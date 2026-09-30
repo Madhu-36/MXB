@@ -15,6 +15,7 @@ Available OS Actions:
 - "type_text": Type dictated text on the keyboard. (Target: exact text to type)
 - "search_web": ONLY use this if the user explicitly asks you to "search", "google", or "look up" something online. (Target: search query)
 - "media_control": Control volume/playback. (Target: "volume_up", "volume_down", "mute", "play", "pause")
+- "manage_window": Control the active window. (Target: "minimize", "maximize", "close")
 - "check_system": The user asks for PC metrics, battery, CPU, or RAM status. (Target: "none")
 - "remember_fact": The user tells you to remember something important. (Target: the exact fact to save)
 - "analyze_clipboard": The user asks you to read, summarize, or analyze what they just copied to their clipboard. (Target: the instruction, e.g., "summarize" or "rewrite")
