@@ -8,16 +8,19 @@ from pynput.keyboard import Controller, Key
 import pywinauto
 from engine.memory import MemoryBank
 
+from utils.app_launcher import SmartAppLauncher
+
 class OSExecutionManager:
     def __init__(self):
         self.keyboard = Controller()
         self.memory = MemoryBank()
+        self.app_launcher = SmartAppLauncher()
 
     def execute_action(self, action: str, target: str) -> str:
         print(f"[Executor] Executing -> Action: {action}, Target: {target}")
         
         if action == "open_app":
-            return self.launch_app(target)
+            return self.app_launcher.launch(target)
             
         elif action == "close_app":
             try:
@@ -72,42 +75,8 @@ class OSExecutionManager:
             return f"Clipboard Analysis:\n{result_text}"
             
         except Exception as e:
-            traceback.print_exc()
+            import traceback; traceback.print_exc()
             return f"Failed to analyze clipboard: {e}"
-
-    def launch_app(self, app_name: str) -> str:
-        app_name_clean = app_name.lower().strip()
-        print(f"[Executor] Attempting to launch: {app_name_clean}")
-        try:
-            app_map = {
-                "notepad": "notepad.exe",
-                "calculator": "calc.exe",
-                "browser": "msedge.exe",
-                "chrome": "chrome.exe",
-                "spotify": "spotify.exe",
-                "explorer": "explorer.exe",
-                "cmd": "cmd.exe",
-                "paint": "mspaint.exe"
-            }
-            exe = app_map.get(app_name_clean, f"{app_name_clean}.exe")
-            os.startfile(exe) 
-            return f"Launched {app_name}"
-        except FileNotFoundError:
-            print(f"[Executor] App {app_name} not found in PATH. Emulating Start Menu search...")
-            try:
-                self.keyboard.press(Key.cmd)
-                self.keyboard.release(Key.cmd)
-                import time; time.sleep(0.5)
-                self.keyboard.type(app_name)
-                time.sleep(0.5)
-                self.keyboard.press(Key.enter)
-                self.keyboard.release(Key.enter)
-                return f"Searched start menu for {app_name}"
-            except Exception as e:
-                return f"App {app_name} not found."
-        except Exception as e:
-            traceback.print_exc()
-            return f"Error launching {app_name}: {e}"
 
     def type_text(self, text: str) -> str:
         print(f"[Executor] Typing text: {text}")
