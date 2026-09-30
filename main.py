@@ -1,12 +1,13 @@
 import sys
 import json
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from ui.hud import FloatingHUD
 from ui.tray import MXBTray
 from engine.audio import VoicePipeline
 from safety.hotkeys import GlobalHotkeyListener
 from utils.llm_builder import LLMBuilder
+from utils.diagnostics import SystemDiagnostics
 
 def load_config():
     config_path = Path(__file__).parent / 'config.json'
@@ -14,6 +15,13 @@ def load_config():
         return json.load(f)
 
 def main():
+    print("[System] Running Pre-flight Diagnostics...")
+    health = SystemDiagnostics.get_health_report()
+    if not health["ollama_running"]:
+        print("[CRITICAL] Ollama is not running! MXB will fail to process commands.")
+    if not health["microphone_active"]:
+        print("[CRITICAL] No microphone detected!")
+        
     LLMBuilder().ensure_build()
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
