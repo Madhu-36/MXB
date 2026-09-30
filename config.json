@@ -1,0 +1,16 @@
+{
+  "audio_input_device": "default",
+  "hotkeys": {
+    "push_to_talk": "ctrl+space",
+    "kill_switch": "ctrl+alt+k"
+  },
+  "llm": {
+    "provider": "ollama",
+    "model": "mxb-brain",
+    "api_url": "http://localhost:11434/api/generate"
+  },
+  "engine": {
+    "whisper_model": "base.en",
+    "vad_threshold": 0.2
+  }
+}
