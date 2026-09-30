@@ -38,7 +38,26 @@ class MemoryBank:
         with open(self.filepath, 'w') as f:
             json.dump(memories, f, indent=2)
 
-    def get_memories(self):
+    def get_memories(self, query=None, limit=10):
         self._ensure_db()
         with open(self.filepath, 'r') as f:
-            return json.load(f)
+            memories = json.load(f)
+            
+        if not memories:
+            return []
+            
+        if not query:
+            return memories[-limit:]
+            
+        # Basic keyword scoring retrieval
+        import re
+        query_words = set(re.findall(r'\w+', query.lower()))
+        scored_memories = []
+        for mem in memories:
+            mem_words = set(re.findall(r'\w+', mem.lower()))
+            score = len(query_words.intersection(mem_words))
+            scored_memories.append((score, mem))
+            
+        # Sort by score descending, return top 'limit'
+        scored_memories.sort(key=lambda x: x[0], reverse=True)
+        return [m[1] for m in scored_memories[:limit]]

@@ -50,8 +50,8 @@ class IntentRouter:
 
     def _route_to_llm(self, text: str) -> str:
         try:
-            # 1. Fetch User Memories to inject into the LLM context
-            saved_memories = self.memory.get_memories()
+            # 1. Fetch relevant User Memories to inject into the LLM context based on the current command
+            saved_memories = self.memory.get_memories(query=text, limit=10)
             memory_context = ""
             if saved_memories:
                 memory_context = "User's Saved Memories:\n" + "\n".join([f"- {m}" for m in saved_memories]) + "\n\n"
