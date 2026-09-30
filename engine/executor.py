@@ -52,6 +52,11 @@ class OSExecutionManager:
         elif action == "manage_window":
             return self.manage_window(target)
             
+        elif action == "notify":
+            from utils.notifications import Notifier
+            Notifier.show_notification("MXB", target)
+            return f"Notification shown: {target}"
+            
         else:
             print(f"[Executor] Unsupported action: {action}")
             return f"Action '{action}' is not supported yet."
