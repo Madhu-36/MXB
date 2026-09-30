@@ -80,8 +80,12 @@ class IntentRouter:
             except Exception:
                 pass
 
-            # 5. Augment the user's prompt
-            augmented_prompt = f"{memory_context}{history_context}{time_context}{active_window_context}User Command: '{text}'"
+            # 5. Add Environment Context (Weather/Location)
+            from utils.environment import EnvironmentContext
+            env_context = f"User's Physical Environment: {EnvironmentContext.get_weather_and_location()}\n\n"
+
+            # 6. Augment the user's prompt
+            augmented_prompt = f"{memory_context}{history_context}{time_context}{active_window_context}{env_context}User Command: '{text}'"
 
             payload = {
                 "model": "mxb-brain",
