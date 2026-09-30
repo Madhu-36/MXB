@@ -70,8 +70,18 @@ class IntentRouter:
             current_time = datetime.now().strftime("%A, %B %d, %Y - %I:%M %p")
             time_context = f"Current System Time: {current_time}\n\n"
 
-            # 4. Augment the user's prompt
-            augmented_prompt = f"{memory_context}{history_context}{time_context}User Command: '{text}'"
+            # 4. Add Active Window Context
+            active_window_context = ""
+            try:
+                import pygetwindow as gw
+                active_window = gw.getActiveWindow()
+                if active_window and active_window.title:
+                    active_window_context = f"User's Current Active Window: '{active_window.title}'\n\n"
+            except Exception:
+                pass
+
+            # 5. Augment the user's prompt
+            augmented_prompt = f"{memory_context}{history_context}{time_context}{active_window_context}User Command: '{text}'"
 
             payload = {
                 "model": "mxb-brain",
