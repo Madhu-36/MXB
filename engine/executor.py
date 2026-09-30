@@ -49,9 +49,33 @@ class OSExecutionManager:
         elif action == "check_system":
             return self.check_system()
             
+        elif action == "manage_window":
+            return self.manage_window(target)
+            
         else:
             print(f"[Executor] Unsupported action: {action}")
             return f"Action '{action}' is not supported yet."
+
+    def manage_window(self, command: str) -> str:
+        try:
+            import pygetwindow as gw
+            active = gw.getActiveWindow()
+            if not active:
+                return "No active window found."
+                
+            if command == "minimize":
+                active.minimize()
+                return f"Minimized {active.title}"
+            elif command == "maximize":
+                active.maximize()
+                return f"Maximized {active.title}"
+            elif command == "close":
+                active.close()
+                return f"Closed {active.title}"
+            else:
+                return f"Unknown window command: {command}"
+        except Exception as e:
+            return f"Window management failed: {e}"
 
     def check_system(self) -> str:
         try:
