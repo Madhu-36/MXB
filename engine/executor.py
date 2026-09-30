@@ -33,8 +33,10 @@ class OSExecutionManager:
             return self.type_text(target)
             
         elif action == "search_web":
-            webbrowser.open(f"https://www.google.com/search?q={target}")
-            return f"Searched the web for: {target}"
+            from utils.web_search import AIWebSearch
+            print(f"[Executor] AI searching the web for: {target}")
+            summary = AIWebSearch.search_and_summarize(target)
+            return summary
             
         elif action == "media_control":
             return self.control_volume(target)
