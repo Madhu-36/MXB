@@ -2,6 +2,7 @@ import re
 import json
 import requests
 import traceback
+from collections import deque
 from engine.executor import OSExecutionManager
 from engine.tts import VoiceSynthesizer
 from engine.memory import MemoryBank
@@ -11,6 +12,8 @@ class IntentRouter:
         self.executor = OSExecutionManager()
         self.tts = VoiceSynthesizer()
         self.memory = MemoryBank()
+        # Keep track of the last 5 conversation turns
+        self.history = deque(maxlen=5)
 
     def route(self, transcription: str) -> str:
         text = transcription.lower().strip()
@@ -25,18 +28,21 @@ class IntentRouter:
             app_name = launch_match.group(2).strip()
             reply = f"Opening {app_name} for you."
             self.tts.speak(reply)
-            return f"MXB: {reply}\n" + self.executor.launch_app(app_name)
+            self.history.append({"user": text, "mxb": reply})
+            return f"MXB: {reply}\n" + self.executor.execute_action("open_app", app_name)
 
         if re.search(r'\b(screenshot|capture screen|print screen)\b', text):
             reply = "Capturing your screen."
             self.tts.speak(reply)
-            return f"MXB: {reply}\n" + self.executor.capture_screen()
+            self.history.append({"user": text, "mxb": reply})
+            return f"MXB: {reply}\n" + self.executor.execute_action("capture_screen", "")
             
         if "type " in text:
             extracted_text = text.split("type ", 1)[1]
             reply = "Typing that now."
             self.tts.speak(reply)
-            return f"MXB: {reply}\n" + self.executor.type_text(extracted_text)
+            self.history.append({"user": text, "mxb": reply})
+            return f"MXB: {reply}\n" + self.executor.execute_action("type_text", extracted_text)
 
         # Layer 2: Conversational "Second Brain" Route
         print("[Router] Sending to LLM Second Brain...")
@@ -49,9 +55,18 @@ class IntentRouter:
             memory_context = ""
             if saved_memories:
                 memory_context = "User's Saved Memories:\n" + "\n".join([f"- {m}" for m in saved_memories]) + "\n\n"
+                
+            # 2. Add Recent Conversation Context
+            history_context = "Recent Conversation Context:\n"
+            if not self.history:
+                history_context += "No previous context.\n\n"
+            else:
+                for turn in self.history:
+                    history_context += f"User: {turn['user']}\nMXB: {turn['mxb']}\n"
+                history_context += "\n"
 
-            # 2. Augment the user's prompt with their long-term memory
-            augmented_prompt = f"{memory_context}User Command: '{text}'"
+            # 3. Augment the user's prompt
+            augmented_prompt = f"{memory_context}{history_context}User Command: '{text}'"
 
             payload = {
                 "model": "mxb-brain",
@@ -61,7 +76,7 @@ class IntentRouter:
                 "keep_alive": "1h",
                 "options": {
                     "num_predict": 200, 
-                    "num_ctx": 2048, 
+                    "num_ctx": 4096, 
                     "temperature": 0.2 
                 }
             }
@@ -102,6 +117,7 @@ class IntentRouter:
             # Speak the conversational reply
             if reply:
                 self.tts.speak(reply)
+                self.history.append({"user": text, "mxb": reply})
             
             # Execute physical OS actions if necessary
             if action not in ["unknown", "conversation", "none"]:
