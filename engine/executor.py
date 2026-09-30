@@ -46,9 +46,31 @@ class OSExecutionManager:
         elif action == "analyze_clipboard":
             return self.analyze_clipboard(target)
             
+        elif action == "check_system":
+            return self.check_system()
+            
         else:
             print(f"[Executor] Unsupported action: {action}")
             return f"Action '{action}' is not supported yet."
+
+    def check_system(self) -> str:
+        try:
+            import psutil
+            cpu = psutil.cpu_percent(interval=0.5)
+            ram = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            report = f"CPU Usage: {cpu}%. "
+            report += f"RAM: {ram.percent}% used ({ram.used // (1024**3)}GB / {ram.total // (1024**3)}GB). "
+            report += f"Disk: {disk.percent}% full."
+            
+            battery = psutil.sensors_battery()
+            if battery:
+                report += f" Battery: {battery.percent}%, Plugged in: {battery.power_plugged}."
+            
+            return report
+        except Exception as e:
+            return f"Failed to check system status: {e}"
 
     def analyze_clipboard(self, instruction: str) -> str:
         print("[Executor] Reading system clipboard...")
