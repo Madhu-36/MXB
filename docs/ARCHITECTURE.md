@@ -43,3 +43,6 @@ Documented threading for asynchronous toasts.
 
 ## Feature 15
 Noted Qt Tool flag for taskbar hiding.
+
+## Feature 16
+Added max-length pruning logic for memory_bank.json.
