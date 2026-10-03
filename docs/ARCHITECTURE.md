@@ -13,3 +13,6 @@ Noted the Windows WASAPI 44100Hz hardware limitation.
 
 ## Feature 5
 Documented keyword overlap math for long term memory.
+
+## Feature 6
+Added Levenshtein distance thresholds to docs.
