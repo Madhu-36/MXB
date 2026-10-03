@@ -28,3 +28,6 @@ Added threading model for SAPI5 pyttsx3.
 
 ## Feature 10
 Documented latitude/longitude extraction via IP.
+
+## Feature 11
+Split architecture into Core, AI, and UI.
