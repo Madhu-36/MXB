@@ -34,3 +34,6 @@ Split architecture into Core, AI, and UI.
 
 ## Feature 12
 Documented MD5 hashing for the Ollama model.
+
+## Feature 13
+Added pynput hotkey safety abort mechanisms.
