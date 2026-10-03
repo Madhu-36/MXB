@@ -52,3 +52,6 @@ Documented whisper condition_on_previous_text=False.
 
 ## Feature 18
 Added 8.8.8.8 ping logic to SystemDiagnostics.
+
+## Feature 19
+Mapped context injection for time and active window.
