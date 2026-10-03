@@ -37,3 +37,6 @@ Documented MD5 hashing for the Ollama model.
 
 ## Feature 13
 Added pynput hotkey safety abort mechanisms.
+
+## Feature 14
+Documented threading for asynchronous toasts.
