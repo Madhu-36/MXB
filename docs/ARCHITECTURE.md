@@ -19,3 +19,6 @@ Added Levenshtein distance thresholds to docs.
 
 ## Feature 7
 Noted the 0.5s interval for CPU percent.
+
+## Feature 8
+Documented HTML stripping and LLM summarization.
