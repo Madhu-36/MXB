@@ -10,3 +10,6 @@ Added flow for regex vs LLM routing.
 
 ## Feature 4
 Noted the Windows WASAPI 44100Hz hardware limitation.
+
+## Feature 5
+Documented keyword overlap math for long term memory.
