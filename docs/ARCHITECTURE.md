@@ -22,3 +22,6 @@ Noted the 0.5s interval for CPU percent.
 
 ## Feature 8
 Documented HTML stripping and LLM summarization.
+
+## Feature 9
+Added threading model for SAPI5 pyttsx3.
