@@ -46,3 +46,6 @@ Noted Qt Tool flag for taskbar hiding.
 
 ## Feature 16
 Added max-length pruning logic for memory_bank.json.
+
+## Feature 17
+Documented whisper condition_on_previous_text=False.
