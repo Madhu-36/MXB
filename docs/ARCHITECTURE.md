@@ -55,3 +55,6 @@ Added 8.8.8.8 ping logic to SystemDiagnostics.
 
 ## Feature 19
 Mapped context injection for time and active window.
+
+## Feature 20
+Completed architecture review and locked V2.0 docs.
