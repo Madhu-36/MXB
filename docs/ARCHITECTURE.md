@@ -40,3 +40,6 @@ Added pynput hotkey safety abort mechanisms.
 
 ## Feature 14
 Documented threading for asynchronous toasts.
+
+## Feature 15
+Noted Qt Tool flag for taskbar hiding.
