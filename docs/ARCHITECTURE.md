@@ -25,3 +25,6 @@ Documented HTML stripping and LLM summarization.
 
 ## Feature 9
 Added threading model for SAPI5 pyttsx3.
+
+## Feature 10
+Documented latitude/longitude extraction via IP.
