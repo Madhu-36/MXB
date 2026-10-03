@@ -49,3 +49,6 @@ Added max-length pruning logic for memory_bank.json.
 
 ## Feature 17
 Documented whisper condition_on_previous_text=False.
+
+## Feature 18
+Added 8.8.8.8 ping logic to SystemDiagnostics.
