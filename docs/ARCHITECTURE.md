@@ -16,3 +16,6 @@ Documented keyword overlap math for long term memory.
 
 ## Feature 6
 Added Levenshtein distance thresholds to docs.
+
+## Feature 7
+Noted the 0.5s interval for CPU percent.
