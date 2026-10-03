@@ -31,3 +31,6 @@ Documented latitude/longitude extraction via IP.
 
 ## Feature 11
 Split architecture into Core, AI, and UI.
+
+## Feature 12
+Documented MD5 hashing for the Ollama model.
