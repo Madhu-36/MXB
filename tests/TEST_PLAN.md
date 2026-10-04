@@ -55,3 +55,6 @@ Mocked QGraphicsDropShadowEffect.
 
 ## Test Case 19
 Verified QPropertyAnimation durations.
+
+## Test Case 20
+Completed V2.0 test coverage suite.
