@@ -13,3 +13,6 @@ Added requests mock for localhost:11434.
 
 ## Test Case 5
 Verified markdown code block stripping in router.
+
+## Test Case 6
+Added TF-IDF overlap tests.
