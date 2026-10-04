@@ -43,3 +43,6 @@ Mocked lat/lon extraction.
 
 ## Test Case 15
 Verified timeout handling.
+
+## Test Case 16
+Added SAPI5 engine mocking.
