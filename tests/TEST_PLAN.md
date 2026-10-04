@@ -10,3 +10,6 @@ Mocked the 44100Hz to 16000Hz pipeline.
 
 ## Test Case 4
 Added requests mock for localhost:11434.
+
+## Test Case 5
+Verified markdown code block stripping in router.
