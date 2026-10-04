@@ -52,3 +52,6 @@ Verified Zira/Hazel fallback.
 
 ## Test Case 18
 Mocked QGraphicsDropShadowEffect.
+
+## Test Case 19
+Verified QPropertyAnimation durations.
