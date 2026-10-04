@@ -31,3 +31,6 @@ Added CPU and RAM metric validation.
 
 ## Test Case 11
 Verified sensor_battery parsing.
+
+## Test Case 12
+Added HTML parsing tests.
