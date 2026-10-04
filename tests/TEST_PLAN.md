@@ -49,3 +49,6 @@ Added SAPI5 engine mocking.
 
 ## Test Case 17
 Verified Zira/Hazel fallback.
+
+## Test Case 18
+Mocked QGraphicsDropShadowEffect.
