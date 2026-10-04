@@ -40,3 +40,6 @@ Verified search payload structure.
 
 ## Test Case 14
 Mocked lat/lon extraction.
+
+## Test Case 15
+Verified timeout handling.
