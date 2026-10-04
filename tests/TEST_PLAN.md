@@ -37,3 +37,6 @@ Added HTML parsing tests.
 
 ## Test Case 13
 Verified search payload structure.
+
+## Test Case 14
+Mocked lat/lon extraction.
