@@ -25,3 +25,6 @@ Added Levenshtein distance matching tests.
 
 ## Test Case 9
 Mocked the ProgramData folder scanning.
+
+## Test Case 10
+Added CPU and RAM metric validation.
