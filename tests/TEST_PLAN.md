@@ -16,3 +16,6 @@ Verified markdown code block stripping in router.
 
 ## Test Case 6
 Added TF-IDF overlap tests.
+
+## Test Case 7
+Verified MemoryBank handles 0-byte files.
