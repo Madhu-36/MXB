@@ -28,3 +28,6 @@ Mocked the ProgramData folder scanning.
 
 ## Test Case 10
 Added CPU and RAM metric validation.
+
+## Test Case 11
+Verified sensor_battery parsing.
