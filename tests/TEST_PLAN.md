@@ -46,3 +46,6 @@ Verified timeout handling.
 
 ## Test Case 16
 Added SAPI5 engine mocking.
+
+## Test Case 17
+Verified Zira/Hazel fallback.
