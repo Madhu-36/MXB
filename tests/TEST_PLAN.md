@@ -34,3 +34,6 @@ Verified sensor_battery parsing.
 
 ## Test Case 12
 Added HTML parsing tests.
+
+## Test Case 13
+Verified search payload structure.
