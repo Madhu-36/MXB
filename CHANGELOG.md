@@ -10,3 +10,6 @@ Documented fuzzy finding.
 
 ## Changelog Entry 4
 Documented DuckDuckGo integration.
+
+## Changelog Entry 5
+Documented Date/Weather injection.
