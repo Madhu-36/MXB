@@ -34,3 +34,6 @@ Proposed AES-256 for future JSON memory storage.
 
 ## Security Posture 12
 Added limits on reading secure active window titles.
+
+## Security Posture 13
+Documented ephemeral nature of audio buffer.
