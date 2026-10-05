@@ -40,3 +40,6 @@ Documented ephemeral nature of audio buffer.
 
 ## Security Posture 14
 Added risks of unintentional activation.
+
+## Security Posture 15
+Noted limitations on executing code from toasts.
