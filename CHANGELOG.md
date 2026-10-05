@@ -43,3 +43,6 @@ Documented auto-builder hash logic.
 
 ## Changelog Entry 15
 Documented Modelfile formatting.
+
+## Changelog Entry 16
+Documented weather API.
