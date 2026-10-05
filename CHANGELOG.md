@@ -37,3 +37,6 @@ Documented 16000Hz resampling.
 
 ## Changelog Entry 13
 Documented condition_on_previous_text=False.
+
+## Changelog Entry 14
+Documented auto-builder hash logic.
