@@ -34,3 +34,6 @@ Documented voice activity threshold.
 
 ## Changelog Entry 12
 Documented 16000Hz resampling.
+
+## Changelog Entry 13
+Documented condition_on_previous_text=False.
