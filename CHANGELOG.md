@@ -22,3 +22,6 @@ Documented win11toast integration.
 
 ## Changelog Entry 8
 Documented asynchronous SAPI5.
+
+## Changelog Entry 9
+Documented psutil checks.
