@@ -49,3 +49,6 @@ Mapped out required UAC permissions for hardware polling.
 
 ## Security Posture 17
 Documented allowed outbound ports (443, 80).
+
+## Security Posture 18
+Added pip-audit and dependabot configuration plans.
