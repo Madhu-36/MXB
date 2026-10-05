@@ -28,3 +28,6 @@ Explained DDGS anonymity and IP masking.
 
 ## Security Posture 10
 Noted lack of PII transmission in weather lookups.
+
+## Security Posture 11
+Proposed AES-256 for future JSON memory storage.
