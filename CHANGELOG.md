@@ -52,3 +52,6 @@ Documented geolocation API.
 
 ## Changelog Entry 18
 Documented pygetwindow usage.
+
+## Changelog Entry 19
+Documented Ctrl+Shift+M mute.
