@@ -25,3 +25,6 @@ Documented safety limits on executable launching.
 
 ## Security Posture 9
 Explained DDGS anonymity and IP masking.
+
+## Security Posture 10
+Noted lack of PII transmission in weather lookups.
