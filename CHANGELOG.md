@@ -16,3 +16,6 @@ Documented Date/Weather injection.
 
 ## Changelog Entry 6
 Documented TF-IDF updates.
+
+## Changelog Entry 7
+Documented win11toast integration.
