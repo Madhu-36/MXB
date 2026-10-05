@@ -31,3 +31,6 @@ Documented QPropertyAnimation.
 
 ## Changelog Entry 11
 Documented voice activity threshold.
+
+## Changelog Entry 12
+Documented 16000Hz resampling.
