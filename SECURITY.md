@@ -43,3 +43,6 @@ Added risks of unintentional activation.
 
 ## Security Posture 15
 Noted limitations on executing code from toasts.
+
+## Security Posture 16
+Mapped out required UAC permissions for hardware polling.
