@@ -22,3 +22,6 @@ Noted risks of unauthorized websocket connections.
 
 ## Security Posture 8
 Documented safety limits on executable launching.
+
+## Security Posture 9
+Explained DDGS anonymity and IP masking.
