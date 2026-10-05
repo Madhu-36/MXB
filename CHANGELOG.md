@@ -40,3 +40,6 @@ Documented condition_on_previous_text=False.
 
 ## Changelog Entry 14
 Documented auto-builder hash logic.
+
+## Changelog Entry 15
+Documented Modelfile formatting.
