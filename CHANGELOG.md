@@ -7,3 +7,6 @@ Documented glassmorphism update.
 
 ## Changelog Entry 3
 Documented fuzzy finding.
+
+## Changelog Entry 4
+Documented DuckDuckGo integration.
