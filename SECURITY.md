@@ -10,3 +10,6 @@ Added dev@mxb.local as primary security contact.
 
 ## Security Posture 4
 Explained encryption requirements for security reports.
+
+## Security Posture 5
+Documented risks of prompt injection in Modelfile.
