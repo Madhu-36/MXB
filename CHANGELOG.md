@@ -55,3 +55,6 @@ Documented pygetwindow usage.
 
 ## Changelog Entry 19
 Documented Ctrl+Shift+M mute.
+
+## Changelog Entry 20
+Completed changelog entries for today.
