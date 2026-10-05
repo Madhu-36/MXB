@@ -49,3 +49,6 @@ Documented weather API.
 
 ## Changelog Entry 17
 Documented geolocation API.
+
+## Changelog Entry 18
+Documented pygetwindow usage.
