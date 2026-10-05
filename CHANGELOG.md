@@ -19,3 +19,6 @@ Documented TF-IDF updates.
 
 ## Changelog Entry 7
 Documented win11toast integration.
+
+## Changelog Entry 8
+Documented asynchronous SAPI5.
