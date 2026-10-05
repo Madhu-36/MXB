@@ -7,3 +7,6 @@ Mapped out support for V2.x branches only.
 
 ## Security Posture 3
 Added dev@mxb.local as primary security contact.
+
+## Security Posture 4
+Explained encryption requirements for security reports.
