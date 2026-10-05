@@ -46,3 +46,6 @@ Documented Modelfile formatting.
 
 ## Changelog Entry 16
 Documented weather API.
+
+## Changelog Entry 17
+Documented geolocation API.
