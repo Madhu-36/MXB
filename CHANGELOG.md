@@ -28,3 +28,6 @@ Documented psutil checks.
 
 ## Changelog Entry 10
 Documented QPropertyAnimation.
+
+## Changelog Entry 11
+Documented voice activity threshold.
