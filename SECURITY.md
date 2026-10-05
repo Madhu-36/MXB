@@ -46,3 +46,6 @@ Noted limitations on executing code from toasts.
 
 ## Security Posture 16
 Mapped out required UAC permissions for hardware polling.
+
+## Security Posture 17
+Documented allowed outbound ports (443, 80).
