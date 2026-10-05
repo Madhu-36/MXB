@@ -13,3 +13,6 @@ Explained encryption requirements for security reports.
 
 ## Security Posture 5
 Documented risks of prompt injection in Modelfile.
+
+## Security Posture 6
+Added warnings about analyzing sensitive clipboard data.
