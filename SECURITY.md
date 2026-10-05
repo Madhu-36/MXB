@@ -19,3 +19,6 @@ Added warnings about analyzing sensitive clipboard data.
 
 ## Security Posture 7
 Noted risks of unauthorized websocket connections.
+
+## Security Posture 8
+Documented safety limits on executable launching.
