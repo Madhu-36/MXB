@@ -37,3 +37,6 @@ Added limits on reading secure active window titles.
 
 ## Security Posture 13
 Documented ephemeral nature of audio buffer.
+
+## Security Posture 14
+Added risks of unintentional activation.
