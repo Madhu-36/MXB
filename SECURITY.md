@@ -16,3 +16,6 @@ Documented risks of prompt injection in Modelfile.
 
 ## Security Posture 6
 Added warnings about analyzing sensitive clipboard data.
+
+## Security Posture 7
+Noted risks of unauthorized websocket connections.
