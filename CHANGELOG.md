@@ -13,3 +13,6 @@ Documented DuckDuckGo integration.
 
 ## Changelog Entry 5
 Documented Date/Weather injection.
+
+## Changelog Entry 6
+Documented TF-IDF updates.
