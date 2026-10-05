@@ -25,3 +25,6 @@ Documented asynchronous SAPI5.
 
 ## Changelog Entry 9
 Documented psutil checks.
+
+## Changelog Entry 10
+Documented QPropertyAnimation.
