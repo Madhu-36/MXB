@@ -37,3 +37,6 @@ Documented 16000Hz conversion method.
 
 ## API Endpoint 13
 Documented inference payload format.
+
+## API Endpoint 14
+Documented MD5 hashing for Ollama models.
