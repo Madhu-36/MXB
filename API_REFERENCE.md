@@ -25,3 +25,6 @@ Documented pyttsx3 threading queue.
 
 ## API Endpoint 9
 Documented psutil memory/cpu dictionaries.
+
+## API Endpoint 10
+Documented QPropertyAnimation property references.
