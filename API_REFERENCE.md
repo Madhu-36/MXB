@@ -49,3 +49,6 @@ Documented weather API GET parameters.
 
 ## API Endpoint 17
 Documented geolocation API GET parameters.
+
+## API Endpoint 18
+Documented pygetwindow control functions.
