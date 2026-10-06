@@ -46,3 +46,6 @@ Documented regex stripping for Llama output.
 
 ## API Endpoint 16
 Documented weather API GET parameters.
+
+## API Endpoint 17
+Documented geolocation API GET parameters.
