@@ -55,3 +55,6 @@ Documented pygetwindow control functions.
 
 ## API Endpoint 19
 Documented pynput listener threading.
+
+## API Endpoint 20
+Completed API documentation entries for today.
