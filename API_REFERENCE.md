@@ -43,3 +43,6 @@ Documented MD5 hashing for Ollama models.
 
 ## API Endpoint 15
 Documented regex stripping for Llama output.
+
+## API Endpoint 16
+Documented weather API GET parameters.
