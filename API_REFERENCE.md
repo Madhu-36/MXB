@@ -28,3 +28,6 @@ Documented psutil memory/cpu dictionaries.
 
 ## API Endpoint 10
 Documented QPropertyAnimation property references.
+
+## API Endpoint 11
+Documented RMS volume threshold constants.
