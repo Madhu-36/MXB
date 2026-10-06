@@ -19,3 +19,6 @@ Documented keyword overlap math functions.
 
 ## API Endpoint 7
 Documented win11toast threading payload.
+
+## API Endpoint 8
+Documented pyttsx3 threading queue.
