@@ -16,3 +16,6 @@ Documented Date/Weather payload injection.
 
 ## API Endpoint 6
 Documented keyword overlap math functions.
+
+## API Endpoint 7
+Documented win11toast threading payload.
