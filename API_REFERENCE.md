@@ -13,3 +13,6 @@ Added JSON structure for DDGS payload.
 
 ## API Endpoint 5
 Documented Date/Weather payload injection.
+
+## API Endpoint 6
+Documented keyword overlap math functions.
