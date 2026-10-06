@@ -22,3 +22,6 @@ Documented win11toast threading payload.
 
 ## API Endpoint 8
 Documented pyttsx3 threading queue.
+
+## API Endpoint 9
+Documented psutil memory/cpu dictionaries.
