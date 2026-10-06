@@ -31,3 +31,6 @@ Documented QPropertyAnimation property references.
 
 ## API Endpoint 11
 Documented RMS volume threshold constants.
+
+## API Endpoint 12
+Documented 16000Hz conversion method.
