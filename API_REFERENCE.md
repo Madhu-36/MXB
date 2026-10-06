@@ -7,3 +7,6 @@ Added Modelfile prompt specifications.
 
 ## API Endpoint 3
 Documented the fuzzy finding threshold parameters.
+
+## API Endpoint 4
+Added JSON structure for DDGS payload.
