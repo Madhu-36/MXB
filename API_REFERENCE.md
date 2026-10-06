@@ -40,3 +40,6 @@ Documented inference payload format.
 
 ## API Endpoint 14
 Documented MD5 hashing for Ollama models.
+
+## API Endpoint 15
+Documented regex stripping for Llama output.
