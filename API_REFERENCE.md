@@ -52,3 +52,6 @@ Documented geolocation API GET parameters.
 
 ## API Endpoint 18
 Documented pygetwindow control functions.
+
+## API Endpoint 19
+Documented pynput listener threading.
