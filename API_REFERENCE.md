@@ -34,3 +34,6 @@ Documented RMS volume threshold constants.
 
 ## API Endpoint 12
 Documented 16000Hz conversion method.
+
+## API Endpoint 13
+Documented inference payload format.
