@@ -52,3 +52,6 @@ Documented how to edit the Modelfile prompts.
 
 ## Section 18
 Explained Windows 11 Action Center toasts.
+
+## Section 19
+Added common questions about local execution and privacy.
