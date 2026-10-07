@@ -31,3 +31,6 @@ Documented fuzzy finding across the Start Menu.
 
 ## Architecture Component 11
 Mapped out psutil interval checks.
+
+## Architecture Component 12
+Documented internal data flow restrictions.
