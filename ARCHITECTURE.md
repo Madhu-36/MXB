@@ -37,3 +37,6 @@ Documented internal data flow restrictions.
 
 ## Architecture Component 13
 Mapped out pynput global hooking.
+
+## Architecture Component 14
+Documented win11toast asynchronous alerts.
