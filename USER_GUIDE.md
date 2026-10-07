@@ -10,3 +10,6 @@ Added venv creation and activation instructions.
 
 ## Section 4
 Documented pip requirements installation.
+
+## Section 5
+Added details on Modelfile auto-compilation.
