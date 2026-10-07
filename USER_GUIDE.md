@@ -16,3 +16,6 @@ Added details on Modelfile auto-compilation.
 
 ## Section 6
 Documented how the glassmorphism UI responds to voice.
+
+## Section 7
+Added Ctrl+Shift+M mute toggle instructions.
