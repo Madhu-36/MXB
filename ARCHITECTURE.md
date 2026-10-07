@@ -34,3 +34,6 @@ Mapped out psutil interval checks.
 
 ## Architecture Component 12
 Documented internal data flow restrictions.
+
+## Architecture Component 13
+Mapped out pynput global hooking.
