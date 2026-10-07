@@ -28,3 +28,6 @@ Documented how to trigger DuckDuckGo AI summarization.
 
 ## Section 10
 Explained how MXB reads active window titles.
+
+## Section 11
+Provided examples for asking about local conditions.
