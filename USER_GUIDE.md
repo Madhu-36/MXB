@@ -49,3 +49,6 @@ Added fixes for low microphone volume and VAD thresholds.
 
 ## Section 17
 Documented how to edit the Modelfile prompts.
+
+## Section 18
+Explained Windows 11 Action Center toasts.
