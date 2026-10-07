@@ -13,3 +13,6 @@ Documented pip requirements installation.
 
 ## Section 5
 Added details on Modelfile auto-compilation.
+
+## Section 6
+Documented how the glassmorphism UI responds to voice.
