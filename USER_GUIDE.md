@@ -25,3 +25,6 @@ Provided sample commands for OS control.
 
 ## Section 9
 Documented how to trigger DuckDuckGo AI summarization.
+
+## Section 10
+Explained how MXB reads active window titles.
