@@ -34,3 +34,6 @@ Provided examples for asking about local conditions.
 
 ## Section 12
 Documented how MXB remembers past conversations via TF-IDF.
+
+## Section 13
+Provided examples to check RAM and CPU usage.
