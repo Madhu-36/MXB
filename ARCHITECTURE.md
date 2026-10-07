@@ -7,3 +7,6 @@ Mapped out the core event loop architecture.
 
 ## Architecture Component 3
 Documented PyAudio -> VAD -> Whisper flow.
+
+## Architecture Component 4
+Documented Intent vs Command routing.
