@@ -46,3 +46,6 @@ Explained fuzzy matching for opening applications.
 
 ## Section 16
 Added fixes for low microphone volume and VAD thresholds.
+
+## Section 17
+Documented how to edit the Modelfile prompts.
