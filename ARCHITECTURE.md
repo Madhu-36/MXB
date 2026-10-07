@@ -43,3 +43,6 @@ Documented win11toast asynchronous alerts.
 
 ## Architecture Component 15
 Mapped out Ollama Modelfile hashing.
+
+## Architecture Component 16
+Documented Torchaudio 16kHz conversion.
