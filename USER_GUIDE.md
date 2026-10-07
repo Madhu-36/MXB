@@ -55,3 +55,6 @@ Explained Windows 11 Action Center toasts.
 
 ## Section 19
 Added common questions about local execution and privacy.
+
+## Section 20
+Completed user guide documentation for today.
