@@ -40,3 +40,6 @@ Provided examples to check RAM and CPU usage.
 
 ## Section 14
 Documented minimize, maximize, and close commands.
+
+## Section 15
+Explained fuzzy matching for opening applications.
