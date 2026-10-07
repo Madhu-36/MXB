@@ -16,3 +16,6 @@ Mapped out how windows/weather/time enter the prompt.
 
 ## Architecture Component 6
 Documented the keyword overlap scoring algorithm.
+
+## Architecture Component 7
+Mapped out the QThread SAPI5 execution.
