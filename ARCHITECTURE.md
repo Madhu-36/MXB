@@ -40,3 +40,6 @@ Mapped out pynput global hooking.
 
 ## Architecture Component 14
 Documented win11toast asynchronous alerts.
+
+## Architecture Component 15
+Mapped out Ollama Modelfile hashing.
