@@ -19,3 +19,6 @@ Documented how the glassmorphism UI responds to voice.
 
 ## Section 7
 Added Ctrl+Shift+M mute toggle instructions.
+
+## Section 8
+Provided sample commands for OS control.
