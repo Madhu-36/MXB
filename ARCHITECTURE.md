@@ -52,3 +52,6 @@ Mapped out RMS volume math.
 
 ## Architecture Component 18
 Documented Open-Meteo and IPAPI usage.
+
+## Architecture Component 19
+Documented planned architectural upgrades.
