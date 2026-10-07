@@ -37,3 +37,6 @@ Documented how MXB remembers past conversations via TF-IDF.
 
 ## Section 13
 Provided examples to check RAM and CPU usage.
+
+## Section 14
+Documented minimize, maximize, and close commands.
