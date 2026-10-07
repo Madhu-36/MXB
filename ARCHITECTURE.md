@@ -25,3 +25,6 @@ Documented PySide6 frameless window composition.
 
 ## Architecture Component 9
 Mapped out DuckDuckGo -> Llama 3.1 summarization.
+
+## Architecture Component 10
+Documented fuzzy finding across the Start Menu.
