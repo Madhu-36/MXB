@@ -22,3 +22,6 @@ Added Ctrl+Shift+M mute toggle instructions.
 
 ## Section 8
 Provided sample commands for OS control.
+
+## Section 9
+Documented how to trigger DuckDuckGo AI summarization.
