@@ -7,3 +7,6 @@ Documented Python 3.10 and Ollama requirements.
 
 ## Section 3
 Added venv creation and activation instructions.
+
+## Section 4
+Documented pip requirements installation.
