@@ -13,3 +13,6 @@ Documented Intent vs Command routing.
 
 ## Architecture Component 5
 Mapped out how windows/weather/time enter the prompt.
+
+## Architecture Component 6
+Documented the keyword overlap scoring algorithm.
