@@ -46,3 +46,6 @@ Mapped out Ollama Modelfile hashing.
 
 ## Architecture Component 16
 Documented Torchaudio 16kHz conversion.
+
+## Architecture Component 17
+Mapped out RMS volume math.
