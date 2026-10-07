@@ -43,3 +43,6 @@ Documented minimize, maximize, and close commands.
 
 ## Section 15
 Explained fuzzy matching for opening applications.
+
+## Section 16
+Added fixes for low microphone volume and VAD thresholds.
