@@ -19,3 +19,6 @@ Documented the keyword overlap scoring algorithm.
 
 ## Architecture Component 7
 Mapped out the QThread SAPI5 execution.
+
+## Architecture Component 8
+Documented PySide6 frameless window composition.
