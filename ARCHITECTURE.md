@@ -10,3 +10,6 @@ Documented PyAudio -> VAD -> Whisper flow.
 
 ## Architecture Component 4
 Documented Intent vs Command routing.
+
+## Architecture Component 5
+Mapped out how windows/weather/time enter the prompt.
