@@ -19,3 +19,6 @@ Run pre-commit checks before pushing any changes to maintain repository hygiene.
 
 ## Section 7: Define Black and Flake8 formatting rules
 Format code using Black with line length 100 and enforce Flake8 PEP8 guidelines.
+
+## Section 8: Document type hinting and mypy checks
+All new functions and methods must provide strict type annotations verified with mypy.
