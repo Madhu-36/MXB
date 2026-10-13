@@ -16,3 +16,6 @@ Use a dedicated .venv virtual environment to prevent dependency conflicts with s
 
 ## Section 6: Add pre-commit hooks and linting standards
 Run pre-commit checks before pushing any changes to maintain repository hygiene.
+
+## Section 7: Define Black and Flake8 formatting rules
+Format code using Black with line length 100 and enforce Flake8 PEP8 guidelines.
