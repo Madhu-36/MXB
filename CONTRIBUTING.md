@@ -40,3 +40,6 @@ Update the LLM hash and document template tweaks when modifying the Ollama Model
 
 ## Section 14: Document Conventional Commits standards
 Follow conventional commit format: feat, fix, docs, style, refactor, perf, test, chore.
+
+## Section 15: Outline pull request submission process
+Ensure PRs reference relevant issue IDs with detailed descriptions and passing test suites.
