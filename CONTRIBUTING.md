@@ -31,3 +31,6 @@ Use QtTest module for testing frameless HUD event loops and animations headless.
 
 ## Section 11: Document Mock audio streaming for tests
 Audio tests should use synthetic numpy audio buffers instead of hardware devices.
+
+## Section 12: Add LLM prompt engineering guidelines
+Ensure system prompt modifications maintain strict JSON schema output formatting.
