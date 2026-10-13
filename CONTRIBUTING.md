@@ -37,3 +37,6 @@ Ensure system prompt modifications maintain strict JSON schema output formatting
 
 ## Section 13: Define Modelfile versioning procedures
 Update the LLM hash and document template tweaks when modifying the Ollama Modelfile.
+
+## Section 14: Document Conventional Commits standards
+Follow conventional commit format: feat, fix, docs, style, refactor, perf, test, chore.
