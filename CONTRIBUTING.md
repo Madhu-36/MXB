@@ -28,3 +28,6 @@ Tests reside in tests/ and must be executable via pytest with coverage metrics.
 
 ## Section 10: Detail PySide6 UI component testing conventions
 Use QtTest module for testing frameless HUD event loops and animations headless.
+
+## Section 11: Document Mock audio streaming for tests
+Audio tests should use synthetic numpy audio buffers instead of hardware devices.
