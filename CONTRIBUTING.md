@@ -4,3 +4,6 @@ Welcome to MXB contributor guide. We welcome community contributions to build th
 
 ## Section 2: Define code of conduct
 Contributors must adhere to inclusive, professional, and constructive collaboration standards.
+
+## Section 3: Outline development environment prerequisites
+Requires Python 3.10+, Ollama with Llama 3.1, Windows 10/11, and a working microphone input.
