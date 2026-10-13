@@ -7,3 +7,6 @@ Contributors must adhere to inclusive, professional, and constructive collaborat
 
 ## Section 3: Outline development environment prerequisites
 Requires Python 3.10+, Ollama with Llama 3.1, Windows 10/11, and a working microphone input.
+
+## Section 4: Detail repository fork and branch conventions
+Branch naming follows feature/<name>, fix/<name>, or docs/<name> branched from main.
