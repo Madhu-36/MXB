@@ -34,3 +34,6 @@ Audio tests should use synthetic numpy audio buffers instead of hardware devices
 
 ## Section 12: Add LLM prompt engineering guidelines
 Ensure system prompt modifications maintain strict JSON schema output formatting.
+
+## Section 13: Define Modelfile versioning procedures
+Update the LLM hash and document template tweaks when modifying the Ollama Modelfile.
