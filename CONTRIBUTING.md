@@ -13,3 +13,6 @@ Branch naming follows feature/<name>, fix/<name>, or docs/<name> branched from m
 
 ## Section 5: Document virtual environment isolation
 Use a dedicated .venv virtual environment to prevent dependency conflicts with system Python.
+
+## Section 6: Add pre-commit hooks and linting standards
+Run pre-commit checks before pushing any changes to maintain repository hygiene.
