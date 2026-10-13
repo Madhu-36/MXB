@@ -22,3 +22,6 @@ Format code using Black with line length 100 and enforce Flake8 PEP8 guidelines.
 
 ## Section 8: Document type hinting and mypy checks
 All new functions and methods must provide strict type annotations verified with mypy.
+
+## Section 9: Specify unit testing guidelines with pytest
+Tests reside in tests/ and must be executable via pytest with coverage metrics.
