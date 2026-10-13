@@ -52,3 +52,6 @@ Measure audio VAD latency and memory overhead to ensure zero frame drops on host
 
 ## Section 18: Define release tagging and semantic versioning
 Releases adhere to SemVer 2.0.0 (MAJOR.MINOR.PATCH) tagged via git annotated tags.
+
+## Section 19: Add issue reporting templates and bug triage
+Use GitHub Issue templates for bug reports, hardware incompatibility, and feature requests.
