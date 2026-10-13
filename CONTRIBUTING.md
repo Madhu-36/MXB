@@ -43,3 +43,6 @@ Follow conventional commit format: feat, fix, docs, style, refactor, perf, test,
 
 ## Section 15: Outline pull request submission process
 Ensure PRs reference relevant issue IDs with detailed descriptions and passing test suites.
+
+## Section 16: Detail code review checklist
+Reviewers will verify security, thread safety in QThreads, and offline execution integrity.
