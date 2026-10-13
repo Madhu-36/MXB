@@ -46,3 +46,6 @@ Ensure PRs reference relevant issue IDs with detailed descriptions and passing t
 
 ## Section 16: Detail code review checklist
 Reviewers will verify security, thread safety in QThreads, and offline execution integrity.
+
+## Section 17: Add performance profiling and benchmarking requirements
+Measure audio VAD latency and memory overhead to ensure zero frame drops on host OS.
