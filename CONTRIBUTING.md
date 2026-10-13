@@ -49,3 +49,6 @@ Reviewers will verify security, thread safety in QThreads, and offline execution
 
 ## Section 17: Add performance profiling and benchmarking requirements
 Measure audio VAD latency and memory overhead to ensure zero frame drops on host OS.
+
+## Section 18: Define release tagging and semantic versioning
+Releases adhere to SemVer 2.0.0 (MAJOR.MINOR.PATCH) tagged via git annotated tags.
