@@ -10,3 +10,6 @@ Requires Python 3.10+, Ollama with Llama 3.1, Windows 10/11, and a working micro
 
 ## Section 4: Detail repository fork and branch conventions
 Branch naming follows feature/<name>, fix/<name>, or docs/<name> branched from main.
+
+## Section 5: Document virtual environment isolation
+Use a dedicated .venv virtual environment to prevent dependency conflicts with system Python.
