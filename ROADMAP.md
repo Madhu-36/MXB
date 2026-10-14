@@ -19,3 +19,6 @@ Target DirectML execution provider for low-latency Whisper STT inference on AMD/
 
 ## Milestone 7: Add SQLite vector database for long-term semantic embeddings
 Replace in-memory TF-IDF with persistent SQLite sqlite-vec vector store with local nomic embeddings.
+
+## Milestone 8: Outline automated daily calendar briefing features
+Plan local Outlook and Google Calendar synchronization for morning voice agenda readouts.
