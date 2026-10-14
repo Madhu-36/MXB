@@ -37,3 +37,6 @@ Target Piper neural TTS engine for ultra-low latency phoneme streaming and expre
 
 ## Milestone 13: Add system tray minimize and background service daemon
 Implement native Windows Notification Area (System Tray) icon with background service lifecycle.
+
+## Milestone 14: Plan automated email summarization and draft composition
+Design privacy-safe local IMAP/SMTP connector for drafting context-aware email replies.
