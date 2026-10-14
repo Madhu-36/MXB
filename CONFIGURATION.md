@@ -22,3 +22,6 @@ Documented 16,000 Hz target sample rate, 16-bit PCM format, and stereo-to-mono d
 
 ## Configuration 8: Add microphone input device index selection
 Provided instructions for specifying default PyAudio input device indices via config.
+
+## Configuration 9: Document PySide6 UI opacity and glassmorphism styling
+Documented frameless window flags, translucency settings, and backdrop blur parameters in HUD.
