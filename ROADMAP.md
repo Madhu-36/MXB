@@ -13,3 +13,6 @@ Map out autonomous sub-agent orchestration for delegating complex multi-step OS 
 
 ## Milestone 5: Add native Windows Bluetooth audio profile handling
 Design automatic switching between Handsfree profile and Stereo audio for wireless headsets.
+
+## Milestone 6: Plan DirectML hardware acceleration for Whisper
+Target DirectML execution provider for low-latency Whisper STT inference on AMD/Intel/NVIDIA GPUs.
