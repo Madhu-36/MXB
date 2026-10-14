@@ -52,3 +52,6 @@ Define isolated subprocess plugin IPC protocol allowing third-party community ex
 
 ## Milestone 18: Outline offline web archiving and semantic search cache
 Implement headless background web archiving for visited documentation pages and reference material.
+
+## Milestone 19: Add multi-monitor HUD positioning and DPI scaling
+Improve PySide6 HUD rendering to support multi-DPI per-monitor virtualization and auto-centering.
