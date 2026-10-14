@@ -40,3 +40,6 @@ Detailed automatic GPS coordinate resolution from IP lookup with offline coordin
 
 ## Configuration 14: Detail IP-based geolocation fallback provider settings
 Added fallback providers (ipapi.co, ip-api.com) and rate limit protection mechanisms.
+
+## Configuration 15: Add MemoryBank JSON persistence path and backup intervals
+Documented memory_bank.json storage directory, write-ahead flushing, and auto-backup schedules.
