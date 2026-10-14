@@ -37,3 +37,6 @@ Configured DDGS max_results=5 and HTTP request timeout=8s for real-time web summ
 
 ## Configuration 13: Document Open-Meteo latitude and longitude auto-detection
 Detailed automatic GPS coordinate resolution from IP lookup with offline coordinate caching.
+
+## Configuration 14: Detail IP-based geolocation fallback provider settings
+Added fallback providers (ipapi.co, ip-api.com) and rate limit protection mechanisms.
