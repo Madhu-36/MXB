@@ -7,3 +7,6 @@ Configure OLLAMA_HOST and port bindings (defaults to localhost:11434) for local 
 
 ## Configuration 3: Define Llama 3.1 model parameter overrides
 Documented model context length (num_ctx=4096) and GPU offload layer parameters in the Modelfile.
+
+## Configuration 4: Document temperature and top_p sampling configs
+Detailed default temperature (0.2 for deterministic JSON routing) and top_p (0.9) parameters.
