@@ -28,3 +28,6 @@ Documented frameless window flags, translucency settings, and backdrop blur para
 
 ## Configuration 10: Add HUD animation duration and easing curves
 Configured QPropertyAnimation fade-in/fade-out curves (QEasingCurve.InOutQuad, 300ms).
+
+## Configuration 11: Detail SmartAppLauncher scan directories and exclusions
+Documented Start Menu shortcut directories, system PATH traversal, and process blacklist rules.
