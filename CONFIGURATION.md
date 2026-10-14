@@ -49,3 +49,6 @@ Configured minimum cosine similarity score (0.25) required to inject a past memo
 
 ## Configuration 17: Detail SAPI5 TTS voice selection and speech rate
 Documented Windows registry voice tokens (David/Zira) and speech rate adjustments (default: 185 wpm).
+
+## Configuration 18: Add Windows 11 Toast notification duration and sound toggle
+Configured win11toast notification expiry time, application app_id, and mute flags.
