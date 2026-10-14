@@ -4,3 +4,6 @@ Welcome to the MXB configuration manual. This guide outlines all environment var
 
 ## Configuration 2: Document Ollama host and port settings
 Configure OLLAMA_HOST and port bindings (defaults to localhost:11434) for local inference connectivity.
+
+## Configuration 3: Define Llama 3.1 model parameter overrides
+Documented model context length (num_ctx=4096) and GPU offload layer parameters in the Modelfile.
