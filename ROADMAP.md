@@ -31,3 +31,6 @@ Design chunking and retrieval engine for personal Obsidian vaults, Markdown note
 
 ## Milestone 11: Outline cross-platform portability targets
 Document architectural abstraction layers required to support future Linux and macOS execution.
+
+## Milestone 12: Plan zero-latency neural TTS streaming with Piper
+Target Piper neural TTS engine for ultra-low latency phoneme streaming and expressive speech synthesis.
