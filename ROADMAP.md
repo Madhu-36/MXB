@@ -46,3 +46,6 @@ Design background heuristics for detecting workflow bottlenecks and suggesting a
 
 ## Milestone 16: Add encrypted biometric authentication for sensitive tasks
 Integrate Windows Hello biometric APIs for authenticating privileged OS execution actions.
+
+## Milestone 17: Plan dynamic plugin ecosystem with Python sidecars
+Define isolated subprocess plugin IPC protocol allowing third-party community extensions.
