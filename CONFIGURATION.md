@@ -19,3 +19,6 @@ Configured RMS audio volume activation floor (0.015) and silence hangover durati
 
 ## Configuration 7: Detail audio sample rate and downmixing settings
 Documented 16,000 Hz target sample rate, 16-bit PCM format, and stereo-to-mono downmixing logic.
+
+## Configuration 8: Add microphone input device index selection
+Provided instructions for specifying default PyAudio input device indices via config.
