@@ -25,3 +25,6 @@ Provided instructions for specifying default PyAudio input device indices via co
 
 ## Configuration 9: Document PySide6 UI opacity and glassmorphism styling
 Documented frameless window flags, translucency settings, and backdrop blur parameters in HUD.
+
+## Configuration 10: Add HUD animation duration and easing curves
+Configured QPropertyAnimation fade-in/fade-out curves (QEasingCurve.InOutQuad, 300ms).
