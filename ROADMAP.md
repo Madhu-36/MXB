@@ -40,3 +40,6 @@ Implement native Windows Notification Area (System Tray) icon with background se
 
 ## Milestone 14: Plan automated email summarization and draft composition
 Design privacy-safe local IMAP/SMTP connector for drafting context-aware email replies.
+
+## Milestone 15: Outline proactive desktop assistance and focus tracking
+Design background heuristics for detecting workflow bottlenecks and suggesting automation macros.
