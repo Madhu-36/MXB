@@ -34,3 +34,6 @@ Document architectural abstraction layers required to support future Linux and m
 
 ## Milestone 12: Plan zero-latency neural TTS streaming with Piper
 Target Piper neural TTS engine for ultra-low latency phoneme streaming and expressive speech synthesis.
+
+## Milestone 13: Add system tray minimize and background service daemon
+Implement native Windows Notification Area (System Tray) icon with background service lifecycle.
