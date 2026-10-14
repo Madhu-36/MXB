@@ -34,3 +34,6 @@ Documented Start Menu shortcut directories, system PATH traversal, and process b
 
 ## Configuration 12: Add DuckDuckGo search result limit and timeout settings
 Configured DDGS max_results=5 and HTTP request timeout=8s for real-time web summarization.
+
+## Configuration 13: Document Open-Meteo latitude and longitude auto-detection
+Detailed automatic GPS coordinate resolution from IP lookup with offline coordinate caching.
