@@ -13,3 +13,6 @@ Detailed default temperature (0.2 for deterministic JSON routing) and top_p (0.9
 
 ## Configuration 5: Add Whisper model size options (tiny, base, small)
 Outlined Whisper STT model selection trade-offs between latency and word error rate on local CPU/GPU.
+
+## Configuration 6: Document Voice Activity Detection (VAD) thresholds
+Configured RMS audio volume activation floor (0.015) and silence hangover duration (1.2s).
