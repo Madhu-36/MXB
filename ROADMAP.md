@@ -28,3 +28,6 @@ Document pipeline for training user-personalized wake words using synthetic voic
 
 ## Milestone 10: Add local RAG engine for personal notes and documents
 Design chunking and retrieval engine for personal Obsidian vaults, Markdown notes, and PDF archives.
+
+## Milestone 11: Outline cross-platform portability targets
+Document architectural abstraction layers required to support future Linux and macOS execution.
