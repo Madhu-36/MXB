@@ -10,3 +10,6 @@ Plan real-time screen parsing via Windows Media OCR APIs and coordinate mapping 
 
 ## Milestone 4: Outline multi-agent tool calling architecture
 Map out autonomous sub-agent orchestration for delegating complex multi-step OS workflows.
+
+## Milestone 5: Add native Windows Bluetooth audio profile handling
+Design automatic switching between Handsfree profile and Stereo audio for wireless headsets.
