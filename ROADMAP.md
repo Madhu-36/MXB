@@ -16,3 +16,6 @@ Design automatic switching between Handsfree profile and Stereo audio for wirele
 
 ## Milestone 6: Plan DirectML hardware acceleration for Whisper
 Target DirectML execution provider for low-latency Whisper STT inference on AMD/Intel/NVIDIA GPUs.
+
+## Milestone 7: Add SQLite vector database for long-term semantic embeddings
+Replace in-memory TF-IDF with persistent SQLite sqlite-vec vector store with local nomic embeddings.
