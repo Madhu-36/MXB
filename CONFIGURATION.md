@@ -52,3 +52,6 @@ Documented Windows registry voice tokens (David/Zira) and speech rate adjustment
 
 ## Configuration 18: Add Windows 11 Toast notification duration and sound toggle
 Configured win11toast notification expiry time, application app_id, and mute flags.
+
+## Configuration 19: Document global hotkey bindings (mute, activate)
+Documented pynput key combinations (Ctrl+Shift+M for mic mute, Ctrl+Shift+Space for manual trigger).
