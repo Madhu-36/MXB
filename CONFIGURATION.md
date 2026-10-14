@@ -16,3 +16,6 @@ Outlined Whisper STT model selection trade-offs between latency and word error r
 
 ## Configuration 6: Document Voice Activity Detection (VAD) thresholds
 Configured RMS audio volume activation floor (0.015) and silence hangover duration (1.2s).
+
+## Configuration 7: Detail audio sample rate and downmixing settings
+Documented 16,000 Hz target sample rate, 16-bit PCM format, and stereo-to-mono downmixing logic.
