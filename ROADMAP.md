@@ -7,3 +7,6 @@ Design architecture for integrating local Vision-LLMs (e.g. LLaVA, MiniCPM) for 
 
 ## Milestone 3: Add screen OCR and visual grounding targets
 Plan real-time screen parsing via Windows Media OCR APIs and coordinate mapping for UI automation.
+
+## Milestone 4: Outline multi-agent tool calling architecture
+Map out autonomous sub-agent orchestration for delegating complex multi-step OS workflows.
