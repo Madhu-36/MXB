@@ -31,3 +31,6 @@ Configured QPropertyAnimation fade-in/fade-out curves (QEasingCurve.InOutQuad, 3
 
 ## Configuration 11: Detail SmartAppLauncher scan directories and exclusions
 Documented Start Menu shortcut directories, system PATH traversal, and process blacklist rules.
+
+## Configuration 12: Add DuckDuckGo search result limit and timeout settings
+Configured DDGS max_results=5 and HTTP request timeout=8s for real-time web summarization.
