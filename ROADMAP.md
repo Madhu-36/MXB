@@ -22,3 +22,6 @@ Replace in-memory TF-IDF with persistent SQLite sqlite-vec vector store with loc
 
 ## Milestone 8: Outline automated daily calendar briefing features
 Plan local Outlook and Google Calendar synchronization for morning voice agenda readouts.
+
+## Milestone 9: Plan custom wake-word training pipeline with openWakeWord
+Document pipeline for training user-personalized wake words using synthetic voice augmentations.
