@@ -43,3 +43,6 @@ Design privacy-safe local IMAP/SMTP connector for drafting context-aware email r
 
 ## Milestone 15: Outline proactive desktop assistance and focus tracking
 Design background heuristics for detecting workflow bottlenecks and suggesting automation macros.
+
+## Milestone 16: Add encrypted biometric authentication for sensitive tasks
+Integrate Windows Hello biometric APIs for authenticating privileged OS execution actions.
