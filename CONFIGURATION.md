@@ -43,3 +43,6 @@ Added fallback providers (ipapi.co, ip-api.com) and rate limit protection mechan
 
 ## Configuration 15: Add MemoryBank JSON persistence path and backup intervals
 Documented memory_bank.json storage directory, write-ahead flushing, and auto-backup schedules.
+
+## Configuration 16: Document TF-IDF similarity threshold for memory recall
+Configured minimum cosine similarity score (0.25) required to inject a past memory into LLM prompt.
