@@ -10,3 +10,6 @@ Documented model context length (num_ctx=4096) and GPU offload layer parameters 
 
 ## Configuration 4: Document temperature and top_p sampling configs
 Detailed default temperature (0.2 for deterministic JSON routing) and top_p (0.9) parameters.
+
+## Configuration 5: Add Whisper model size options (tiny, base, small)
+Outlined Whisper STT model selection trade-offs between latency and word error rate on local CPU/GPU.
