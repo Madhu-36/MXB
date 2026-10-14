@@ -25,3 +25,6 @@ Plan local Outlook and Google Calendar synchronization for morning voice agenda 
 
 ## Milestone 9: Plan custom wake-word training pipeline with openWakeWord
 Document pipeline for training user-personalized wake words using synthetic voice augmentations.
+
+## Milestone 10: Add local RAG engine for personal notes and documents
+Design chunking and retrieval engine for personal Obsidian vaults, Markdown notes, and PDF archives.
