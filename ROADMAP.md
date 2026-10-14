@@ -49,3 +49,6 @@ Integrate Windows Hello biometric APIs for authenticating privileged OS executio
 
 ## Milestone 17: Plan dynamic plugin ecosystem with Python sidecars
 Define isolated subprocess plugin IPC protocol allowing third-party community extensions.
+
+## Milestone 18: Outline offline web archiving and semantic search cache
+Implement headless background web archiving for visited documentation pages and reference material.
