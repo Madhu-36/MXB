@@ -46,3 +46,6 @@ Add fallback endpoints (ip-api, ipapi.co) and local GPS cache fallback when geol
 
 ## Troubleshooting Case 16: Resolve Open-Meteo weather API serialization failures
 Handle null values in hourly weather telemetry and gracefully degrade to standard temperature forecast.
+
+## Troubleshooting Case 17: Fix memory_bank.json corrupted JSON structure recovery
+Implement atomic write (.tmp -> .json rename) and auto-recovery from backup checkpoints if JSON parses invalidly.
