@@ -25,3 +25,6 @@ Tweak silence hangover time (1.2s) and RMS energy thresholds to prevent continuo
 
 ## Troubleshooting Case 9: Fix PySide6 Qt platform plugin windows errors
 Address missing Qt DLL dependencies by setting QT_QPA_PLATFORM_PLUGIN_PATH within the active virtualenv.
+
+## Troubleshooting Case 10: Resolve HUD glassmorphism transparency artifacting
+Fix black backdrop glitches by enabling WA_TranslucentBackground and frameless window flags before show().
