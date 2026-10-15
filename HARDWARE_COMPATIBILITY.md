@@ -58,3 +58,6 @@ Verified Windows Ink and multi-touch tap-to-activate gesture handling on 2-in-1 
 
 ## Hardware Specification 20: Document Windows Mixed Reality and Headset Mic Array isolation
 Documented microphone beamforming array and spatial audio separation for virtual reality headsets.
+
+## Hardware Specification 21: Add PCIe Gen4/Gen5 Bandwidth impact on Model Weight Paging
+Benchmarked PCIe bandwidth impact during memory swapping when GPU VRAM is constrained.
