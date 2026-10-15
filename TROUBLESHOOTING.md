@@ -19,3 +19,6 @@ Configure Windows Sound Control Panel microphone boost and calibrate PyAudio RMS
 
 ## Troubleshooting Case 7: Diagnose Whisper model download timeout and SSL errors
 Troubleshoot HuggingFace/OpenAI Whisper checkpoint downloads with retry proxies and manual weight staging.
+
+## Troubleshooting Case 8: Resolve Voice Activity Detection (VAD) false triggers
+Tweak silence hangover time (1.2s) and RMS energy thresholds to prevent continuous background triggering.
