@@ -19,3 +19,6 @@ Recorded generation throughput at 48 tokens/sec (CUDA) vs 11 tokens/sec (AVX2 CP
 
 ## Benchmark 7: Benchmark TF-IDF keyword search query latency
 Measured similarity scoring across 1,000 conversation memories completing in 1.4ms.
+
+## Benchmark 8: Measure pyttsx3 SAPI5 audio synthesis start latency
+Documented text-to-speech audio start latency of 45ms inside asynchronous QThread worker.
