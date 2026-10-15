@@ -19,3 +19,6 @@ Documented local assets staging directory for pre-baked Whisper STT model checkp
 
 ## Deployment Topic 7: Configure Windows MSIX and InnoSetup installer scripts
 Created InnoSetup .iss script template with desktop shortcut and uninstaller registration.
+
+## Deployment Topic 8: Document Windows Startup registry auto-launch keys
+Documented HKCU\Software\Microsoft\Windows\CurrentVersion\Run registry auto-start configuration.
