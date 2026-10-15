@@ -37,3 +37,6 @@ Outlined sha256 checksum verification verifying local model weights have not bee
 
 ## Privacy Standard 13: Detail SAPI5 local text-to-speech zero-cloud voice guarantee
 Documented reliance on offline Microsoft SAPI5 voices preventing synthesized audio exfiltration.
+
+## Privacy Standard 14: Document Windows Toast notification local IPC security
+Verified that desktop notification payloads stay within local Windows Action Center IPC boundaries.
