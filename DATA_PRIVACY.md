@@ -22,3 +22,6 @@ Documented client-side query sanitization stripping user identifiers prior to we
 
 ## Privacy Standard 8: Document Open-Meteo non-tracking IP weather lookup policy
 Specified non-commercial open API usage with zero tracking headers or API key telemetry.
+
+## Privacy Standard 9: Detail active window title sanitization and sensitive app masking
+Implemented process blacklist masking window titles from banking apps, password managers, and private browsers.
