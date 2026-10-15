@@ -31,3 +31,6 @@ Configured Windows Task Scheduler XML template for automated crash recovery and 
 
 ## Deployment Topic 11: Configure isolated local roaming appdata directories
 Documented %APPDATA%\MXB directory structure for logs, persistent config, and memory bank storage.
+
+## Deployment Topic 12: Document code signing with Windows Authenticode certificates
+Documented signtool.exe code signing pipeline using EV Authenticode certificates to bypass SmartScreen.
