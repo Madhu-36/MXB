@@ -58,3 +58,6 @@ Handle non-ASCII unicode window titles from IDEs and browser tabs gracefully wit
 
 ## Troubleshooting Case 20: Resolve Modelfile hash re-compilation loops
 Store sha256 checksum of Modelfile and verify Ollama model tag existence before triggering ollama create.
+
+## Troubleshooting Case 21: Address CPU thermal throttling during continuous STT
+Optimize Whisper inference thread count and introduce brief sleep periods during silence states.
