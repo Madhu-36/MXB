@@ -31,3 +31,6 @@ Benchmarked live DuckDuckGo query retrieval and HTML text extraction averaging 6
 
 ## Benchmark 11: Benchmark Open-Meteo REST API roundtrip response times
 Recorded 140ms average HTTP roundtrip latency for 7-day weather forecast payload.
+
+## Benchmark 12: Measure IP-based geolocation lookup latency and DNS caching
+Documented 95ms resolution time on initial boot with instantaneous memory cache hits thereafter.
