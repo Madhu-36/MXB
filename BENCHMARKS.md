@@ -34,3 +34,6 @@ Recorded 140ms average HTTP roundtrip latency for 7-day weather forecast payload
 
 ## Benchmark 12: Measure IP-based geolocation lookup latency and DNS caching
 Documented 95ms resolution time on initial boot with instantaneous memory cache hits thereafter.
+
+## Benchmark 13: Benchmark SmartAppLauncher Start Menu traversal speed
+Indexed 240 installed Windows shortcuts (.lnk) in 84ms on system SSD.
