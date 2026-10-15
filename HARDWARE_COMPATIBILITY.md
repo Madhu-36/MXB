@@ -40,3 +40,6 @@ Tested plug-and-play USB microphones (Blue Yeti, Shure MV7, Rode NT-USB) with na
 
 ## Hardware Specification 14: Document Bluetooth 5.0+ LE Audio and Hands-Free latency
 Detailed Bluetooth A2DP vs HFP protocol latency implications and automatic mono fallback switching.
+
+## Hardware Specification 15: Add Dedicated Audio Interface support
+Documented Focusrite Scarlett, PreSonus AudioBox, and MOTU ASIO driver integration and low-latency buffer sizes.
