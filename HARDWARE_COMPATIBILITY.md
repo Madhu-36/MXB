@@ -19,3 +19,6 @@ Outlined partial layer offloading strategies for legacy 4GB-6GB Turing architect
 
 ## Hardware Specification 7: Add AMD Radeon RX 7000-series ROCm and DirectML support
 Documented RDNA 3 architecture support via Microsoft DirectML and native Windows ROCm runtimes.
+
+## Hardware Specification 8: Document Intel Arc Alchemist and Battlemage GPU acceleration
+Configured Intel OneAPI OpenVINO backend acceleration for Intel Arc A770 and integrated Xe graphics.
