@@ -61,3 +61,6 @@ Integrated Windows WER (Windows Error Reporting) minidump crash handlers for pos
 
 ## Deployment Topic 21: Configure offline air-gapped enterprise installation mode
 Documented air-gapped provisioning mode disabling external HTTP requests and relying strictly on local assets.
+
+## Deployment Topic 22: Document release checksum SHA256 validation procedures
+Documented release artifact SHA256 checksum generation and integrity verification steps.
