@@ -31,3 +31,6 @@ Fix black backdrop glitches by enabling WA_TranslucentBackground and frameless w
 
 ## Troubleshooting Case 11: Fix pyttsx3 COM SAPI5 initialization in background thread
 Prevent silent voice synth hang by ensuring pythoncom.CoInitialize() is invoked before pyttsx3.init() in QThread.
+
+## Troubleshooting Case 12: Resolve pynput global keyboard hook permissions on Windows
+Address global hotkey interception failure under elevated Administrator windows and UAC boundaries.
