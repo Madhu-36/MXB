@@ -43,3 +43,6 @@ Implement exponential backoff retries and fallback query scrapers when DDGS enco
 
 ## Troubleshooting Case 15: Fix IP-based geolocation lookup timeouts
 Add fallback endpoints (ip-api, ipapi.co) and local GPS cache fallback when geolocation requests exceed timeout.
+
+## Troubleshooting Case 16: Resolve Open-Meteo weather API serialization failures
+Handle null values in hourly weather telemetry and gracefully degrade to standard temperature forecast.
