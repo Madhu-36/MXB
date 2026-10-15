@@ -43,3 +43,6 @@ Measured Win32 GetForegroundWindow polling consuming <0.02% CPU at 5Hz polling f
 
 ## Benchmark 15: Document RAM working set size across idle vs active states
 Documented memory footprint at 210 MB idle (HUD + VAD listening) and 580 MB peak during STT.
+
+## Benchmark 16: Benchmark VRAM footprint during concurrent Whisper and Llama inference
+Recorded peak VRAM consumption at 4.2 GB when Llama 3.1 8B Q4_K_M and Whisper base run concurrently.
