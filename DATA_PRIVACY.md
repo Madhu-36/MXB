@@ -28,3 +28,6 @@ Implemented process blacklist masking window titles from banking apps, password 
 
 ## Privacy Standard 10: Document clipboard privacy and password manager ignore list
 Ensured clipboard history is never passively read or ingested into LLM context prompts.
+
+## Privacy Standard 11: Define local network air-gapped firewall isolation rules
+Documented Windows Defender Firewall outbound rule configurations for running MXB 100% offline.
