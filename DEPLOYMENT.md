@@ -55,3 +55,6 @@ Detailed session-scoped port allocation and user profile separation on Windows M
 
 ## Deployment Topic 19: Document hardware acceleration driver prerequisites
 Documented NVIDIA CUDA 12.x and Intel OneAPI driver requirements for enabling DirectML/GPU offloading.
+
+## Deployment Topic 20: Add crash reporting and dump minidump generation configuration
+Integrated Windows WER (Windows Error Reporting) minidump crash handlers for post-mortem diagnostics.
