@@ -52,3 +52,6 @@ Formulated formal policy certifying that no user metadata, telemetry, or convers
 
 ## Privacy Standard 18: Detail third-party API opt-in flags and default disabled states
 Configured web search and weather lookups to require explicit user activation via configuration settings.
+
+## Privacy Standard 19: Document diagnostic log rotation and automatic PII scrubbers
+Documented regex-based PII scrubbing filters applied to system diagnostic logs before writing to disk.
