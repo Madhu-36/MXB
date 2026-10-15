@@ -61,3 +61,6 @@ Documented 32ms dispatch time to Windows 11 Action Center notification queue.
 
 ## Benchmark 21: Document audio downsampling latency with Torchaudio 16kHz
 Measured WASAPI 48kHz to Whisper 16kHz downsampling taking 4.1ms for 3-second audio tensor.
+
+## Benchmark 22: Benchmark Modelfile sha256 hashing and boot compilation check
+Measured file integrity hash computation taking 0.3ms during startup sequence.
