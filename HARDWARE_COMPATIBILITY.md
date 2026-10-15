@@ -28,3 +28,6 @@ Documented upcoming Qualcomm Hexagon NPU hardware integration for local 45 TOPS 
 
 ## Hardware Specification 10: Document Minimum and Recommended System RAM configurations
 Specified 16GB dual-channel DDR4/DDR5 as minimum, 32GB recommended for uncompressed model paging.
+
+## Hardware Specification 11: Add NVMe SSD vs SATA SSD read throughput requirements
+Documented PCIe NVMe 3,500 MB/s sequential read requirement for sub-second model weight ingestion.
