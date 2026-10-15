@@ -40,3 +40,6 @@ Indexed 240 installed Windows shortcuts (.lnk) in 84ms on system SSD.
 
 ## Benchmark 14: Measure pygetwindow active window polling overhead
 Measured Win32 GetForegroundWindow polling consuming <0.02% CPU at 5Hz polling frequency.
+
+## Benchmark 15: Document RAM working set size across idle vs active states
+Documented memory footprint at 210 MB idle (HUD + VAD listening) and 580 MB peak during STT.
