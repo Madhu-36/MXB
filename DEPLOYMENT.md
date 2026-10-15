@@ -37,3 +37,6 @@ Documented signtool.exe code signing pipeline using EV Authenticode certificates
 
 ## Deployment Topic 13: Add environment variable override priority for deployed builds
 Outlined configuration resolution order: CLI arguments > Environment variables > JSON config file.
+
+## Deployment Topic 14: Document silent headless unattended installation flags
+Documented /VERYSILENT /NORESTART command-line installer parameters for enterprise mass deployment.
