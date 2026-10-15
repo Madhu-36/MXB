@@ -49,3 +49,6 @@ Handle null values in hourly weather telemetry and gracefully degrade to standar
 
 ## Troubleshooting Case 17: Fix memory_bank.json corrupted JSON structure recovery
 Implement atomic write (.tmp -> .json rename) and auto-recovery from backup checkpoints if JSON parses invalidly.
+
+## Troubleshooting Case 18: Address SmartAppLauncher Start Menu resolution lag
+Cache parsed .lnk targets in memory on startup and invalidate cache asynchronously rather than re-scanning filesystem.
