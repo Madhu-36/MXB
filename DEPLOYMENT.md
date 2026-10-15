@@ -28,3 +28,6 @@ Outlined Windows Service wrapper implementation for headless server and kiosk in
 
 ## Deployment Topic 10: Document Task Scheduler automated watchdog setup
 Configured Windows Task Scheduler XML template for automated crash recovery and health check restarts.
+
+## Deployment Topic 11: Configure isolated local roaming appdata directories
+Documented %APPDATA%\MXB directory structure for logs, persistent config, and memory bank storage.
