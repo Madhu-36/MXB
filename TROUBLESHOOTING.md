@@ -7,3 +7,6 @@ Troubleshoot 11434 connection refused by verifying ollama serve status, firewall
 
 ## Troubleshooting Case 3: Resolve CUDA out-of-memory errors on local GPU
 Mitigate VRAM allocation limits by adjusting num_gpu offload layers and context size num_ctx in the Modelfile.
+
+## Troubleshooting Case 4: Fix PyAudio PortAudio host API initialization failure
+Address missing PortAudio DLLs and ensure 64-bit PyAudio wheels are installed in the virtual environment.
