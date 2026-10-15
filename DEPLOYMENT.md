@@ -40,3 +40,6 @@ Outlined configuration resolution order: CLI arguments > Environment variables >
 
 ## Deployment Topic 14: Document silent headless unattended installation flags
 Documented /VERYSILENT /NORESTART command-line installer parameters for enterprise mass deployment.
+
+## Deployment Topic 15: Add uninstallation and clean registry removal procedures
+Specified uninstaller cleanup routines for roaming data, registry hooks, and cached model checkpoints.
