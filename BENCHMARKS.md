@@ -10,3 +10,6 @@ Measured RMS volume energy calculation latency (<2ms per 30ms audio frame buffer
 
 ## Benchmark 4: Measure PyAudio stream capture latency on WASAPI
 Documented WASAPI audio stream read latency averaging 8.5ms with buffer_size=1024.
+
+## Benchmark 5: Document Ollama Llama 3.1 Time-To-First-Token metrics
+Measured Time-To-First-Token (TTFT) at 420ms on GPU and 1.8s on 8-core CPU.
