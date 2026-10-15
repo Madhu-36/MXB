@@ -7,3 +7,6 @@ Established that all LLM inference and speech recognition execute exclusively on
 
 ## Privacy Standard 3: Document Voice Audio ephemeral memory buffer lifecycle
 Specified that microphone audio streams reside strictly in volatile RAM and are overwritten after inference.
+
+## Privacy Standard 4: Specify zero audio disk persistence policy for raw PCM streams
+Documented architectural guarantee that raw audio waveforms are never saved to disk under any operational state.
