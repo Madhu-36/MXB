@@ -16,3 +16,6 @@ Outlined optional AES-256 local file encryption for conversation memory bank per
 
 ## Privacy Standard 6: Document user memory retention, redaction, and deletion policies
 Documented CLI commands and voice actions for purging individual memories or entire memory banks.
+
+## Privacy Standard 7: Outline DuckDuckGo anonymous search query scrubbing
+Documented client-side query sanitization stripping user identifiers prior to web search dispatch.
