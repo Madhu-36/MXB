@@ -49,3 +49,6 @@ Designed background update checker polling GitHub API releases for signed execut
 
 ## Deployment Topic 17: Add delta binary patching and safe rollback staging
 Documented atomic update replacement and previous version backup staging in %APPDATA%\MXB\backup.
+
+## Deployment Topic 18: Configure multi-user Windows terminal server isolation
+Detailed session-scoped port allocation and user profile separation on Windows MultiPoint/Terminal servers.
