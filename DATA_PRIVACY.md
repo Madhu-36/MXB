@@ -61,3 +61,6 @@ Defined periodic penetration testing and threat modeling checklist for local pri
 
 ## Privacy Standard 21: Document memory bank export, backup, and portable migration
 Provided JSON schema export specifications for migrating user memory banks across devices securely.
+
+## Privacy Standard 22: Detail child safety and sensitive command confirmation safeguards
+Added explicit confirmation dialog requirements for irreversible file deletion and system shutdowns.
