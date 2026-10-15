@@ -16,3 +16,6 @@ Detailed subprocess lifecycle management for launching bundled Ollama server on 
 
 ## Deployment Topic 6: Add Whisper weights offline caching and pre-packaging
 Documented local assets staging directory for pre-baked Whisper STT model checkpoint weights.
+
+## Deployment Topic 7: Configure Windows MSIX and InnoSetup installer scripts
+Created InnoSetup .iss script template with desktop shortcut and uninstaller registration.
