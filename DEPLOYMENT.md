@@ -43,3 +43,6 @@ Documented /VERYSILENT /NORESTART command-line installer parameters for enterpri
 
 ## Deployment Topic 15: Add uninstallation and clean registry removal procedures
 Specified uninstaller cleanup routines for roaming data, registry hooks, and cached model checkpoints.
+
+## Deployment Topic 16: Document auto-updater mechanism with GitHub Releases API
+Designed background update checker polling GitHub API releases for signed executable patches.
