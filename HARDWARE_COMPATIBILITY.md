@@ -34,3 +34,6 @@ Documented PCIe NVMe 3,500 MB/s sequential read requirement for sub-second model
 
 ## Hardware Specification 12: Document Realtek High Definition Audio ALC codecs on WASAPI
 Verified compatibility with Realtek ALC897, ALC1200, and ALC1220 audio hardware codecs under WASAPI exclusive mode.
+
+## Hardware Specification 13: Add USB Studio Microphone compatibility
+Tested plug-and-play USB microphones (Blue Yeti, Shure MV7, Rode NT-USB) with native 24-bit 48kHz capture.
