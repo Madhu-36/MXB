@@ -13,3 +13,6 @@ Documented 4th-Gen Tensor Core acceleration, FP8 tensor cores, and CUDA 12.4 run
 
 ## Hardware Specification 5: Document NVIDIA RTX 30-series Ampere VRAM allocation matrix
 Mapped out VRAM memory budgeting across 8GB, 12GB, and 24GB GPUs for concurrent Llama and Whisper execution.
+
+## Hardware Specification 6: Document NVIDIA GTX 16/20-series Turing GPU offloading
+Outlined partial layer offloading strategies for legacy 4GB-6GB Turing architecture graphics cards.
