@@ -61,3 +61,6 @@ Documented microphone beamforming array and spatial audio separation for virtual
 
 ## Hardware Specification 21: Add PCIe Gen4/Gen5 Bandwidth impact on Model Weight Paging
 Benchmarked PCIe bandwidth impact during memory swapping when GPU VRAM is constrained.
+
+## Hardware Specification 22: Document Motherboard BIOS TPM 2.0 and Secure Boot Requirements
+Documented hardware security module requirements for Windows 11 kernel-level driver isolation.
