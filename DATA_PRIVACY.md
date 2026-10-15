@@ -10,3 +10,6 @@ Specified that microphone audio streams reside strictly in volatile RAM and are 
 
 ## Privacy Standard 4: Specify zero audio disk persistence policy for raw PCM streams
 Documented architectural guarantee that raw audio waveforms are never saved to disk under any operational state.
+
+## Privacy Standard 5: Detail memory_bank.json local storage encryption mechanisms
+Outlined optional AES-256 local file encryption for conversation memory bank persistent storage.
