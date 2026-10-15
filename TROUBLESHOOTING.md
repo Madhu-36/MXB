@@ -37,3 +37,6 @@ Address global hotkey interception failure under elevated Administrator windows 
 
 ## Troubleshooting Case 13: Fix win11toast notification center blockage
 Ensure application app_id is registered with Windows Action Center to avoid silent notification suppression.
+
+## Troubleshooting Case 14: Resolve DuckDuckGo search rate limit and captcha blocks
+Implement exponential backoff retries and fallback query scrapers when DDGS encounters rate limiting.
