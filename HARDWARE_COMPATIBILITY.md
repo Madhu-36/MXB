@@ -10,3 +10,6 @@ Outlined Zen 3, Zen 4, and Zen 5 instruction set support and multi-threading thr
 
 ## Hardware Specification 4: Add NVIDIA RTX 40-series Ada Lovelace CUDA compatibility
 Documented 4th-Gen Tensor Core acceleration, FP8 tensor cores, and CUDA 12.4 runtime optimization.
+
+## Hardware Specification 5: Document NVIDIA RTX 30-series Ampere VRAM allocation matrix
+Mapped out VRAM memory budgeting across 8GB, 12GB, and 24GB GPUs for concurrent Llama and Whisper execution.
