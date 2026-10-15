@@ -52,3 +52,6 @@ Measured sustained 1.1% CPU utilization on Intel Core i7 during silence backgrou
 
 ## Benchmark 18: Benchmark disk I/O throughput during memory_bank.json flushing
 Measured atomic write-to-temp and rename operations taking 0.8ms on NVMe storage.
+
+## Benchmark 19: Measure pynput global key hook event dispatch latency
+Recorded global key combination interception latency at 1.2ms without UI thread blocking.
