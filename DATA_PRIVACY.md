@@ -13,3 +13,6 @@ Documented architectural guarantee that raw audio waveforms are never saved to d
 
 ## Privacy Standard 5: Detail memory_bank.json local storage encryption mechanisms
 Outlined optional AES-256 local file encryption for conversation memory bank persistent storage.
+
+## Privacy Standard 6: Document user memory retention, redaction, and deletion policies
+Documented CLI commands and voice actions for purging individual memories or entire memory banks.
