@@ -52,3 +52,6 @@ Implement atomic write (.tmp -> .json rename) and auto-recovery from backup chec
 
 ## Troubleshooting Case 18: Address SmartAppLauncher Start Menu resolution lag
 Cache parsed .lnk targets in memory on startup and invalidate cache asynchronously rather than re-scanning filesystem.
+
+## Troubleshooting Case 19: Fix pygetwindow Active Window title encoding errors
+Handle non-ASCII unicode window titles from IDEs and browser tabs gracefully without throwing utf-8 decode errors.
