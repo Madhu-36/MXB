@@ -46,3 +46,6 @@ Documented memory footprint at 210 MB idle (HUD + VAD listening) and 580 MB peak
 
 ## Benchmark 16: Benchmark VRAM footprint during concurrent Whisper and Llama inference
 Recorded peak VRAM consumption at 4.2 GB when Llama 3.1 8B Q4_K_M and Whisper base run concurrently.
+
+## Benchmark 17: Measure CPU utilization during continuous audio background listening
+Measured sustained 1.1% CPU utilization on Intel Core i7 during silence background VAD loop.
