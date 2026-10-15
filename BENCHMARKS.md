@@ -1,3 +1,6 @@
 
 ## Benchmark 1: Initialize MXB Performance Benchmarks & Metrics
 Started performance and latency benchmark suite for MXB V2.0 architecture components.
+
+## Benchmark 2: Document Whisper STT inference latency across model sizes
+Benchmarked Whisper tiny (180ms), base (340ms), and small (720ms) on NVIDIA RTX 30-series GPU.
