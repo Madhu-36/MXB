@@ -58,3 +58,6 @@ Documented NVIDIA CUDA 12.x and Intel OneAPI driver requirements for enabling Di
 
 ## Deployment Topic 20: Add crash reporting and dump minidump generation configuration
 Integrated Windows WER (Windows Error Reporting) minidump crash handlers for post-mortem diagnostics.
+
+## Deployment Topic 21: Configure offline air-gapped enterprise installation mode
+Documented air-gapped provisioning mode disabling external HTTP requests and relying strictly on local assets.
