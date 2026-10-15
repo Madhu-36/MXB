@@ -34,3 +34,6 @@ Prevent silent voice synth hang by ensuring pythoncom.CoInitialize() is invoked 
 
 ## Troubleshooting Case 12: Resolve pynput global keyboard hook permissions on Windows
 Address global hotkey interception failure under elevated Administrator windows and UAC boundaries.
+
+## Troubleshooting Case 13: Fix win11toast notification center blockage
+Ensure application app_id is registered with Windows Action Center to avoid silent notification suppression.
