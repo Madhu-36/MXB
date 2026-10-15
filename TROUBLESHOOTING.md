@@ -28,3 +28,6 @@ Address missing Qt DLL dependencies by setting QT_QPA_PLATFORM_PLUGIN_PATH withi
 
 ## Troubleshooting Case 10: Resolve HUD glassmorphism transparency artifacting
 Fix black backdrop glitches by enabling WA_TranslucentBackground and frameless window flags before show().
+
+## Troubleshooting Case 11: Fix pyttsx3 COM SAPI5 initialization in background thread
+Prevent silent voice synth hang by ensuring pythoncom.CoInitialize() is invoked before pyttsx3.init() in QThread.
