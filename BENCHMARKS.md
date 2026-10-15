@@ -22,3 +22,6 @@ Measured similarity scoring across 1,000 conversation memories completing in 1.4
 
 ## Benchmark 8: Measure pyttsx3 SAPI5 audio synthesis start latency
 Documented text-to-speech audio start latency of 45ms inside asynchronous QThread worker.
+
+## Benchmark 9: Benchmark PySide6 HUD glassmorphism render frametimes
+Recorded 60 FPS locked render frametimes (16.2ms per frame) during translucency fade-in.
