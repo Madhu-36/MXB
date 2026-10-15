@@ -52,3 +52,6 @@ Configured automatic whisper model down-stepping to tiny model on DC battery pow
 
 ## Hardware Specification 18: Document Multi-Display Resolution and Refresh Rate Support
 Tested PySide6 frameless HUD on 4K 144Hz, Ultrawide 21:9, and multi-monitor mixed-DPI display topologies.
+
+## Hardware Specification 19: Add Touchscreen and Pen Digitizer interaction compatibility
+Verified Windows Ink and multi-touch tap-to-activate gesture handling on 2-in-1 convertible PCs.
