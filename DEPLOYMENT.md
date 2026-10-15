@@ -10,3 +10,6 @@ Configured PySide6 qml, translations, and platforms plugin bundling in the pyins
 
 ## Deployment Topic 4: Configure UPX compression rules for bundled binaries
 Specified UPX compression flags and exclusion lists to optimize installer size without corrupting DLLs.
+
+## Deployment Topic 5: Document Ollama sidecar bundling and headless daemon launch
+Detailed subprocess lifecycle management for launching bundled Ollama server on localhost:11434.
