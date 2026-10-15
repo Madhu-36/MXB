@@ -37,3 +37,6 @@ Verified compatibility with Realtek ALC897, ALC1200, and ALC1220 audio hardware 
 
 ## Hardware Specification 13: Add USB Studio Microphone compatibility
 Tested plug-and-play USB microphones (Blue Yeti, Shure MV7, Rode NT-USB) with native 24-bit 48kHz capture.
+
+## Hardware Specification 14: Document Bluetooth 5.0+ LE Audio and Hands-Free latency
+Detailed Bluetooth A2DP vs HFP protocol latency implications and automatic mono fallback switching.
