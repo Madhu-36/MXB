@@ -43,3 +43,6 @@ Detailed Bluetooth A2DP vs HFP protocol latency implications and automatic mono 
 
 ## Hardware Specification 15: Add Dedicated Audio Interface support
 Documented Focusrite Scarlett, PreSonus AudioBox, and MOTU ASIO driver integration and low-latency buffer sizes.
+
+## Hardware Specification 16: Document Hardware Thermal Limits and Fan Profiles under STT load
+Outlined thermal dissipation benchmarks and power target capping to prevent CPU thermal throttling.
