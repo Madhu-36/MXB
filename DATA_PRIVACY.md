@@ -55,3 +55,6 @@ Configured web search and weather lookups to require explicit user activation vi
 
 ## Privacy Standard 19: Document diagnostic log rotation and automatic PII scrubbers
 Documented regex-based PII scrubbing filters applied to system diagnostic logs before writing to disk.
+
+## Privacy Standard 20: Add developer security audit protocol and threat modeling
+Defined periodic penetration testing and threat modeling checklist for local privilege escalation vectors.
