@@ -13,3 +13,6 @@ Address missing PortAudio DLLs and ensure 64-bit PyAudio wheels are installed in
 
 ## Troubleshooting Case 5: Address WASAPI Realtek audio sample rate mismatch
 Resolve Windows WASAPI hardware conflicts by querying device native sample rate and resampling to 16kHz via Torchaudio.
+
+## Troubleshooting Case 6: Fix microphone silence and low input gain issues
+Configure Windows Sound Control Panel microphone boost and calibrate PyAudio RMS threshold above noise floor.
