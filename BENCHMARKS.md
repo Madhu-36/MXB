@@ -28,3 +28,6 @@ Recorded 60 FPS locked render frametimes (16.2ms per frame) during translucency 
 
 ## Benchmark 10: Measure DuckDuckGo web search scraping and parse latency
 Benchmarked live DuckDuckGo query retrieval and HTML text extraction averaging 620ms.
+
+## Benchmark 11: Benchmark Open-Meteo REST API roundtrip response times
+Recorded 140ms average HTTP roundtrip latency for 7-day weather forecast payload.
