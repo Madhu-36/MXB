@@ -49,3 +49,6 @@ Recorded peak VRAM consumption at 4.2 GB when Llama 3.1 8B Q4_K_M and Whisper ba
 
 ## Benchmark 17: Measure CPU utilization during continuous audio background listening
 Measured sustained 1.1% CPU utilization on Intel Core i7 during silence background VAD loop.
+
+## Benchmark 18: Benchmark disk I/O throughput during memory_bank.json flushing
+Measured atomic write-to-temp and rename operations taking 0.8ms on NVMe storage.
