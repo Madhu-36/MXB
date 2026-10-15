@@ -43,3 +43,6 @@ Verified that desktop notification payloads stay within local Windows Action Cen
 
 ## Privacy Standard 15: Add biometric Windows Hello access control specification
 Designed user verification step using Windows Hello fingerprint/face recognition before executing critical commands.
+
+## Privacy Standard 16: Document GDPR Article 17 Right to Erasure implementation
+Outlined compliance with Right to Erasure allowing one-click complete eradication of all user artifacts.
