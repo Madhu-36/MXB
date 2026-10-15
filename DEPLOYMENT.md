@@ -25,3 +25,6 @@ Documented HKCU\Software\Microsoft\Windows\CurrentVersion\Run registry auto-star
 
 ## Deployment Topic 9: Add Windows Service background execution configuration
 Outlined Windows Service wrapper implementation for headless server and kiosk installations.
+
+## Deployment Topic 10: Document Task Scheduler automated watchdog setup
+Configured Windows Task Scheduler XML template for automated crash recovery and health check restarts.
