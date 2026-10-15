@@ -16,3 +16,6 @@ Measured Time-To-First-Token (TTFT) at 420ms on GPU and 1.8s on 8-core CPU.
 
 ## Benchmark 6: Measure LLM token generation throughput on CPU vs GPU
 Recorded generation throughput at 48 tokens/sec (CUDA) vs 11 tokens/sec (AVX2 CPU).
+
+## Benchmark 7: Benchmark TF-IDF keyword search query latency
+Measured similarity scoring across 1,000 conversation memories completing in 1.4ms.
