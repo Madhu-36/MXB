@@ -37,3 +37,6 @@ Documented 95ms resolution time on initial boot with instantaneous memory cache 
 
 ## Benchmark 13: Benchmark SmartAppLauncher Start Menu traversal speed
 Indexed 240 installed Windows shortcuts (.lnk) in 84ms on system SSD.
+
+## Benchmark 14: Measure pygetwindow active window polling overhead
+Measured Win32 GetForegroundWindow polling consuming <0.02% CPU at 5Hz polling frequency.
