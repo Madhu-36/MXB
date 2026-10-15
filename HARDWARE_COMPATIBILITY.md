@@ -16,3 +16,6 @@ Mapped out VRAM memory budgeting across 8GB, 12GB, and 24GB GPUs for concurrent 
 
 ## Hardware Specification 6: Document NVIDIA GTX 16/20-series Turing GPU offloading
 Outlined partial layer offloading strategies for legacy 4GB-6GB Turing architecture graphics cards.
+
+## Hardware Specification 7: Add AMD Radeon RX 7000-series ROCm and DirectML support
+Documented RDNA 3 architecture support via Microsoft DirectML and native Windows ROCm runtimes.
