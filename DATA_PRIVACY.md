@@ -46,3 +46,6 @@ Designed user verification step using Windows Hello fingerprint/face recognition
 
 ## Privacy Standard 16: Document GDPR Article 17 Right to Erasure implementation
 Outlined compliance with Right to Erasure allowing one-click complete eradication of all user artifacts.
+
+## Privacy Standard 17: Document CCPA compliance and zero personal data sale policy
+Formulated formal policy certifying that no user metadata, telemetry, or conversation data is collected or sold.
