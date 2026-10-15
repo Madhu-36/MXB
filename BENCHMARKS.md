@@ -13,3 +13,6 @@ Documented WASAPI audio stream read latency averaging 8.5ms with buffer_size=102
 
 ## Benchmark 5: Document Ollama Llama 3.1 Time-To-First-Token metrics
 Measured Time-To-First-Token (TTFT) at 420ms on GPU and 1.8s on 8-core CPU.
+
+## Benchmark 6: Measure LLM token generation throughput on CPU vs GPU
+Recorded generation throughput at 48 tokens/sec (CUDA) vs 11 tokens/sec (AVX2 CPU).
