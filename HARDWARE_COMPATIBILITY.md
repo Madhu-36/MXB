@@ -22,3 +22,6 @@ Documented RDNA 3 architecture support via Microsoft DirectML and native Windows
 
 ## Hardware Specification 8: Document Intel Arc Alchemist and Battlemage GPU acceleration
 Configured Intel OneAPI OpenVINO backend acceleration for Intel Arc A770 and integrated Xe graphics.
+
+## Hardware Specification 9: Add Qualcomm Snapdragon X Elite ARM64 NPU integration targets
+Documented upcoming Qualcomm Hexagon NPU hardware integration for local 45 TOPS INT4 execution.
