@@ -31,3 +31,6 @@ Ensured clipboard history is never passively read or ingested into LLM context p
 
 ## Privacy Standard 11: Define local network air-gapped firewall isolation rules
 Documented Windows Defender Firewall outbound rule configurations for running MXB 100% offline.
+
+## Privacy Standard 12: Document Ollama local model weights provenance and hash checks
+Outlined sha256 checksum verification verifying local model weights have not been tampered with.
