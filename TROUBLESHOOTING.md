@@ -16,3 +16,6 @@ Resolve Windows WASAPI hardware conflicts by querying device native sample rate 
 
 ## Troubleshooting Case 6: Fix microphone silence and low input gain issues
 Configure Windows Sound Control Panel microphone boost and calibrate PyAudio RMS threshold above noise floor.
+
+## Troubleshooting Case 7: Diagnose Whisper model download timeout and SSL errors
+Troubleshoot HuggingFace/OpenAI Whisper checkpoint downloads with retry proxies and manual weight staging.
