@@ -10,3 +10,6 @@ Mitigate VRAM allocation limits by adjusting num_gpu offload layers and context 
 
 ## Troubleshooting Case 4: Fix PyAudio PortAudio host API initialization failure
 Address missing PortAudio DLLs and ensure 64-bit PyAudio wheels are installed in the virtual environment.
+
+## Troubleshooting Case 5: Address WASAPI Realtek audio sample rate mismatch
+Resolve Windows WASAPI hardware conflicts by querying device native sample rate and resampling to 16kHz via Torchaudio.
