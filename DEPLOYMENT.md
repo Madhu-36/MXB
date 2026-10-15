@@ -34,3 +34,6 @@ Documented %APPDATA%\MXB directory structure for logs, persistent config, and me
 
 ## Deployment Topic 12: Document code signing with Windows Authenticode certificates
 Documented signtool.exe code signing pipeline using EV Authenticode certificates to bypass SmartScreen.
+
+## Deployment Topic 13: Add environment variable override priority for deployed builds
+Outlined configuration resolution order: CLI arguments > Environment variables > JSON config file.
