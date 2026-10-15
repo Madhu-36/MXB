@@ -52,3 +52,6 @@ Documented atomic update replacement and previous version backup staging in %APP
 
 ## Deployment Topic 18: Configure multi-user Windows terminal server isolation
 Detailed session-scoped port allocation and user profile separation on Windows MultiPoint/Terminal servers.
+
+## Deployment Topic 19: Document hardware acceleration driver prerequisites
+Documented NVIDIA CUDA 12.x and Intel OneAPI driver requirements for enabling DirectML/GPU offloading.
