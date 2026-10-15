@@ -46,3 +46,6 @@ Specified uninstaller cleanup routines for roaming data, registry hooks, and cac
 
 ## Deployment Topic 16: Document auto-updater mechanism with GitHub Releases API
 Designed background update checker polling GitHub API releases for signed executable patches.
+
+## Deployment Topic 17: Add delta binary patching and safe rollback staging
+Documented atomic update replacement and previous version backup staging in %APPDATA%\MXB\backup.
