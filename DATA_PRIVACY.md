@@ -25,3 +25,6 @@ Specified non-commercial open API usage with zero tracking headers or API key te
 
 ## Privacy Standard 9: Detail active window title sanitization and sensitive app masking
 Implemented process blacklist masking window titles from banking apps, password managers, and private browsers.
+
+## Privacy Standard 10: Document clipboard privacy and password manager ignore list
+Ensured clipboard history is never passively read or ingested into LLM context prompts.
