@@ -58,3 +58,6 @@ Documented regex-based PII scrubbing filters applied to system diagnostic logs b
 
 ## Privacy Standard 20: Add developer security audit protocol and threat modeling
 Defined periodic penetration testing and threat modeling checklist for local privilege escalation vectors.
+
+## Privacy Standard 21: Document memory bank export, backup, and portable migration
+Provided JSON schema export specifications for migrating user memory banks across devices securely.
