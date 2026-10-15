@@ -46,3 +46,6 @@ Documented Focusrite Scarlett, PreSonus AudioBox, and MOTU ASIO driver integrati
 
 ## Hardware Specification 16: Document Hardware Thermal Limits and Fan Profiles under STT load
 Outlined thermal dissipation benchmarks and power target capping to prevent CPU thermal throttling.
+
+## Hardware Specification 17: Add Laptop Battery Optimization and Dynamic GPU Power States
+Configured automatic whisper model down-stepping to tiny model on DC battery power mode.
