@@ -25,3 +25,6 @@ Configured Intel OneAPI OpenVINO backend acceleration for Intel Arc A770 and int
 
 ## Hardware Specification 9: Add Qualcomm Snapdragon X Elite ARM64 NPU integration targets
 Documented upcoming Qualcomm Hexagon NPU hardware integration for local 45 TOPS INT4 execution.
+
+## Hardware Specification 10: Document Minimum and Recommended System RAM configurations
+Specified 16GB dual-channel DDR4/DDR5 as minimum, 32GB recommended for uncompressed model paging.
