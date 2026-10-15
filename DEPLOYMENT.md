@@ -13,3 +13,6 @@ Specified UPX compression flags and exclusion lists to optimize installer size w
 
 ## Deployment Topic 5: Document Ollama sidecar bundling and headless daemon launch
 Detailed subprocess lifecycle management for launching bundled Ollama server on localhost:11434.
+
+## Deployment Topic 6: Add Whisper weights offline caching and pre-packaging
+Documented local assets staging directory for pre-baked Whisper STT model checkpoint weights.
