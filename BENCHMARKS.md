@@ -55,3 +55,6 @@ Measured atomic write-to-temp and rename operations taking 0.8ms on NVMe storage
 
 ## Benchmark 19: Measure pynput global key hook event dispatch latency
 Recorded global key combination interception latency at 1.2ms without UI thread blocking.
+
+## Benchmark 20: Benchmark win11toast notification delivery timing
+Documented 32ms dispatch time to Windows 11 Action Center notification queue.
