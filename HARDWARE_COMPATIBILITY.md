@@ -49,3 +49,6 @@ Outlined thermal dissipation benchmarks and power target capping to prevent CPU 
 
 ## Hardware Specification 17: Add Laptop Battery Optimization and Dynamic GPU Power States
 Configured automatic whisper model down-stepping to tiny model on DC battery power mode.
+
+## Hardware Specification 18: Document Multi-Display Resolution and Refresh Rate Support
+Tested PySide6 frameless HUD on 4K 144Hz, Ultrawide 21:9, and multi-monitor mixed-DPI display topologies.
