@@ -49,3 +49,6 @@ Outlined compliance with Right to Erasure allowing one-click complete eradicatio
 
 ## Privacy Standard 17: Document CCPA compliance and zero personal data sale policy
 Formulated formal policy certifying that no user metadata, telemetry, or conversation data is collected or sold.
+
+## Privacy Standard 18: Detail third-party API opt-in flags and default disabled states
+Configured web search and weather lookups to require explicit user activation via configuration settings.
