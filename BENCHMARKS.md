@@ -25,3 +25,6 @@ Documented text-to-speech audio start latency of 45ms inside asynchronous QThrea
 
 ## Benchmark 9: Benchmark PySide6 HUD glassmorphism render frametimes
 Recorded 60 FPS locked render frametimes (16.2ms per frame) during translucency fade-in.
+
+## Benchmark 10: Measure DuckDuckGo web search scraping and parse latency
+Benchmarked live DuckDuckGo query retrieval and HTML text extraction averaging 620ms.
