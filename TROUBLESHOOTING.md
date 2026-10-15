@@ -61,3 +61,6 @@ Store sha256 checksum of Modelfile and verify Ollama model tag existence before 
 
 ## Troubleshooting Case 21: Address CPU thermal throttling during continuous STT
 Optimize Whisper inference thread count and introduce brief sleep periods during silence states.
+
+## Troubleshooting Case 22: Fix virtual environment activation pathing issues
+Provide troubleshooting steps for PowerShell execution policy restrictions (Set-ExecutionPolicy RemoteSigned).
