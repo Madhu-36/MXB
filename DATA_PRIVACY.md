@@ -19,3 +19,6 @@ Documented CLI commands and voice actions for purging individual memories or ent
 
 ## Privacy Standard 7: Outline DuckDuckGo anonymous search query scrubbing
 Documented client-side query sanitization stripping user identifiers prior to web search dispatch.
+
+## Privacy Standard 8: Document Open-Meteo non-tracking IP weather lookup policy
+Specified non-commercial open API usage with zero tracking headers or API key telemetry.
