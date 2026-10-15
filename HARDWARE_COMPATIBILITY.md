@@ -31,3 +31,6 @@ Specified 16GB dual-channel DDR4/DDR5 as minimum, 32GB recommended for uncompres
 
 ## Hardware Specification 11: Add NVMe SSD vs SATA SSD read throughput requirements
 Documented PCIe NVMe 3,500 MB/s sequential read requirement for sub-second model weight ingestion.
+
+## Hardware Specification 12: Document Realtek High Definition Audio ALC codecs on WASAPI
+Verified compatibility with Realtek ALC897, ALC1200, and ALC1220 audio hardware codecs under WASAPI exclusive mode.
