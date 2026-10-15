@@ -22,3 +22,6 @@ Troubleshoot HuggingFace/OpenAI Whisper checkpoint downloads with retry proxies 
 
 ## Troubleshooting Case 8: Resolve Voice Activity Detection (VAD) false triggers
 Tweak silence hangover time (1.2s) and RMS energy thresholds to prevent continuous background triggering.
+
+## Troubleshooting Case 9: Fix PySide6 Qt platform plugin windows errors
+Address missing Qt DLL dependencies by setting QT_QPA_PLATFORM_PLUGIN_PATH within the active virtualenv.
