@@ -40,3 +40,6 @@ Documented reliance on offline Microsoft SAPI5 voices preventing synthesized aud
 
 ## Privacy Standard 14: Document Windows Toast notification local IPC security
 Verified that desktop notification payloads stay within local Windows Action Center IPC boundaries.
+
+## Privacy Standard 15: Add biometric Windows Hello access control specification
+Designed user verification step using Windows Hello fingerprint/face recognition before executing critical commands.
