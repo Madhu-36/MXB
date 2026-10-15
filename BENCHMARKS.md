@@ -58,3 +58,6 @@ Recorded global key combination interception latency at 1.2ms without UI thread 
 
 ## Benchmark 20: Benchmark win11toast notification delivery timing
 Documented 32ms dispatch time to Windows 11 Action Center notification queue.
+
+## Benchmark 21: Document audio downsampling latency with Torchaudio 16kHz
+Measured WASAPI 48kHz to Whisper 16kHz downsampling taking 4.1ms for 3-second audio tensor.
