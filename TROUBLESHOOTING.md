@@ -40,3 +40,6 @@ Ensure application app_id is registered with Windows Action Center to avoid sile
 
 ## Troubleshooting Case 14: Resolve DuckDuckGo search rate limit and captcha blocks
 Implement exponential backoff retries and fallback query scrapers when DDGS encounters rate limiting.
+
+## Troubleshooting Case 15: Fix IP-based geolocation lookup timeouts
+Add fallback endpoints (ip-api, ipapi.co) and local GPS cache fallback when geolocation requests exceed timeout.
