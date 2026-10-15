@@ -22,3 +22,6 @@ Created InnoSetup .iss script template with desktop shortcut and uninstaller reg
 
 ## Deployment Topic 8: Document Windows Startup registry auto-launch keys
 Documented HKCU\Software\Microsoft\Windows\CurrentVersion\Run registry auto-start configuration.
+
+## Deployment Topic 9: Add Windows Service background execution configuration
+Outlined Windows Service wrapper implementation for headless server and kiosk installations.
