@@ -55,3 +55,6 @@ Tested PySide6 frameless HUD on 4K 144Hz, Ultrawide 21:9, and multi-monitor mixe
 
 ## Hardware Specification 19: Add Touchscreen and Pen Digitizer interaction compatibility
 Verified Windows Ink and multi-touch tap-to-activate gesture handling on 2-in-1 convertible PCs.
+
+## Hardware Specification 20: Document Windows Mixed Reality and Headset Mic Array isolation
+Documented microphone beamforming array and spatial audio separation for virtual reality headsets.
