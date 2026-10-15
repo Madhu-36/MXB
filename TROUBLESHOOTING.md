@@ -55,3 +55,6 @@ Cache parsed .lnk targets in memory on startup and invalidate cache asynchronous
 
 ## Troubleshooting Case 19: Fix pygetwindow Active Window title encoding errors
 Handle non-ASCII unicode window titles from IDEs and browser tabs gracefully without throwing utf-8 decode errors.
+
+## Troubleshooting Case 20: Resolve Modelfile hash re-compilation loops
+Store sha256 checksum of Modelfile and verify Ollama model tag existence before triggering ollama create.
