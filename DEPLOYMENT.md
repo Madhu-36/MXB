@@ -7,3 +7,6 @@ Defined PyInstaller entrypoint specifications, hidden imports, and binary hooks 
 
 ## Deployment Topic 3: Add PySide6 Qt platform plugin asset collection spec
 Configured PySide6 qml, translations, and platforms plugin bundling in the pyinstaller specfile.
+
+## Deployment Topic 4: Configure UPX compression rules for bundled binaries
+Specified UPX compression flags and exclusion lists to optimize installer size without corrupting DLLs.
