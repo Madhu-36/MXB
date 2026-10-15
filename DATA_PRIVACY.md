@@ -34,3 +34,6 @@ Documented Windows Defender Firewall outbound rule configurations for running MX
 
 ## Privacy Standard 12: Document Ollama local model weights provenance and hash checks
 Outlined sha256 checksum verification verifying local model weights have not been tampered with.
+
+## Privacy Standard 13: Detail SAPI5 local text-to-speech zero-cloud voice guarantee
+Documented reliance on offline Microsoft SAPI5 voices preventing synthesized audio exfiltration.
