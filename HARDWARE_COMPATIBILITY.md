@@ -7,3 +7,6 @@ Documented vector instruction set acceleration for CPU-bound quantization kernel
 
 ## Hardware Specification 3: Document AMD Ryzen and EPYC processor instruction sets
 Outlined Zen 3, Zen 4, and Zen 5 instruction set support and multi-threading thread pool tuning.
+
+## Hardware Specification 4: Add NVIDIA RTX 40-series Ada Lovelace CUDA compatibility
+Documented 4th-Gen Tensor Core acceleration, FP8 tensor cores, and CUDA 12.4 runtime optimization.
