@@ -13,3 +13,6 @@ Added instructions for interactive ambient noise floor measurement and optimal R
 
 ## CLI Command 5: Add VAD energy threshold test mode (mxb audio --test-vad)
 Documented real-time terminal VU meter visualization showing speech activation thresholds and silence hangover timers.
+
+## CLI Command 6: Document Ollama inference ping command (mxb llm --ping)
+Added connectivity verification command checking Ollama HTTP REST daemon availability on localhost:11434.
