@@ -10,3 +10,6 @@ Documented PyAudio host API querying and input/output index enumeration with sup
 
 ## CLI Command 4: Document microphone sensitivity calibration tool (mxb audio --calibrate)
 Added instructions for interactive ambient noise floor measurement and optimal RMS threshold calculation.
+
+## CLI Command 5: Add VAD energy threshold test mode (mxb audio --test-vad)
+Documented real-time terminal VU meter visualization showing speech activation thresholds and silence hangover timers.
