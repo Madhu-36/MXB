@@ -49,3 +49,6 @@ Documented headless search command retrieving raw search snippets and piped summ
 
 ## CLI Command 17: Add weather telemetry lookup command (mxb weather --current)
 Documented standalone weather reporting tool fetching Open-Meteo forecasts for auto-detected GPS coordinates.
+
+## CLI Command 18: Document system diagnostics telemetry readout (mxb diag --full)
+Documented comprehensive system status report outputting CPU, GPU, RAM, VRAM, and thermal sensors via psutil.
