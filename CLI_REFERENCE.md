@@ -61,3 +61,6 @@ Added terminal debugging mode logging global keypress combinations intercepted b
 
 ## CLI Command 21: Add configuration validation tool (mxb config --validate)
 Documented schema validation utility checking environment variables, paths, and JSON configs for syntax errors.
+
+## CLI Command 22: Document JSON output mode for programmatic scripting (--json)
+Documented global --json flag formatting all CLI command outputs into machine-readable JSON for pipeline automation.
