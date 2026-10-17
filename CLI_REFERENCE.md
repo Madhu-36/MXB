@@ -19,3 +19,6 @@ Added connectivity verification command checking Ollama HTTP REST daemon availab
 
 ## CLI Command 7: Add Modelfile recompile trigger flag (mxb llm --recompile)
 Documented manual re-compilation trigger for rebuilding the local Ollama Modelfile with updated system prompts.
+
+## CLI Command 8: Document memory bank query tool (mxb memory --query <text>)
+Documented terminal search command querying memory_bank.json using TF-IDF cosine similarity scoring.
