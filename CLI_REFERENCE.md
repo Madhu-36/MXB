@@ -55,3 +55,6 @@ Documented comprehensive system status report outputting CPU, GPU, RAM, VRAM, an
 
 ## CLI Command 19: Add SAPI5 TTS speech test flag (mxb voice --speak <text>)
 Documented terminal synthesis utility testing Microsoft SAPI5 voice output, speech rate, and volume.
+
+## CLI Command 20: Document hotkey listener standalone mode (mxb hotkeys --listen)
+Added terminal debugging mode logging global keypress combinations intercepted by pynput listeners.
