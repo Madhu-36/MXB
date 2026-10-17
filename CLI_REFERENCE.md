@@ -34,3 +34,6 @@ Documented retention cleanup utility for pruning memories older than N days or e
 
 ## CLI Command 12: Document live desktop notification test (mxb notify --test)
 Added CLI verification utility dispatching test Windows 11 Action Center toast notifications.
+
+## CLI Command 13: Add active window tracker monitoring mode (mxb window --monitor)
+Documented continuous terminal logger outputting Win32 active window titles, process names, and PID transitions.
