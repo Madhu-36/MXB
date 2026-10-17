@@ -58,3 +58,6 @@ Documented terminal synthesis utility testing Microsoft SAPI5 voice output, spee
 
 ## CLI Command 20: Document hotkey listener standalone mode (mxb hotkeys --listen)
 Added terminal debugging mode logging global keypress combinations intercepted by pynput listeners.
+
+## CLI Command 21: Add configuration validation tool (mxb config --validate)
+Documented schema validation utility checking environment variables, paths, and JSON configs for syntax errors.
