@@ -22,3 +22,6 @@ Documented manual re-compilation trigger for rebuilding the local Ollama Modelfi
 
 ## CLI Command 8: Document memory bank query tool (mxb memory --query <text>)
 Documented terminal search command querying memory_bank.json using TF-IDF cosine similarity scoring.
+
+## CLI Command 9: Add memory bank inspection and stats command (mxb memory --stats)
+Documented metadata readout reporting total conversation count, unique vocabulary size, and memory file size.
