@@ -43,3 +43,6 @@ Documented fuzzy match search utility querying installed Start Menu shortcuts an
 
 ## CLI Command 15: Add Start Menu index rebuilding command (mxb app --reindex)
 Documented background filesystem crawler refreshing the local cached shortcut registry in memory.
+
+## CLI Command 16: Document DuckDuckGo headless query tool (mxb search --query <term>)
+Documented headless search command retrieving raw search snippets and piped summaries via Llama 3.1.
