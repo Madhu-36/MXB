@@ -37,3 +37,6 @@ Added CLI verification utility dispatching test Windows 11 Action Center toast n
 
 ## CLI Command 13: Add active window tracker monitoring mode (mxb window --monitor)
 Documented continuous terminal logger outputting Win32 active window titles, process names, and PID transitions.
+
+## CLI Command 14: Document SmartAppLauncher fuzzy search utility (mxb app --search <query>)
+Documented fuzzy match search utility querying installed Start Menu shortcuts and reporting resolve paths.
