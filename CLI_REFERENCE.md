@@ -25,3 +25,6 @@ Documented terminal search command querying memory_bank.json using TF-IDF cosine
 
 ## CLI Command 9: Add memory bank inspection and stats command (mxb memory --stats)
 Documented metadata readout reporting total conversation count, unique vocabulary size, and memory file size.
+
+## CLI Command 10: Document memory bank backup command (mxb memory --backup)
+Documented timestamped snapshot generation creating atomic JSON archives in %APPDATA%\MXB\backups.
