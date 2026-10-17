@@ -46,3 +46,6 @@ Documented background filesystem crawler refreshing the local cached shortcut re
 
 ## CLI Command 16: Document DuckDuckGo headless query tool (mxb search --query <term>)
 Documented headless search command retrieving raw search snippets and piped summaries via Llama 3.1.
+
+## CLI Command 17: Add weather telemetry lookup command (mxb weather --current)
+Documented standalone weather reporting tool fetching Open-Meteo forecasts for auto-detected GPS coordinates.
