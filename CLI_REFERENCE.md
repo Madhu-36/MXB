@@ -40,3 +40,6 @@ Documented continuous terminal logger outputting Win32 active window titles, pro
 
 ## CLI Command 14: Document SmartAppLauncher fuzzy search utility (mxb app --search <query>)
 Documented fuzzy match search utility querying installed Start Menu shortcuts and reporting resolve paths.
+
+## CLI Command 15: Add Start Menu index rebuilding command (mxb app --reindex)
+Documented background filesystem crawler refreshing the local cached shortcut registry in memory.
