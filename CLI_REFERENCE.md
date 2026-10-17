@@ -52,3 +52,6 @@ Documented standalone weather reporting tool fetching Open-Meteo forecasts for a
 
 ## CLI Command 18: Document system diagnostics telemetry readout (mxb diag --full)
 Documented comprehensive system status report outputting CPU, GPU, RAM, VRAM, and thermal sensors via psutil.
+
+## CLI Command 19: Add SAPI5 TTS speech test flag (mxb voice --speak <text>)
+Documented terminal synthesis utility testing Microsoft SAPI5 voice output, speech rate, and volume.
