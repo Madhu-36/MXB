@@ -28,3 +28,6 @@ Documented metadata readout reporting total conversation count, unique vocabular
 
 ## CLI Command 10: Document memory bank backup command (mxb memory --backup)
 Documented timestamped snapshot generation creating atomic JSON archives in %APPDATA%\MXB\backups.
+
+## CLI Command 11: Add memory bank pruning and purge flag (mxb memory --purge)
+Documented retention cleanup utility for pruning memories older than N days or eradicating entire conversation histories.
