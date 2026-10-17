@@ -16,3 +16,6 @@ Documented real-time terminal VU meter visualization showing speech activation t
 
 ## CLI Command 6: Document Ollama inference ping command (mxb llm --ping)
 Added connectivity verification command checking Ollama HTTP REST daemon availability on localhost:11434.
+
+## CLI Command 7: Add Modelfile recompile trigger flag (mxb llm --recompile)
+Documented manual re-compilation trigger for rebuilding the local Ollama Modelfile with updated system prompts.
