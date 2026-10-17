@@ -31,3 +31,6 @@ Documented timestamped snapshot generation creating atomic JSON archives in %APP
 
 ## CLI Command 11: Add memory bank pruning and purge flag (mxb memory --purge)
 Documented retention cleanup utility for pruning memories older than N days or eradicating entire conversation histories.
+
+## CLI Command 12: Document live desktop notification test (mxb notify --test)
+Added CLI verification utility dispatching test Windows 11 Action Center toast notifications.
