@@ -22,3 +22,6 @@ Added audio hook specification allowing plugins to process, filter, or record re
 
 ## Plugin Topic 8: Add LLM prompt context injection hooks (on_prompt_build)
 Documented hook for injecting custom dynamic context (e.g. calendar events, clipboard text) into the Llama 3.1 system prompt.
+
+## Plugin Topic 9: Document LLM response post-processing middleware
+Outlined filter pipeline allowing plugins to intercept, mutate, or format model responses before TTS audio synthesis.
