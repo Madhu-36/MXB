@@ -40,3 +40,6 @@ Outlined custom audio playback routing allowing plugins to substitute Piper or E
 
 ## Plugin Topic 14: Add Memory Bank custom metadata tagging for plugin memories
 Documented memory_bank.json schema extensions for storing namespaced plugin state and user preferences.
+
+## Plugin Topic 15: Document External REST API integration best practices
+Outlined non-blocking asynchronous HTTP networking patterns using aiohttp and urllib inside background workers.
