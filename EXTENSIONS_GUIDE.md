@@ -49,3 +49,6 @@ Documented threading best practices to prevent plugin computation from blocking 
 
 ## Plugin Topic 17: Document Plugin security sandboxing and capability permissions
 Defined capability-based permission model restricting filesystem, network, and window management access.
+
+## Plugin Topic 18: Add Plugin unit testing harness and mock runner
+Provided mock test fixtures simulating voice commands, memory lookups, and HUD states using pytest.
