@@ -31,3 +31,6 @@ Documented SmartAppLauncher provider interface for registering custom URI scheme
 
 ## Plugin Topic 11: Document Subprocess Sidecar IPC over standard I/O (JSON-RPC)
 Specified bidirectional JSON-RPC 2.0 protocol for running resource-intensive plugins in isolated subprocesses.
+
+## Plugin Topic 12: Add PySide6 Custom HUD widget injection guidelines
+Documented guidelines for attaching custom QWidget overlays and visual status badges to the floating glassmorphism HUD.
