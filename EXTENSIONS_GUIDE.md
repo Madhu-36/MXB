@@ -43,3 +43,6 @@ Documented memory_bank.json schema extensions for storing namespaced plugin stat
 
 ## Plugin Topic 15: Document External REST API integration best practices
 Outlined non-blocking asynchronous HTTP networking patterns using aiohttp and urllib inside background workers.
+
+## Plugin Topic 16: Add Background Worker Thread isolation via QThread
+Documented threading best practices to prevent plugin computation from blocking the PySide6 UI event loop.
