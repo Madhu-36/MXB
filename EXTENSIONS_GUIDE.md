@@ -55,3 +55,6 @@ Provided mock test fixtures simulating voice commands, memory lookups, and HUD s
 
 ## Plugin Topic 19: Document Plugin packaging and zip distribution format
 Documented .mxb-plugin zip bundle specification containing manifest, Python code, assets, and requirements.txt.
+
+## Plugin Topic 20: Add Hot-Reloading mechanism for rapid plugin development
+Implemented dynamic module re-importing enabling plugin reloading without restarting the MXB host process.
