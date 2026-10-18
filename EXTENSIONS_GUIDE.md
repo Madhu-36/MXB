@@ -46,3 +46,6 @@ Outlined non-blocking asynchronous HTTP networking patterns using aiohttp and ur
 
 ## Plugin Topic 16: Add Background Worker Thread isolation via QThread
 Documented threading best practices to prevent plugin computation from blocking the PySide6 UI event loop.
+
+## Plugin Topic 17: Document Plugin security sandboxing and capability permissions
+Defined capability-based permission model restricting filesystem, network, and window management access.
