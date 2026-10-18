@@ -4,3 +4,6 @@ Started comprehensive developer manual for creating third-party extensions and p
 
 ## Plugin Topic 2: Define Plugin manifest schema (plugin.json) and metadata
 Documented plugin.json manifest structure including plugin ID, name, version, author, entrypoint, and required permissions.
+
+## Plugin Topic 3: Document BasePlugin class lifecycle (on_load, on_unload)
+Outlined core BasePlugin class interface with synchronous setup and teardown lifecycle methods.
