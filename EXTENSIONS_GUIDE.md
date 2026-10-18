@@ -10,3 +10,6 @@ Outlined core BasePlugin class interface with synchronous setup and teardown lif
 
 ## Plugin Topic 4: Add Custom Voice Intent registration API (register_intent)
 Documented voice command registration API enabling extensions to register new voice keywords and action handlers.
+
+## Plugin Topic 5: Document Intent pattern matching and regex slot extraction
+Detailed named entity slot extraction from transcribed speech using regex patterns and fuzzy matching.
