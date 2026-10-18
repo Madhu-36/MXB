@@ -13,3 +13,6 @@ Documented voice command registration API enabling extensions to register new vo
 
 ## Plugin Topic 5: Document Intent pattern matching and regex slot extraction
 Detailed named entity slot extraction from transcribed speech using regex patterns and fuzzy matching.
+
+## Plugin Topic 6: Add Event Bus hook subscription model (subscribe, emit)
+Documented internal pub/sub event bus enabling decoupled communication between plugins and core engine components.
