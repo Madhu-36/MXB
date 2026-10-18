@@ -37,3 +37,6 @@ Documented guidelines for attaching custom QWidget overlays and visual status ba
 
 ## Plugin Topic 13: Document SAPI5 and custom TTS voice output overrides
 Outlined custom audio playback routing allowing plugins to substitute Piper or ElevenLabs neural TTS engines.
+
+## Plugin Topic 14: Add Memory Bank custom metadata tagging for plugin memories
+Documented memory_bank.json schema extensions for storing namespaced plugin state and user preferences.
