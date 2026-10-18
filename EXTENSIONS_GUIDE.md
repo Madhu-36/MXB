@@ -16,3 +16,6 @@ Detailed named entity slot extraction from transcribed speech using regex patter
 
 ## Plugin Topic 6: Add Event Bus hook subscription model (subscribe, emit)
 Documented internal pub/sub event bus enabling decoupled communication between plugins and core engine components.
+
+## Plugin Topic 7: Document Audio Stream filter interception callbacks
+Added audio hook specification allowing plugins to process, filter, or record real-time raw PCM audio buffers.
