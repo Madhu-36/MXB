@@ -34,3 +34,6 @@ Specified bidirectional JSON-RPC 2.0 protocol for running resource-intensive plu
 
 ## Plugin Topic 12: Add PySide6 Custom HUD widget injection guidelines
 Documented guidelines for attaching custom QWidget overlays and visual status badges to the floating glassmorphism HUD.
+
+## Plugin Topic 13: Document SAPI5 and custom TTS voice output overrides
+Outlined custom audio playback routing allowing plugins to substitute Piper or ElevenLabs neural TTS engines.
