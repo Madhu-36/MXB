@@ -28,3 +28,6 @@ Outlined filter pipeline allowing plugins to intercept, mutate, or format model 
 
 ## Plugin Topic 10: Add Custom App Launcher rule providers
 Documented SmartAppLauncher provider interface for registering custom URI schemes, web bookmarks, and scripts.
+
+## Plugin Topic 11: Document Subprocess Sidecar IPC over standard I/O (JSON-RPC)
+Specified bidirectional JSON-RPC 2.0 protocol for running resource-intensive plugins in isolated subprocesses.
