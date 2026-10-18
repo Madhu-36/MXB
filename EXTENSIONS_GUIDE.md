@@ -25,3 +25,6 @@ Documented hook for injecting custom dynamic context (e.g. calendar events, clip
 
 ## Plugin Topic 9: Document LLM response post-processing middleware
 Outlined filter pipeline allowing plugins to intercept, mutate, or format model responses before TTS audio synthesis.
+
+## Plugin Topic 10: Add Custom App Launcher rule providers
+Documented SmartAppLauncher provider interface for registering custom URI schemes, web bookmarks, and scripts.
