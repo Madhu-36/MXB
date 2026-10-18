@@ -58,3 +58,6 @@ Documented .mxb-plugin zip bundle specification containing manifest, Python code
 
 ## Plugin Topic 20: Add Hot-Reloading mechanism for rapid plugin development
 Implemented dynamic module re-importing enabling plugin reloading without restarting the MXB host process.
+
+## Plugin Topic 21: Document Plugin error handling, crash recovery, and timeouts
+Outlined defensive try/catch wrappers and execution timeout limits preventing faulty plugins from crashing host.
