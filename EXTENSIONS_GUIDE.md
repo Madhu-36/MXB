@@ -7,3 +7,6 @@ Documented plugin.json manifest structure including plugin ID, name, version, au
 
 ## Plugin Topic 3: Document BasePlugin class lifecycle (on_load, on_unload)
 Outlined core BasePlugin class interface with synchronous setup and teardown lifecycle methods.
+
+## Plugin Topic 4: Add Custom Voice Intent registration API (register_intent)
+Documented voice command registration API enabling extensions to register new voice keywords and action handlers.
