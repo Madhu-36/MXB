@@ -61,3 +61,6 @@ Implemented dynamic module re-importing enabling plugin reloading without restar
 
 ## Plugin Topic 21: Document Plugin error handling, crash recovery, and timeouts
 Outlined defensive try/catch wrappers and execution timeout limits preventing faulty plugins from crashing host.
+
+## Plugin Topic 22: Add Sample Calculator and Weather Plugin walkthroughs
+Provided complete end-to-end source code examples for a math evaluator and custom weather provider plugin.
