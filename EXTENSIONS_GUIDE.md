@@ -19,3 +19,6 @@ Documented internal pub/sub event bus enabling decoupled communication between p
 
 ## Plugin Topic 7: Document Audio Stream filter interception callbacks
 Added audio hook specification allowing plugins to process, filter, or record real-time raw PCM audio buffers.
+
+## Plugin Topic 8: Add LLM prompt context injection hooks (on_prompt_build)
+Documented hook for injecting custom dynamic context (e.g. calendar events, clipboard text) into the Llama 3.1 system prompt.
