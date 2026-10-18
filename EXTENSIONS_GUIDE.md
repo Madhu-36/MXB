@@ -52,3 +52,6 @@ Defined capability-based permission model restricting filesystem, network, and w
 
 ## Plugin Topic 18: Add Plugin unit testing harness and mock runner
 Provided mock test fixtures simulating voice commands, memory lookups, and HUD states using pytest.
+
+## Plugin Topic 19: Document Plugin packaging and zip distribution format
+Documented .mxb-plugin zip bundle specification containing manifest, Python code, assets, and requirements.txt.
