@@ -58,3 +58,6 @@ Documented regex pattern matching scrubbing API keys, credit cards, and password
 
 ## Memory Architecture 20: Document SQLite sqlite-vec migration path for dense vectors
 Designed schema migration from sparse TF-IDF to dense 768-dimensional nomic embeddings via sqlite-vec.
+
+## Memory Architecture 21: Detail memory export and portable JSON archive generation
+Documented CLI export utilities generating encrypted, portable memory archive files for backup.
