@@ -37,3 +37,6 @@ Documented compression ratio and no-speech probability heuristic filters discard
 
 ## Audio Component 13: Document hotkey-triggered manual microphone mute overrides
 Specified global Ctrl+Shift+M hardware mute bypass disconnecting audio ingestion streams at the driver level.
+
+## Audio Component 14: Detail acoustic echo cancellation during TTS playback
+Documented software AEC ducking incoming microphone gain while SAPI5 text-to-speech audio is actively outputting.
