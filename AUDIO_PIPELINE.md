@@ -52,3 +52,6 @@ Documented registry key traversal locating installed Microsoft Server Speech and
 
 ## Audio Component 18: Detail speech rate, pitch modulation, and volume attenuation
 Documented parameter controls for speech rate (180 WPM default), volume gain normalization, and pitch adjustments.
+
+## Audio Component 19: Document audio stream underrun and overrun recovery handlers
+Implemented defensive buffer flushing and stream restarting when CPU scheduler delays cause buffer overruns.
