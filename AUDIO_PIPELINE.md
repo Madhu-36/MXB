@@ -10,3 +10,6 @@ Outlined latency benefits and exclusivity trade-offs when accessing low-level Wi
 
 ## Audio Component 4: Specify 48kHz hardware capture and PyAudio buffer sizing
 Documented native Realtek 48,000 Hz 16-bit PCM capture stream configuration using 1024-sample frames.
+
+## Audio Component 5: Document Torchaudio 16kHz resampler and downmixing math
+Detailed real-time polyphase FIR filter downsampling converting 48kHz stereo to 16kHz mono audio tensors.
