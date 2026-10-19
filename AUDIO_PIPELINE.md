@@ -19,3 +19,6 @@ Specified circular ring buffer holding the most recent 1.5 seconds of ambient au
 
 ## Audio Component 7: Document RMS volume energy calculation and noise floor baseline
 Documented root-mean-square energy calculation measuring ambient acoustic decibels to adaptively calibrate thresholds.
+
+## Audio Component 8: Detail dynamic silence hangover timer and speech segmentation
+Configured 1.2-second trailing silence hangover timer preventing premature speech chunk truncation during natural pauses.
