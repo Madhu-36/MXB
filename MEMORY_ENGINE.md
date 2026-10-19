@@ -55,3 +55,6 @@ Documented voice triggers (e.g. forget my last search, delete today's memories) 
 
 ## Memory Architecture 19: Detail sensitive data redaction before memory persistence
 Documented regex pattern matching scrubbing API keys, credit cards, and passwords before saving to disk.
+
+## Memory Architecture 20: Document SQLite sqlite-vec migration path for dense vectors
+Designed schema migration from sparse TF-IDF to dense 768-dimensional nomic embeddings via sqlite-vec.
