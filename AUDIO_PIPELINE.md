@@ -4,3 +4,6 @@ Started comprehensive audio engineering specification for MXB real-time speech p
 
 ## Audio Component 2: Detail PortAudio backend driver enumeration and host APIs
 Documented PyAudio binding architecture querying WASAPI, DirectSound, and MME host API endpoints on Windows.
+
+## Audio Component 3: Document Windows WASAPI Exclusive vs Shared stream modes
+Outlined latency benefits and exclusivity trade-offs when accessing low-level Windows WASAPI audio streams.
