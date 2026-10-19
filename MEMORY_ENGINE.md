@@ -37,3 +37,6 @@ Implemented crash-safe write-to-temp and atomic replacement preventing memory_ba
 
 ## Memory Architecture 13: Detail memory corruption auto-recovery and backup snapshots
 Outlined automated loading from %APPDATA%\MXB\backups when primary JSON fails schema validation.
+
+## Memory Architecture 14: Document memory deduplication and semantic clustering
+Documented Jaccard similarity heuristics identifying and consolidating duplicate historical entries.
