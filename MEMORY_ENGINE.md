@@ -25,3 +25,6 @@ Specified normalized dot product computation measuring semantic query similarity
 
 ## Memory Architecture 9: Detail similarity cutoff threshold to prevent noisy injections
 Configured strict 0.25 similarity score floor to ensure only high-confidence memories enter LLM context.
+
+## Memory Architecture 10: Document dynamic LLM system prompt memory injection format
+Outlined injected prompt template presenting historical context facts cleanly to Llama 3.1.
