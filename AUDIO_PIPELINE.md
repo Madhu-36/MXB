@@ -55,3 +55,6 @@ Documented parameter controls for speech rate (180 WPM default), volume gain nor
 
 ## Audio Component 19: Document audio stream underrun and overrun recovery handlers
 Implemented defensive buffer flushing and stream restarting when CPU scheduler delays cause buffer overruns.
+
+## Audio Component 20: Detail multi-channel microphone array beamforming capture
+Outlined spatial phase alignment algorithms for dual-mic laptop arrays to isolate user voice from background room noise.
