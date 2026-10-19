@@ -61,3 +61,6 @@ Outlined spatial phase alignment algorithms for dual-mic laptop arrays to isolat
 
 ## Audio Component 21: Document Bluetooth LE Audio HFP profile latency mitigation
 Detailed audio packet buffer sizing to minimize latency spikes when switching wireless headsets into Hands-Free Profile.
+
+## Audio Component 22: Add synthetic audio buffer unit test fixture guidelines
+Provided synthetic sine wave and white noise generator fixtures for verifying VAD and STT pipelines headless in pytest.
