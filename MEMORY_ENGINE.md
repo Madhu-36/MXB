@@ -10,3 +10,6 @@ Outlined ISO 8601 UTC timestamping and unique UUID session grouping across multi
 
 ## Memory Architecture 4: Document TF-IDF inverted index construction from corpus
 Specified inverted index mapping vocabulary terms to document frequency and occurrence postings.
+
+## Memory Architecture 5: Detail tokenization, stop-word removal, and stemming pipeline
+Documented pre-processing pipeline stripping punctuation, normalizing case, and filtering noise words.
