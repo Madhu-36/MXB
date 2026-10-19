@@ -49,3 +49,6 @@ Documented exponential half-life decay function giving higher priority to recent
 
 ## Memory Architecture 17: Detail user-directed memory retention flags
 Specified explicit voice triggers (e.g. remember that, save this note) marking memories as permanent.
+
+## Memory Architecture 18: Document user-directed memory erasure commands
+Documented voice triggers (e.g. forget my last search, delete today's memories) triggering targeted purges.
