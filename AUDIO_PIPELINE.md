@@ -58,3 +58,6 @@ Implemented defensive buffer flushing and stream restarting when CPU scheduler d
 
 ## Audio Component 20: Detail multi-channel microphone array beamforming capture
 Outlined spatial phase alignment algorithms for dual-mic laptop arrays to isolate user voice from background room noise.
+
+## Audio Component 21: Document Bluetooth LE Audio HFP profile latency mitigation
+Detailed audio packet buffer sizing to minimize latency spikes when switching wireless headsets into Hands-Free Profile.
