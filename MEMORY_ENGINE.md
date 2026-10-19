@@ -52,3 +52,6 @@ Specified explicit voice triggers (e.g. remember that, save this note) marking m
 
 ## Memory Architecture 18: Document user-directed memory erasure commands
 Documented voice triggers (e.g. forget my last search, delete today's memories) triggering targeted purges.
+
+## Memory Architecture 19: Detail sensitive data redaction before memory persistence
+Documented regex pattern matching scrubbing API keys, credit cards, and passwords before saving to disk.
