@@ -19,3 +19,6 @@ Detailed sub-linear TF logarithmic scaling formula preventing disproportionate w
 
 ## Memory Architecture 7: Detail inverse document frequency calculation and smoothing
 Documented smoothed IDF formulation mitigating zero-division errors for rare terms across memories.
+
+## Memory Architecture 8: Document vector cosine similarity scoring and rank ordering
+Specified normalized dot product computation measuring semantic query similarity against memory vectors.
