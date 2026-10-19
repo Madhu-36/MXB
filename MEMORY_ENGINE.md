@@ -31,3 +31,6 @@ Outlined injected prompt template presenting historical context facts cleanly to
 
 ## Memory Architecture 11: Detail sliding memory window and token budget constraints
 Documented maximum 512-token memory reservation inside 4096-token LLM context window.
+
+## Memory Architecture 12: Document atomic write-to-temp and rename disk persistence
+Implemented crash-safe write-to-temp and atomic replacement preventing memory_bank.json truncation.
