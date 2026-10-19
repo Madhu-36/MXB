@@ -49,3 +49,6 @@ Specified decoupled worker thread lifecycle preventing PySide6 HUD animation stu
 
 ## Audio Component 17: Document Windows Registry voice token selection
 Documented registry key traversal locating installed Microsoft Server Speech and desktop TTS voices (David, Zira).
+
+## Audio Component 18: Detail speech rate, pitch modulation, and volume attenuation
+Documented parameter controls for speech rate (180 WPM default), volume gain normalization, and pitch adjustments.
