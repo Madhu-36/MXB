@@ -31,3 +31,6 @@ Documented 80-channel log-magnitude Mel-frequency filterbank feature extraction 
 
 ## Audio Component 11: Document Whisper encoder forward pass and beam search decoding
 Detailed greedy and beam search autoregressive token generation decoding audio features into transcribed English text.
+
+## Audio Component 12: Detail hallucination filtering for silence audio frames
+Documented compression ratio and no-speech probability heuristic filters discarding phantom transcriptions on silence.
