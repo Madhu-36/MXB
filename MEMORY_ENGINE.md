@@ -4,3 +4,6 @@ Started comprehensive engineering manual for MXB conversation memory and cogniti
 
 ## Memory Architecture 2: Document memory_bank.json schema and entity data model
 Documented JSON structure capturing timestamped user prompts, assistant replies, intent tags, and metadata.
+
+## Memory Architecture 3: Detail conversation session serialization and timestamping
+Outlined ISO 8601 UTC timestamping and unique UUID session grouping across multi-turn interactions.
