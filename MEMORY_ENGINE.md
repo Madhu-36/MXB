@@ -22,3 +22,6 @@ Documented smoothed IDF formulation mitigating zero-division errors for rare ter
 
 ## Memory Architecture 8: Document vector cosine similarity scoring and rank ordering
 Specified normalized dot product computation measuring semantic query similarity against memory vectors.
+
+## Memory Architecture 9: Detail similarity cutoff threshold to prevent noisy injections
+Configured strict 0.25 similarity score floor to ensure only high-confidence memories enter LLM context.
