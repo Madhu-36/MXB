@@ -13,3 +13,6 @@ Specified inverted index mapping vocabulary terms to document frequency and occu
 
 ## Memory Architecture 5: Detail tokenization, stop-word removal, and stemming pipeline
 Documented pre-processing pipeline stripping punctuation, normalizing case, and filtering noise words.
+
+## Memory Architecture 6: Document term frequency weighting and sub-linear scaling
+Detailed sub-linear TF logarithmic scaling formula preventing disproportionate weighting of repeated words.
