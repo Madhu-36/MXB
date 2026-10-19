@@ -40,3 +40,6 @@ Outlined automated loading from %APPDATA%\MXB\backups when primary JSON fails sc
 
 ## Memory Architecture 14: Document memory deduplication and semantic clustering
 Documented Jaccard similarity heuristics identifying and consolidating duplicate historical entries.
+
+## Memory Architecture 15: Detail entity relation linking and user profile preferences
+Outlined user profile extraction tracking preferred applications, coding styles, and habitual commands.
