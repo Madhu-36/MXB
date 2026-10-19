@@ -28,3 +28,6 @@ Configured strict 0.25 similarity score floor to ensure only high-confidence mem
 
 ## Memory Architecture 10: Document dynamic LLM system prompt memory injection format
 Outlined injected prompt template presenting historical context facts cleanly to Llama 3.1.
+
+## Memory Architecture 11: Detail sliding memory window and token budget constraints
+Documented maximum 512-token memory reservation inside 4096-token LLM context window.
