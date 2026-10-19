@@ -46,3 +46,6 @@ Outlined Windows COM automation apartment threading rules requiring pythoncom.Co
 
 ## Audio Component 16: Detail asynchronous QThread audio generation and UI safety
 Specified decoupled worker thread lifecycle preventing PySide6 HUD animation stutter during synchronous speech synthesis.
+
+## Audio Component 17: Document Windows Registry voice token selection
+Documented registry key traversal locating installed Microsoft Server Speech and desktop TTS voices (David, Zira).
