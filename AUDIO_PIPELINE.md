@@ -28,3 +28,6 @@ Outlined float32 conversion and amplitude normalization scaling PCM int16 values
 
 ## Audio Component 10: Specify 30-second Mel spectrogram feature extraction
 Documented 80-channel log-magnitude Mel-frequency filterbank feature extraction for Whisper transformer encoder.
+
+## Audio Component 11: Document Whisper encoder forward pass and beam search decoding
+Detailed greedy and beam search autoregressive token generation decoding audio features into transcribed English text.
