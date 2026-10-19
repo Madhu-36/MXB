@@ -7,3 +7,6 @@ Documented JSON structure capturing timestamped user prompts, assistant replies,
 
 ## Memory Architecture 3: Detail conversation session serialization and timestamping
 Outlined ISO 8601 UTC timestamping and unique UUID session grouping across multi-turn interactions.
+
+## Memory Architecture 4: Document TF-IDF inverted index construction from corpus
+Specified inverted index mapping vocabulary terms to document frequency and occurrence postings.
