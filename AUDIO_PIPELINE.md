@@ -22,3 +22,6 @@ Documented root-mean-square energy calculation measuring ambient acoustic decibe
 
 ## Audio Component 8: Detail dynamic silence hangover timer and speech segmentation
 Configured 1.2-second trailing silence hangover timer preventing premature speech chunk truncation during natural pauses.
+
+## Audio Component 9: Document Whisper STT audio tensor normalization
+Outlined float32 conversion and amplitude normalization scaling PCM int16 values into continuous [-1.0, 1.0] ranges.
