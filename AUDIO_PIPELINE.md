@@ -34,3 +34,6 @@ Detailed greedy and beam search autoregressive token generation decoding audio f
 
 ## Audio Component 12: Detail hallucination filtering for silence audio frames
 Documented compression ratio and no-speech probability heuristic filters discarding phantom transcriptions on silence.
+
+## Audio Component 13: Document hotkey-triggered manual microphone mute overrides
+Specified global Ctrl+Shift+M hardware mute bypass disconnecting audio ingestion streams at the driver level.
