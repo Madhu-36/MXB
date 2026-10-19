@@ -40,3 +40,6 @@ Specified global Ctrl+Shift+M hardware mute bypass disconnecting audio ingestion
 
 ## Audio Component 14: Detail acoustic echo cancellation during TTS playback
 Documented software AEC ducking incoming microphone gain while SAPI5 text-to-speech audio is actively outputting.
+
+## Audio Component 15: Document SAPI5 COM speech synthesis threading architecture
+Outlined Windows COM automation apartment threading rules requiring pythoncom.CoInitialize() within dedicated QThreads.
