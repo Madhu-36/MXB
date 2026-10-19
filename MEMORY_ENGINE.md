@@ -16,3 +16,6 @@ Documented pre-processing pipeline stripping punctuation, normalizing case, and 
 
 ## Memory Architecture 6: Document term frequency weighting and sub-linear scaling
 Detailed sub-linear TF logarithmic scaling formula preventing disproportionate weighting of repeated words.
+
+## Memory Architecture 7: Detail inverse document frequency calculation and smoothing
+Documented smoothed IDF formulation mitigating zero-division errors for rare terms across memories.
