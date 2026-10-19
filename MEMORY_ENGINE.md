@@ -46,3 +46,6 @@ Outlined user profile extraction tracking preferred applications, coding styles,
 
 ## Memory Architecture 16: Document temporal memory decay and recency boosting weights
 Documented exponential half-life decay function giving higher priority to recent interactions.
+
+## Memory Architecture 17: Detail user-directed memory retention flags
+Specified explicit voice triggers (e.g. remember that, save this note) marking memories as permanent.
