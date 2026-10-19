@@ -13,3 +13,6 @@ Documented native Realtek 48,000 Hz 16-bit PCM capture stream configuration usin
 
 ## Audio Component 5: Document Torchaudio 16kHz resampler and downmixing math
 Detailed real-time polyphase FIR filter downsampling converting 48kHz stereo to 16kHz mono audio tensors.
+
+## Audio Component 6: Detail Voice Activity Detection sliding window ring buffer
+Specified circular ring buffer holding the most recent 1.5 seconds of ambient audio for continuous speech onset detection.
