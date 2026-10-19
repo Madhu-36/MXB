@@ -43,3 +43,6 @@ Documented Jaccard similarity heuristics identifying and consolidating duplicate
 
 ## Memory Architecture 15: Detail entity relation linking and user profile preferences
 Outlined user profile extraction tracking preferred applications, coding styles, and habitual commands.
+
+## Memory Architecture 16: Document temporal memory decay and recency boosting weights
+Documented exponential half-life decay function giving higher priority to recent interactions.
