@@ -16,3 +16,6 @@ Detailed real-time polyphase FIR filter downsampling converting 48kHz stereo to 
 
 ## Audio Component 6: Detail Voice Activity Detection sliding window ring buffer
 Specified circular ring buffer holding the most recent 1.5 seconds of ambient audio for continuous speech onset detection.
+
+## Audio Component 7: Document RMS volume energy calculation and noise floor baseline
+Documented root-mean-square energy calculation measuring ambient acoustic decibels to adaptively calibrate thresholds.
