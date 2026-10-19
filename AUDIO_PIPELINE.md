@@ -43,3 +43,6 @@ Documented software AEC ducking incoming microphone gain while SAPI5 text-to-spe
 
 ## Audio Component 15: Document SAPI5 COM speech synthesis threading architecture
 Outlined Windows COM automation apartment threading rules requiring pythoncom.CoInitialize() within dedicated QThreads.
+
+## Audio Component 16: Detail asynchronous QThread audio generation and UI safety
+Specified decoupled worker thread lifecycle preventing PySide6 HUD animation stutter during synchronous speech synthesis.
