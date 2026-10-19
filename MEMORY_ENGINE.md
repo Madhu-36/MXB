@@ -34,3 +34,6 @@ Documented maximum 512-token memory reservation inside 4096-token LLM context wi
 
 ## Memory Architecture 12: Document atomic write-to-temp and rename disk persistence
 Implemented crash-safe write-to-temp and atomic replacement preventing memory_bank.json truncation.
+
+## Memory Architecture 13: Detail memory corruption auto-recovery and backup snapshots
+Outlined automated loading from %APPDATA%\MXB\backups when primary JSON fails schema validation.
