@@ -49,3 +49,6 @@ Outlined QTextDocument markdown parsing displaying formatted assistant code snip
 
 ## UI Component 17: Detail auto-dismiss timeout timers and hover freeze behavior
 Configured 5-second inactivity timeout with enterEvent/leaveEvent pause overrides when mouse is hovered.
+
+## UI Component 18: Document system tray context menu styling and quick-action toggles
+Styled QMenu context popups with dark theme QSS matching floating HUD aesthetics.
