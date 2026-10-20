@@ -34,3 +34,6 @@ Documented WS_EX_NOACTIVATE Windows extended style preventing HUD from stealing 
 
 ## UI Component 12: Document HUD drag-and-drop repositioning with mouse filters
 Implemented mousePressEvent and mouseMoveEvent delta calculations enabling user drag repositioning.
+
+## UI Component 13: Detail status badge visual state machine
+Mapped out discrete UI state transitions across Listening (Blue), Thinking (Amber), Speaking (Green), and Idle.
