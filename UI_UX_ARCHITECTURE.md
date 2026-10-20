@@ -7,3 +7,6 @@ Documented Qt.FramelessWindowHint, Qt.WindowStaysOnTopHint, and Qt.Tool window a
 
 ## UI Component 3: Detail WA_TranslucentBackground and native DWM blur-behind
 Documented Qt.WA_TranslucentBackground and Windows Desktop Window Manager Acrylic blur effects.
+
+## UI Component 4: Document QGraphicsDropShadowEffect multi-layer ambient glowing
+Outlined layered Gaussian blur drop shadows giving HUD a floating ambient luminescence.
