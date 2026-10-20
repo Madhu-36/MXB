@@ -40,3 +40,6 @@ Mapped out discrete UI state transitions across Listening (Blue), Thinking (Ambe
 
 ## UI Component 14: Document animated pulsating ring indicator for speech states
 Implemented QTimer-driven concentric ring expansion animating around assistant avatar during TTS.
+
+## UI Component 15: Detail dynamic typography scaling and DPI font rendering
+Configured pointSize font auto-scaling maintaining crisp legibility across 1080p, 1440p, and 4K displays.
