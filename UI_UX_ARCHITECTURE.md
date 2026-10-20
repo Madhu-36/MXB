@@ -58,3 +58,6 @@ Implemented keyPressEvent listening for Escape key and global Ctrl+Shift+H toggl
 
 ## UI Component 20: Document headless fallback mode when display server is absent
 Configured graceful degradation to terminal CLI logger when running inside non-GUI container or remote SSH.
+
+## UI Component 21: Add headless UI unit testing with QTest and mocked event loops
+Created pytest-qt test fixtures verifying window lifecycle, opacity states, and button clicks headlessly.
