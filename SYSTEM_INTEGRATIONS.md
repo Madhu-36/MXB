@@ -34,3 +34,6 @@ Documented interactive toast templates allowing user one-click replies and confi
 
 ## Integration Topic 12: Detail system hardware telemetry polling
 Documented interval sampling of CPU load, RAM utilization, GPU temperature, and disk throughput.
+
+## Integration Topic 13: Document Windows power state monitoring and battery detection
+Implemented win32api power broadcast listeners detecting AC power vs battery mode transitions.
