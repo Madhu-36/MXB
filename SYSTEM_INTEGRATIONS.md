@@ -37,3 +37,6 @@ Documented interval sampling of CPU load, RAM utilization, GPU temperature, and 
 
 ## Integration Topic 13: Document Windows power state monitoring and battery detection
 Implemented win32api power broadcast listeners detecting AC power vs battery mode transitions.
+
+## Integration Topic 14: Add global low-level keyboard hook listeners via pynput
+Detailed global keypress interceptor monitoring system-wide shortcuts (Ctrl+Shift+M, Ctrl+Shift+Space).
