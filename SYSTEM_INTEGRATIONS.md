@@ -52,3 +52,6 @@ Documented isolation barriers preventing clipboard ingestion and masking passwor
 
 ## Integration Topic 18: Detail Windows Taskbar and System Tray lifecycle integration
 Outlined QSystemTrayIcon integration with right-click context menu, status badges, and minimize-to-tray.
+
+## Integration Topic 19: Document multi-DPI per-monitor virtualization scaling
+Specified SetProcessDpiAwarenessContext API call ensuring crisp PySide6 HUD rendering on high-DPI panels.
