@@ -13,3 +13,6 @@ Outlined layered Gaussian blur drop shadows giving HUD a floating ambient lumine
 
 ## UI Component 5: Detail modern dark-mode color palette and contrast standards
 Documented charcoal/slate background palette (#0F172A) with semi-transparent cyan (#06B6D4) accents.
+
+## UI Component 6: Document QPropertyAnimation opacity fade-in and fade-out curves
+Detailed smooth 300ms windowOpacity property animations eliminating jarring window pop-in.
