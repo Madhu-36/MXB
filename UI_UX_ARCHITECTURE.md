@@ -43,3 +43,6 @@ Implemented QTimer-driven concentric ring expansion animating around assistant a
 
 ## UI Component 15: Detail dynamic typography scaling and DPI font rendering
 Configured pointSize font auto-scaling maintaining crisp legibility across 1080p, 1440p, and 4K displays.
+
+## UI Component 16: Document user prompt markdown rendering with code blocks
+Outlined QTextDocument markdown parsing displaying formatted assistant code snippets inline.
