@@ -58,3 +58,6 @@ Specified SetProcessDpiAwarenessContext API call ensuring crisp PySide6 HUD rend
 
 ## Integration Topic 20: Add Windows Defender Firewall rule configuration for air-gapped mode
 Documented PowerShell netsh advfirewall commands locking outbound ports for strict local-only execution.
+
+## Integration Topic 21: Detail Windows Service background worker daemon configuration
+Outlined pywin32 ServiceFramework wrapper running MXB core event loop as an unattended system service.
