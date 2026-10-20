@@ -46,3 +46,6 @@ Configured pointSize font auto-scaling maintaining crisp legibility across 1080p
 
 ## UI Component 16: Document user prompt markdown rendering with code blocks
 Outlined QTextDocument markdown parsing displaying formatted assistant code snippets inline.
+
+## UI Component 17: Detail auto-dismiss timeout timers and hover freeze behavior
+Configured 5-second inactivity timeout with enterEvent/leaveEvent pause overrides when mouse is hovered.
