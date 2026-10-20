@@ -40,3 +40,6 @@ Implemented win32api power broadcast listeners detecting AC power vs battery mod
 
 ## Integration Topic 14: Add global low-level keyboard hook listeners via pynput
 Detailed global keypress interceptor monitoring system-wide shortcuts (Ctrl+Shift+M, Ctrl+Shift+Space).
+
+## Integration Topic 15: Detail hotkey collision avoidance and elevated UAC handling
+Documented fallback handling when elevated Administrator windows consume raw keyboard focus.
