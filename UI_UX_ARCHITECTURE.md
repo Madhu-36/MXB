@@ -19,3 +19,6 @@ Detailed smooth 300ms windowOpacity property animations eliminating jarring wind
 
 ## UI Component 7: Detail QEasingCurve.InOutQuad timing functions for transitions
 Documented quadratic easing curves mimicking natural physical deceleration during fade transitions.
+
+## UI Component 8: Document reactive voice waveform visualizer using QPainter
+Detailed custom paintEvent rendering real-time oscillating sine waves driven by incoming audio RMS.
