@@ -37,3 +37,6 @@ Implemented mousePressEvent and mouseMoveEvent delta calculations enabling user 
 
 ## UI Component 13: Detail status badge visual state machine
 Mapped out discrete UI state transitions across Listening (Blue), Thinking (Amber), Speaking (Green), and Idle.
+
+## UI Component 14: Document animated pulsating ring indicator for speech states
+Implemented QTimer-driven concentric ring expansion animating around assistant avatar during TTS.
