@@ -55,3 +55,6 @@ Outlined QSystemTrayIcon integration with right-click context menu, status badge
 
 ## Integration Topic 19: Document multi-DPI per-monitor virtualization scaling
 Specified SetProcessDpiAwarenessContext API call ensuring crisp PySide6 HUD rendering on high-DPI panels.
+
+## Integration Topic 20: Add Windows Defender Firewall rule configuration for air-gapped mode
+Documented PowerShell netsh advfirewall commands locking outbound ports for strict local-only execution.
