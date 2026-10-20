@@ -31,3 +31,6 @@ Implemented QGuiApplication.primaryScreen geometry queries centering HUD at top-
 
 ## UI Component 11: Detail non-stealing window focus policy
 Documented WS_EX_NOACTIVATE Windows extended style preventing HUD from stealing active focus from games or IDEs.
+
+## UI Component 12: Document HUD drag-and-drop repositioning with mouse filters
+Implemented mousePressEvent and mouseMoveEvent delta calculations enabling user drag repositioning.
