@@ -22,3 +22,6 @@ Documented quadratic easing curves mimicking natural physical deceleration durin
 
 ## UI Component 8: Document reactive voice waveform visualizer using QPainter
 Detailed custom paintEvent rendering real-time oscillating sine waves driven by incoming audio RMS.
+
+## UI Component 9: Detail audio amplitude scaling and dynamic bar height modulation
+Specified logarithmic decibel scaling converting raw audio samples into proportional equalizer bars.
