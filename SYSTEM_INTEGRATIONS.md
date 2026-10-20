@@ -25,3 +25,6 @@ Documented rapid fuzzy matching matching voice intent queries against indexed sh
 
 ## Integration Topic 9: Detail Windows shell execution and URI protocol dispatch
 Documented os.startfile and ShellExecuteW invocations for launching native apps, websites, and URI schemes.
+
+## Integration Topic 10: Document Windows 11 Action Center toast notification dispatch
+Outlined win11toast integration generating native Windows toast alerts with custom icons and titles.
