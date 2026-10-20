@@ -28,3 +28,6 @@ Documented os.startfile and ShellExecuteW invocations for launching native apps,
 
 ## Integration Topic 10: Document Windows 11 Action Center toast notification dispatch
 Outlined win11toast integration generating native Windows toast alerts with custom icons and titles.
+
+## Integration Topic 11: Add toast notification action buttons and callback handlers
+Documented interactive toast templates allowing user one-click replies and confirmation triggers.
