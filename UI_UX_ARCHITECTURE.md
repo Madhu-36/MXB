@@ -28,3 +28,6 @@ Specified logarithmic decibel scaling converting raw audio samples into proporti
 
 ## UI Component 10: Document HUD auto-positioning and screen geometry resolution
 Implemented QGuiApplication.primaryScreen geometry queries centering HUD at top-middle of monitor.
+
+## UI Component 11: Detail non-stealing window focus policy
+Documented WS_EX_NOACTIVATE Windows extended style preventing HUD from stealing active focus from games or IDEs.
