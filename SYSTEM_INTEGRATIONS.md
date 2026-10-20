@@ -13,3 +13,6 @@ Detailed ShowWindowAsync commands for programmatic minimizing, maximizing, resto
 
 ## Integration Topic 5: Add window snapping and multi-monitor positioning controls
 Specified SetWindowPos API integrations for tiling windows into halves, quadrants, and secondary monitors.
+
+## Integration Topic 6: Detail process lifecycle management and PID tracking
+Documented psutil process tree inspection, executable path resolution, and graceful SIGTERM dispatch.
