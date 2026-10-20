@@ -46,3 +46,6 @@ Documented fallback handling when elevated Administrator windows consume raw key
 
 ## Integration Topic 16: Document Windows Core Audio WASAPI endpoint device switching
 Outlined IAudioEndpointVolume interface querying and changing active audio input/output devices.
+
+## Integration Topic 17: Add clipboard data protection and sensitive process masking
+Documented isolation barriers preventing clipboard ingestion and masking password manager window titles.
