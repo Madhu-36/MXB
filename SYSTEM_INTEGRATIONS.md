@@ -7,3 +7,6 @@ Outlined EnumWindows and GetWindowText Win32 API calls for mapping active deskto
 
 ## Integration Topic 3: Detail active window title tracking and foreground polling
 Documented pygetwindow foreground polling loop extracting active window metadata at 5Hz.
+
+## Integration Topic 4: Document window state manipulation controls
+Detailed ShowWindowAsync commands for programmatic minimizing, maximizing, restoring, and closing windows.
