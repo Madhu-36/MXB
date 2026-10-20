@@ -49,3 +49,6 @@ Outlined IAudioEndpointVolume interface querying and changing active audio input
 
 ## Integration Topic 17: Add clipboard data protection and sensitive process masking
 Documented isolation barriers preventing clipboard ingestion and masking password manager window titles.
+
+## Integration Topic 18: Detail Windows Taskbar and System Tray lifecycle integration
+Outlined QSystemTrayIcon integration with right-click context menu, status badges, and minimize-to-tray.
