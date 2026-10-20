@@ -16,3 +16,6 @@ Specified SetWindowPos API integrations for tiling windows into halves, quadrant
 
 ## Integration Topic 6: Detail process lifecycle management and PID tracking
 Documented psutil process tree inspection, executable path resolution, and graceful SIGTERM dispatch.
+
+## Integration Topic 7: Document Start Menu shortcut recursive discovery
+Detailed filesystem crawler traversing system and user %APPDATA%\Microsoft\Windows\Start Menu shortcuts.
