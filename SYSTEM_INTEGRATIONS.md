@@ -22,3 +22,6 @@ Detailed filesystem crawler traversing system and user %APPDATA%\Microsoft\Windo
 
 ## Integration Topic 8: Add SmartAppLauncher fuzzy keyword resolution algorithm
 Documented rapid fuzzy matching matching voice intent queries against indexed shortcut names and aliases.
+
+## Integration Topic 9: Detail Windows shell execution and URI protocol dispatch
+Documented os.startfile and ShellExecuteW invocations for launching native apps, websites, and URI schemes.
