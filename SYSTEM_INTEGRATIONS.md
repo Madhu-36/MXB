@@ -10,3 +10,6 @@ Documented pygetwindow foreground polling loop extracting active window metadata
 
 ## Integration Topic 4: Document window state manipulation controls
 Detailed ShowWindowAsync commands for programmatic minimizing, maximizing, restoring, and closing windows.
+
+## Integration Topic 5: Add window snapping and multi-monitor positioning controls
+Specified SetWindowPos API integrations for tiling windows into halves, quadrants, and secondary monitors.
