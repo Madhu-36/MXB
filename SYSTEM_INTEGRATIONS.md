@@ -19,3 +19,6 @@ Documented psutil process tree inspection, executable path resolution, and grace
 
 ## Integration Topic 7: Document Start Menu shortcut recursive discovery
 Detailed filesystem crawler traversing system and user %APPDATA%\Microsoft\Windows\Start Menu shortcuts.
+
+## Integration Topic 8: Add SmartAppLauncher fuzzy keyword resolution algorithm
+Documented rapid fuzzy matching matching voice intent queries against indexed shortcut names and aliases.
