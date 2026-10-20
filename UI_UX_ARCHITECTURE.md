@@ -55,3 +55,6 @@ Styled QMenu context popups with dark theme QSS matching floating HUD aesthetics
 
 ## UI Component 19: Detail keyboard accessibility and Escape key HUD dismissal
 Implemented keyPressEvent listening for Escape key and global Ctrl+Shift+H toggle shortcuts.
+
+## UI Component 20: Document headless fallback mode when display server is absent
+Configured graceful degradation to terminal CLI logger when running inside non-GUI container or remote SSH.
