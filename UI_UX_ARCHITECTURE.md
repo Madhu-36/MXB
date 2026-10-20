@@ -25,3 +25,6 @@ Detailed custom paintEvent rendering real-time oscillating sine waves driven by 
 
 ## UI Component 9: Detail audio amplitude scaling and dynamic bar height modulation
 Specified logarithmic decibel scaling converting raw audio samples into proportional equalizer bars.
+
+## UI Component 10: Document HUD auto-positioning and screen geometry resolution
+Implemented QGuiApplication.primaryScreen geometry queries centering HUD at top-middle of monitor.
