@@ -52,3 +52,6 @@ Configured 5-second inactivity timeout with enterEvent/leaveEvent pause override
 
 ## UI Component 18: Document system tray context menu styling and quick-action toggles
 Styled QMenu context popups with dark theme QSS matching floating HUD aesthetics.
+
+## UI Component 19: Detail keyboard accessibility and Escape key HUD dismissal
+Implemented keyPressEvent listening for Escape key and global Ctrl+Shift+H toggle shortcuts.
