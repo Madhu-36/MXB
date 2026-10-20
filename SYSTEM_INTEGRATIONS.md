@@ -43,3 +43,6 @@ Detailed global keypress interceptor monitoring system-wide shortcuts (Ctrl+Shif
 
 ## Integration Topic 15: Detail hotkey collision avoidance and elevated UAC handling
 Documented fallback handling when elevated Administrator windows consume raw keyboard focus.
+
+## Integration Topic 16: Document Windows Core Audio WASAPI endpoint device switching
+Outlined IAudioEndpointVolume interface querying and changing active audio input/output devices.
