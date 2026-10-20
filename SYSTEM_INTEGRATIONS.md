@@ -31,3 +31,6 @@ Outlined win11toast integration generating native Windows toast alerts with cust
 
 ## Integration Topic 11: Add toast notification action buttons and callback handlers
 Documented interactive toast templates allowing user one-click replies and confirmation triggers.
+
+## Integration Topic 12: Detail system hardware telemetry polling
+Documented interval sampling of CPU load, RAM utilization, GPU temperature, and disk throughput.
