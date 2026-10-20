@@ -16,3 +16,6 @@ Documented charcoal/slate background palette (#0F172A) with semi-transparent cya
 
 ## UI Component 6: Document QPropertyAnimation opacity fade-in and fade-out curves
 Detailed smooth 300ms windowOpacity property animations eliminating jarring window pop-in.
+
+## UI Component 7: Detail QEasingCurve.InOutQuad timing functions for transitions
+Documented quadratic easing curves mimicking natural physical deceleration during fade transitions.
