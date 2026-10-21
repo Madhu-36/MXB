@@ -19,3 +19,6 @@ Configured temperature=0.2 and top_p=0.9 to suppress hallucination while preserv
 
 ## Architecture Topic 7: Detail context window budgeting across prompt components
 Mapped out 4096-token context allocation: 800 tokens system, 600 context/memories, 1000 history, 1696 output.
+
+## Architecture Topic 8: Document dynamic context injection (Date, Time, Location, Weather)
+Documented real-time prompt templating injecting local time, GPS coordinates, and Open-Meteo weather readings.
