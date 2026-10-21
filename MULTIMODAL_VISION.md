@@ -55,3 +55,6 @@ Configured Microsoft DirectML execution provider for accelerating vision encoder
 
 ## Vision Component 19: Detail fallback to pure text UI Automation on non-GPU systems
 Outlined Windows UI Automation (UIA) tree fallback providing semantic UI control when VLM GPU is unavailable.
+
+## Vision Component 20: Document user visual overlay debugging mode on HUD
+Implemented toggleable PySide6 overlay drawing color-coded bounding boxes around detected clickable elements.
