@@ -40,3 +40,6 @@ Guaranteed that screen capture frames exist solely in volatile RAM/VRAM and are 
 
 ## Vision Component 14: Document vision prompt engineering for spatial reasoning
 Outlined VLM system prompts teaching model to output precise coordinates and structured JSON interaction plans.
+
+## Vision Component 15: Detail voice and vision multimodal intent fusion
+Specified intent fusion layer correlating voice queries (e.g. click that button) with screen visual coordinates.
