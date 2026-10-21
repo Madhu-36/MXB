@@ -10,3 +10,6 @@ Documented DXGI output duplication interface capturing 60 FPS desktop surfaces d
 
 ## Vision Component 4: Document local Vision-LLM model candidates (MiniCPM-V, LLaVA)
 Evaluated edge Vision-Language Models capable of high-resolution image reasoning on consumer hardware.
+
+## Vision Component 5: Detail model quantization (INT4/AWQ) for sub-4GB VRAM execution
+Outlined AWQ and GPTQ 4-bit quantization preserving spatial localization while fitting within 4GB VRAM.
