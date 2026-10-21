@@ -49,3 +49,6 @@ Documented chunked HTTP token streaming minimizing perceived latency before trig
 
 ## Architecture Topic 17: Detail conversational context truncation and sliding window history
 Implemented rolling turn history pruning oldest interaction pairs to prevent context window overflow.
+
+## Architecture Topic 18: Document prompt injection defense and command boundary sanitization
+Designed prompt isolation delimiters preventing adversarial voice inputs from overriding system instructions.
