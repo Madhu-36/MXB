@@ -52,3 +52,6 @@ Designed dedicated QThread pipeline ensuring vision inference does not block PyS
 
 ## Vision Component 18: Document DirectML hardware acceleration for vision feature extraction
 Configured Microsoft DirectML execution provider for accelerating vision encoder convolutions on Windows.
+
+## Vision Component 19: Detail fallback to pure text UI Automation on non-GPU systems
+Outlined Windows UI Automation (UIA) tree fallback providing semantic UI control when VLM GPU is unavailable.
