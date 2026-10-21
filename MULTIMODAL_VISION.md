@@ -49,3 +49,6 @@ Documented real-time cursor velocity tracking predicting target UI elements befo
 
 ## Vision Component 17: Detail asynchronous frame processing pipeline on QThread worker
 Designed dedicated QThread pipeline ensuring vision inference does not block PySide6 HUD rendering.
+
+## Vision Component 18: Document DirectML hardware acceleration for vision feature extraction
+Configured Microsoft DirectML execution provider for accelerating vision encoder convolutions on Windows.
