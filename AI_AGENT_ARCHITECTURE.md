@@ -40,3 +40,6 @@ Implemented resilient regex fallback parser extracting JSON payloads when markdo
 
 ## Architecture Topic 14: Document Modelfile sha256 checksum hashing and boot auto-compilation
 Documented automatic boot hash checking recompiling Ollama model tag only when prompt template changes.
+
+## Architecture Topic 15: Detail GPU VRAM layer offloading tuning on Windows
+Configured num_gpu layer allocation dynamically adjusting offload layers based on detected CUDA VRAM headroom.
