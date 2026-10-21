@@ -16,3 +16,6 @@ Specified deterministic JSON output format enforcing schema keys: intent, action
 
 ## Architecture Topic 6: Document temperature and top_p sampling parameters
 Configured temperature=0.2 and top_p=0.9 to suppress hallucination while preserving natural conversational flow.
+
+## Architecture Topic 7: Detail context window budgeting across prompt components
+Mapped out 4096-token context allocation: 800 tokens system, 600 context/memories, 1000 history, 1696 output.
