@@ -10,3 +10,6 @@ Detailed base Modelfile declarations shaping MXB persona as a concise, proactive
 
 ## Architecture Topic 4: Document zero-shot intent classification taxonomy
 Categorized user queries into command execution, search dispatch, memory recall, and natural conversational dialogue.
+
+## Architecture Topic 5: Detail strict JSON schema output grammar constraints
+Specified deterministic JSON output format enforcing schema keys: intent, action, arguments, and speech_response.
