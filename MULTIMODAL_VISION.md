@@ -22,3 +22,6 @@ Mapped detected buttons, text inputs, and icons into structured semantic interac
 
 ## Vision Component 8: Document normalized coordinate transformation to native display pixels
 Documented coordinate mapping scaling normalized [0.0, 1.0] bounding boxes into physical monitor coordinates.
+
+## Vision Component 9: Detail programmatic mouse click and keyboard event injection
+Documented Win32 SendInput API integration dispatching synthetic mouse clicks and keystrokes to UI targets.
