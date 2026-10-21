@@ -46,3 +46,6 @@ Specified intent fusion layer correlating voice queries (e.g. click that button)
 
 ## Vision Component 16: Document optical cursor tracking and hover target prediction
 Documented real-time cursor velocity tracking predicting target UI elements before mouse click completes.
+
+## Vision Component 17: Detail asynchronous frame processing pipeline on QThread worker
+Designed dedicated QThread pipeline ensuring vision inference does not block PySide6 HUD rendering.
