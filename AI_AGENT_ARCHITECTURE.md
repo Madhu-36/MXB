@@ -52,3 +52,6 @@ Implemented rolling turn history pruning oldest interaction pairs to prevent con
 
 ## Architecture Topic 18: Document prompt injection defense and command boundary sanitization
 Designed prompt isolation delimiters preventing adversarial voice inputs from overriding system instructions.
+
+## Architecture Topic 19: Detail offline fallback heuristics when Ollama daemon is unreachable
+Configured offline fallback rule engine matching common regex commands when LLM server is disconnected.
