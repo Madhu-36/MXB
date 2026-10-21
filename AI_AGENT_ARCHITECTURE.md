@@ -31,3 +31,6 @@ Formatted top-k retrieved memories into structured historical context bullet poi
 
 ## Architecture Topic 11: Detail multi-step action planning and tool dispatch routing
 Documented executor pipeline mapping JSON action keys to OS commands, apps, and window manipulation calls.
+
+## Architecture Topic 12: Document DuckDuckGo search query synthesis and answer summarization
+Outlined two-stage web search pipeline synthesizing optimized DDGS search queries and summarizing top text snippets.
