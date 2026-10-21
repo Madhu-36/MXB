@@ -25,3 +25,6 @@ Documented coordinate mapping scaling normalized [0.0, 1.0] bounding boxes into 
 
 ## Vision Component 9: Detail programmatic mouse click and keyboard event injection
 Documented Win32 SendInput API integration dispatching synthetic mouse clicks and keystrokes to UI targets.
+
+## Vision Component 10: Document multi-monitor bounding box offset calculation
+Specified multi-monitor desktop coordinate space calculations handling mixed DPI scales and negative virtual coordinates.
