@@ -22,3 +22,6 @@ Mapped out 4096-token context allocation: 800 tokens system, 600 context/memorie
 
 ## Architecture Topic 8: Document dynamic context injection (Date, Time, Location, Weather)
 Documented real-time prompt templating injecting local time, GPS coordinates, and Open-Meteo weather readings.
+
+## Architecture Topic 9: Detail active window title grounding into LLM situational awareness
+Integrated pygetwindow active window titles into LLM prompt enabling context-aware desktop assistance.
