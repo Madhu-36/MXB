@@ -37,3 +37,6 @@ Outlined two-stage web search pipeline synthesizing optimized DDGS search querie
 
 ## Architecture Topic 13: Detail JSON parsing error recovery and automatic schema retry loops
 Implemented resilient regex fallback parser extracting JSON payloads when markdown code fences wrap output.
+
+## Architecture Topic 14: Document Modelfile sha256 checksum hashing and boot auto-compilation
+Documented automatic boot hash checking recompiling Ollama model tag only when prompt template changes.
