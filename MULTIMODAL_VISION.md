@@ -58,3 +58,6 @@ Outlined Windows UI Automation (UIA) tree fallback providing semantic UI control
 
 ## Vision Component 20: Document user visual overlay debugging mode on HUD
 Implemented toggleable PySide6 overlay drawing color-coded bounding boxes around detected clickable elements.
+
+## Vision Component 21: Add multimodal vision unit testing fixtures with synthetic screenshots
+Created pytest test suite validating coordinate normalization and OCR parsing using synthetic UI images.
