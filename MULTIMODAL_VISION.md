@@ -34,3 +34,6 @@ Implemented SSIM and perceptual hash frame diffing skipping inference when scree
 
 ## Vision Component 12: Document sensitive window blurring before VLM ingestion
 Documented automatic pixelation of password managers, bank portals, and private browser windows.
+
+## Vision Component 13: Detail ephemeral in-memory frame buffer policy with zero disk writes
+Guaranteed that screen capture frames exist solely in volatile RAM/VRAM and are never saved to disk.
