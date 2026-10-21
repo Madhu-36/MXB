@@ -34,3 +34,6 @@ Documented executor pipeline mapping JSON action keys to OS commands, apps, and 
 
 ## Architecture Topic 12: Document DuckDuckGo search query synthesis and answer summarization
 Outlined two-stage web search pipeline synthesizing optimized DDGS search queries and summarizing top text snippets.
+
+## Architecture Topic 13: Detail JSON parsing error recovery and automatic schema retry loops
+Implemented resilient regex fallback parser extracting JSON payloads when markdown code fences wrap output.
