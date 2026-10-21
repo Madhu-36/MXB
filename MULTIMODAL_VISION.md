@@ -13,3 +13,6 @@ Evaluated edge Vision-Language Models capable of high-resolution image reasoning
 
 ## Vision Component 5: Detail model quantization (INT4/AWQ) for sub-4GB VRAM execution
 Outlined AWQ and GPTQ 4-bit quantization preserving spatial localization while fitting within 4GB VRAM.
+
+## Vision Component 6: Document Windows Media OCR text detection and bounding boxes
+Documented native Windows.Media.Ocr engine extracting words, text lines, and pixel bounding boxes in <15ms.
