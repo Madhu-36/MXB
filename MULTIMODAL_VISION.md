@@ -43,3 +43,6 @@ Outlined VLM system prompts teaching model to output precise coordinates and str
 
 ## Vision Component 15: Detail voice and vision multimodal intent fusion
 Specified intent fusion layer correlating voice queries (e.g. click that button) with screen visual coordinates.
+
+## Vision Component 16: Document optical cursor tracking and hover target prediction
+Documented real-time cursor velocity tracking predicting target UI elements before mouse click completes.
