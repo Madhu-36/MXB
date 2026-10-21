@@ -28,3 +28,6 @@ Integrated pygetwindow active window titles into LLM prompt enabling context-awa
 
 ## Architecture Topic 10: Document TF-IDF retrieved historical memory formatting
 Formatted top-k retrieved memories into structured historical context bullet points for prompt injection.
+
+## Architecture Topic 11: Detail multi-step action planning and tool dispatch routing
+Documented executor pipeline mapping JSON action keys to OS commands, apps, and window manipulation calls.
