@@ -25,3 +25,6 @@ Documented real-time prompt templating injecting local time, GPS coordinates, an
 
 ## Architecture Topic 9: Detail active window title grounding into LLM situational awareness
 Integrated pygetwindow active window titles into LLM prompt enabling context-aware desktop assistance.
+
+## Architecture Topic 10: Document TF-IDF retrieved historical memory formatting
+Formatted top-k retrieved memories into structured historical context bullet points for prompt injection.
