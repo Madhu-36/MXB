@@ -43,3 +43,6 @@ Documented automatic boot hash checking recompiling Ollama model tag only when p
 
 ## Architecture Topic 15: Detail GPU VRAM layer offloading tuning on Windows
 Configured num_gpu layer allocation dynamically adjusting offload layers based on detected CUDA VRAM headroom.
+
+## Architecture Topic 16: Document token streaming latency and Time-To-First-Token metrics
+Documented chunked HTTP token streaming minimizing perceived latency before triggering SAPI5 speech synthesis.
