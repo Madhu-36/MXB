@@ -19,3 +19,6 @@ Documented native Windows.Media.Ocr engine extracting words, text lines, and pix
 
 ## Vision Component 7: Detail UI element visual grounding and semantic label mapping
 Mapped detected buttons, text inputs, and icons into structured semantic interactive elements.
+
+## Vision Component 8: Document normalized coordinate transformation to native display pixels
+Documented coordinate mapping scaling normalized [0.0, 1.0] bounding boxes into physical monitor coordinates.
