@@ -37,3 +37,6 @@ Documented automatic pixelation of password managers, bank portals, and private 
 
 ## Vision Component 13: Detail ephemeral in-memory frame buffer policy with zero disk writes
 Guaranteed that screen capture frames exist solely in volatile RAM/VRAM and are never saved to disk.
+
+## Vision Component 14: Document vision prompt engineering for spatial reasoning
+Outlined VLM system prompts teaching model to output precise coordinates and structured JSON interaction plans.
