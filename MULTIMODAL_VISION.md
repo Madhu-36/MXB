@@ -31,3 +31,6 @@ Specified multi-monitor desktop coordinate space calculations handling mixed DPI
 
 ## Vision Component 11: Detail visual diff detection to trigger inference on frame changes
 Implemented SSIM and perceptual hash frame diffing skipping inference when screen content is static.
+
+## Vision Component 12: Document sensitive window blurring before VLM ingestion
+Documented automatic pixelation of password managers, bank portals, and private browser windows.
