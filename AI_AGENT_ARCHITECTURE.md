@@ -58,3 +58,6 @@ Configured offline fallback rule engine matching common regex commands when LLM 
 
 ## Architecture Topic 20: Document asynchronous LLM inference worker lifecycle via QThread
 Specified QThread execution preventing long-running Ollama inference requests from freezing PySide6 UI loop.
+
+## Architecture Topic 21: Add LLM router unit testing fixtures with mock HTTP responses
+Created pytest test suite verifying intent routing and JSON schema conformance using mocked Ollama endpoints.
