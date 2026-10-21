@@ -55,3 +55,6 @@ Designed prompt isolation delimiters preventing adversarial voice inputs from ov
 
 ## Architecture Topic 19: Detail offline fallback heuristics when Ollama daemon is unreachable
 Configured offline fallback rule engine matching common regex commands when LLM server is disconnected.
+
+## Architecture Topic 20: Document asynchronous LLM inference worker lifecycle via QThread
+Specified QThread execution preventing long-running Ollama inference requests from freezing PySide6 UI loop.
