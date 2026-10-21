@@ -7,3 +7,6 @@ Documented Llama 3.1 8B Instruct Q4_K_M quantization balancing 4.8-bit perplexit
 
 ## Architecture Topic 3: Detail Ollama Modelfile system prompt engineering and persona
 Detailed base Modelfile declarations shaping MXB persona as a concise, proactive Windows executive brain.
+
+## Architecture Topic 4: Document zero-shot intent classification taxonomy
+Categorized user queries into command execution, search dispatch, memory recall, and natural conversational dialogue.
