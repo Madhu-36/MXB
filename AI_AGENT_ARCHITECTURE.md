@@ -13,3 +13,6 @@ Categorized user queries into command execution, search dispatch, memory recall,
 
 ## Architecture Topic 5: Detail strict JSON schema output grammar constraints
 Specified deterministic JSON output format enforcing schema keys: intent, action, arguments, and speech_response.
+
+## Architecture Topic 6: Document temperature and top_p sampling parameters
+Configured temperature=0.2 and top_p=0.9 to suppress hallucination while preserving natural conversational flow.
