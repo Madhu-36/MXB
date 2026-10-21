@@ -28,3 +28,6 @@ Documented Win32 SendInput API integration dispatching synthetic mouse clicks an
 
 ## Vision Component 10: Document multi-monitor bounding box offset calculation
 Specified multi-monitor desktop coordinate space calculations handling mixed DPI scales and negative virtual coordinates.
+
+## Vision Component 11: Detail visual diff detection to trigger inference on frame changes
+Implemented SSIM and perceptual hash frame diffing skipping inference when screen content is static.
