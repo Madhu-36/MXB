@@ -4,3 +4,6 @@ Started comprehensive engineering manual for MXB desktop visual understanding an
 
 ## Vision Component 2: Document screen capture pipeline using Windows Graphics Capture API
 Outlined Windows.Graphics.Capture API integration providing zero-copy hardware desktop frame buffers.
+
+## Vision Component 3: Detail DirectX 11 DXGI desktop duplication surface streaming
+Documented DXGI output duplication interface capturing 60 FPS desktop surfaces directly in GPU memory.
