@@ -46,3 +46,6 @@ Configured num_gpu layer allocation dynamically adjusting offload layers based o
 
 ## Architecture Topic 16: Document token streaming latency and Time-To-First-Token metrics
 Documented chunked HTTP token streaming minimizing perceived latency before triggering SAPI5 speech synthesis.
+
+## Architecture Topic 17: Detail conversational context truncation and sliding window history
+Implemented rolling turn history pruning oldest interaction pairs to prevent context window overflow.
