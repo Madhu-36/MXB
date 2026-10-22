@@ -134,3 +134,13 @@ ORDER BY distance ASC;
 Embedding vectors are generated using a local ONNX quantized `all-MiniLM-L6-v2` encoder (384 dimensions) with 15ms inference latency.
 
 
+## 8. Encrypted Local Telemetry Queue & Crash Journal
+To debug failures without exposing internal application state across unencrypted channels, diagnostic events are recorded into an encrypted local circular ring buffer.
+
+### Ring Buffer Attributes
+- **Format**: AES-GCM encrypted local SQLite database `telemetry_journal.db`.
+- **Maximum Buffer Size**: 50 MB (auto-purging oldest non-fatal records when full).
+- **Zero-Egress Mode**: In air-gapped configuration, external sync endpoints are permanently disabled, retaining records strictly for manual local diagnostic export.
+- **Redaction**: All file paths and window names are scrubbed of personal usernames before disk commitment.
+
+
