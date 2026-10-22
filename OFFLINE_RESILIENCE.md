@@ -162,3 +162,16 @@ def on_network_connectivity_changed(is_connected: bool):
 Transition between online hybrid mode and full offline autonomy happens in less than 50 milliseconds with zero dropped voice frames.
 
 
+## 10. DNS Timeout Isolation & Circuit Breaking
+When hybrid features (such as real-time web search) are enabled but the network drops, connection hangs can freeze UI threads. MXB implements strict circuit breaking with rapid fail-fast timers.
+
+### Circuit Breaker States
+- **Closed**: Remote endpoints healthy; requests proceed with a 2.5s hard timeout.
+- **Open**: After 2 consecutive socket/DNS timeouts, breaker trips to OPEN. All subsequent requests fail immediately to local fallback without issuing network socket calls.
+- **Half-Open**: Periodic single probe allowed after a 60-second cooldown window.
+
+```python
+class CircuitBreakerOpenException(Exception): pass
+```
+
+
