@@ -234,3 +234,13 @@ class ThermalManager:
 The system continuously reads sensor data via Windows Management Instrumentation (WMI) and NVIDIA NVML C-bindings.
 
 
+## 15. Atomic State Journaling & Crash Recovery
+To protect user configurations, preferences, and session state from corruption during unexpected power cuts or OS crashes, all disk writes adhere to strict Write-Ahead Logging (WAL) and atomic swap semantics.
+
+### Atomic Swap Sequence
+1. Serialize state into `config.json.tmp`.
+2. Force disk flush using `os.fsync(fd)`.
+3. Perform atomic replacement via `os.replace("config.json.tmp", "config.json")`.
+4. Validate checksum on boot; if corrupted, rollback automatically to `config.json.bak`.
+
+
