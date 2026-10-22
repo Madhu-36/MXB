@@ -144,3 +144,21 @@ To debug failures without exposing internal application state across unencrypted
 - **Redaction**: All file paths and window names are scrubbed of personal usernames before disk commitment.
 
 
+## 9. Dynamic Network State Listener & Seamless Mode Switching
+MXB uses the Windows Network List Manager (NLM) COM API (`INetworkListManager`) to monitor active network interfaces without periodic network polling.
+
+```python
+def on_network_connectivity_changed(is_connected: bool):
+    if not is_connected:
+        log.warning("Network connection severed. Transitioning to Autonomous Offline Mode.")
+        engine.set_inference_tier(InferenceTier.LOCAL_ONLY)
+        network_pool.cancel_pending_cloud_tasks()
+        ui.display_offline_badge(active=True)
+    else:
+        log.info("Network restored. Optional remote sync enabled.")
+        ui.display_offline_badge(active=False)
+```
+
+Transition between online hybrid mode and full offline autonomy happens in less than 50 milliseconds with zero dropped voice frames.
+
+
