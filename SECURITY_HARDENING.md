@@ -46,3 +46,6 @@ Mandated strict certificate chain validation and modern cipher suites for web se
 
 ## Security Standard 16: Document biometric Windows Hello authentication for privileged commands
 Designed secondary biometric approval gates before executing system-level actions or file deletions.
+
+## Security Standard 17: Detail irreversible action double-confirmation prompts
+Implemented mandatory voice/UI confirmation dialogues before executing shutdowns or file purges.
