@@ -274,3 +274,19 @@ To ensure installation without internet access, MXB is packaged with an embedded
 Installation is completely executable from a local USB drive with `setup.bat --offline`.
 
 
+## 19. Resilient Audio Device Hot-Plugging
+When users unplug USB headsets or audio interfaces while traveling offline, MXB maintains a resilient WASAPI session monitoring loop.
+
+```python
+def monitor_audio_endpoints():
+    device_enumerator = CreateDeviceEnumerator()
+    while not stop_signal.is_set():
+        if not device_enumerator.is_default_device_active():
+            log.warning("Audio capture device lost. Attempting auto-rebind...")
+            reinitialize_wasapi_stream()
+        time.sleep(1.0)
+```
+
+The audio pipeline recovers within 1.5 seconds without terminating active voice recognition sessions.
+
+
