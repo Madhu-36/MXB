@@ -253,3 +253,12 @@ When the host laptop is running on battery power (DC), MXB automatically shifts 
 - **Audio Capture Polling**: Extends audio ring buffer polling interval from 10ms to 25ms, reducing CPU wakeups.
 
 
+## 17. Offline Screen Reading with Local OCR
+MXB supports offline visual screen queries without transmitting screen captures over the internet.
+
+### Vision Pipeline
+- **Screen Capture**: Direct Windows DXGI desktop duplication API (< 12ms per frame).
+- **Text Recognition**: Local embedded Tesseract OCR 5.3 engine with fast integer models (`tessdata_fast`).
+- **Object Detection**: MobileNet-V3 ONNX object detection model detecting UI buttons, dialogue boxes, and text entry fields.
+
+
