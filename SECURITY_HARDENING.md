@@ -58,3 +58,6 @@ Outlined type-safe ctypes and PyO3 bindings for third-party C++ and Rust extensi
 
 ## Security Standard 20: Document supply chain security and pip dependency vulnerability scanning
 Integrated pip-audit and Dependabot scanning verifying third-party packages against known CVEs.
+
+## Security Standard 21: Add security automated penetration testing fixtures with pytest
+Created pytest fixtures testing adversarial prompt injection and unauthorized command execution.
