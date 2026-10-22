@@ -196,3 +196,13 @@ New-NetFirewallRule -DisplayName "MXB Permit Localhost IPC" `
 ```
 
 
+## 12. Offline Updates via Signed Binary Bundles (.mxbupdate)
+Updates in air-gapped environments are delivered via cryptographically signed update bundles (`.mxbupdate`) transferred via authorized USB media.
+
+### Update Workflow
+1. The administrator loads `mxb_v2.1_update.mxbupdate`.
+2. Binary signature is validated using the MXB offline RSA-4096 public root key.
+3. Binary differential patches (`bsdiff4`) are applied against existing DLLs and executables in a staging directory.
+4. An atomic directory rename completes the update upon next application restart.
+
+
