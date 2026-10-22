@@ -25,3 +25,6 @@ Guaranteed clipboard data is never accessed unless explicitly invoked by direct 
 
 ## Security Standard 9: Detail Windows Defender SmartScreen binary signing requirements
 Documented Authenticode code-signing with EV certificates preventing SmartScreen warning prompts.
+
+## Security Standard 10: Document local memory bank AES-GCM-256 encryption at rest
+Outlined authenticated encryption for conversation history files stored on local disk.
