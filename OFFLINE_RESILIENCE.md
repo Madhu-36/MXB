@@ -262,3 +262,15 @@ MXB supports offline visual screen queries without transmitting screen captures 
 - **Object Detection**: MobileNet-V3 ONNX object detection model detecting UI buttons, dialogue boxes, and text entry fields.
 
 
+## 18. Air-Gapped Python Environment Bundling
+To ensure installation without internet access, MXB is packaged with an embedded Python distribution and pre-compiled binary wheels.
+
+### Build Artifact Contents
+- Embedded Python 3.14 runtime (`python-3.14-embed-amd64`).
+- Pre-cached offline wheelhouse (`pip cache / wheels/*.whl`).
+- Static C++ runtime redistributables (`vcruntime140.dll`, `msvcp140.dll`).
+- Pre-downloaded model weight cache under `models/` directory.
+
+Installation is completely executable from a local USB drive with `setup.bat --offline`.
+
+
