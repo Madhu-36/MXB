@@ -55,3 +55,6 @@ Documented automated regex sanitization stripping usernames, IPs, and MAC addres
 
 ## Security Standard 19: Detail memory-safe extension boundary FFI validation
 Outlined type-safe ctypes and PyO3 bindings for third-party C++ and Rust extension modules.
+
+## Security Standard 20: Document supply chain security and pip dependency vulnerability scanning
+Integrated pip-audit and Dependabot scanning verifying third-party packages against known CVEs.
