@@ -43,3 +43,6 @@ Enforced strict 127.0.0.1 IP binding for local model server preventing remote LA
 
 ## Security Standard 15: Detail TLS 1.3 verification for external web calls
 Mandated strict certificate chain validation and modern cipher suites for web search lookups.
+
+## Security Standard 16: Document biometric Windows Hello authentication for privileged commands
+Designed secondary biometric approval gates before executing system-level actions or file deletions.
