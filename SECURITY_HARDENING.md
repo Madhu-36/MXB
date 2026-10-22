@@ -19,3 +19,6 @@ Outlined structural XML delimiters and adversarial token filtering protecting LL
 
 ## Security Standard 7: Detail sensitive process isolation masking password managers
 Configured process blacklist preventing window title inspection on password managers and banking apps.
+
+## Security Standard 8: Document clipboard history protection and zero scraping guarantee
+Guaranteed clipboard data is never accessed unless explicitly invoked by direct user voice command.
