@@ -52,3 +52,6 @@ Implemented mandatory voice/UI confirmation dialogues before executing shutdowns
 
 ## Security Standard 18: Document diagnostic log redaction stripping personal markers
 Documented automated regex sanitization stripping usernames, IPs, and MAC addresses from logs.
+
+## Security Standard 19: Detail memory-safe extension boundary FFI validation
+Outlined type-safe ctypes and PyO3 bindings for third-party C++ and Rust extension modules.
