@@ -31,3 +31,6 @@ Outlined authenticated encryption for conversation history files stored on local
 
 ## Security Standard 11: Detail ephemeral encryption key derivation via Windows DPAPI
 Utilized CryptProtectData Windows DPAPI for securing local encryption master keys with user credentials.
+
+## Security Standard 12: Document memory redaction filters for API keys and credentials
+Configured high-entropy regex patterns stripping API keys, tokens, and passwords before persistence.
