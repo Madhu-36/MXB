@@ -13,3 +13,6 @@ Specified os.path.realpath and os.path.commonpath checks preventing directory tr
 
 ## Security Standard 5: Detail command parameter whitelisting and regex token validation
 Documented schema validation rejecting unwhitelisted terminal switches and chained shell operators.
+
+## Security Standard 6: Document prompt injection containment and system instruction demarcation
+Outlined structural XML delimiters and adversarial token filtering protecting LLM system prompts.
