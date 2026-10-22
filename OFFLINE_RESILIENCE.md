@@ -46,3 +46,24 @@ def verify_model_integrity(model_path: Path, expected_sha256: str) -> bool:
 Verified hashes are cached in `model_manifest.json` alongside model quantization profiles (`Q4_K_M`, `Q5_K_S`) to bypass redundant re-hashing during rapid application warm starts.
 
 
+## 3. High-Performance Local Speech-to-Text via whisper.cpp
+When running detached from the internet, MXB leverages `pywhispercpp` bound to statically compiled AVX2/CUDA C++ binaries.
+
+### Configuration Specification
+- **Engine**: Whisper.cpp runtime bindings.
+- **Model Target**: `ggml-base.en-q5_1.bin` (60MB) for low-power laptops; `ggml-small.en-q5_1.bin` (240MB) for desktop workstations.
+- **Latency Budget**: < 220ms on 4-thread CPU; < 45ms on RTX GPU.
+- **Memory Footprint**: Under 350MB VRAM / 500MB System RAM.
+
+```python
+from pywhispercpp.model import Model
+
+stt_engine = Model(
+    model="base.en",
+    n_threads=4,
+    print_realtime=False,
+    print_progress=False
+)
+```
+
+
