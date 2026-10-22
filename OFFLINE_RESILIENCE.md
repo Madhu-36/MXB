@@ -299,3 +299,23 @@ The MXB supervisor daemon continuously monitors child inference engines (such as
 - **Auto-Recovery**: If 3 consecutive heartbeat probes fail, the supervisor sends `SIGKILL` to the hung child process, flushes orphaned VRAM allocations, and restarts the backend process cleanly.
 
 
+## 21. Automated Offline Integration Test Suite
+To prevent regressions where unexpected network calls creep into the codebase, our automated test suite runs with network sockets strictly disabled.
+
+```python
+import socket
+import pytest
+
+@pytest.fixture(autouse=True)
+def block_external_sockets(monkeypatch):
+    def guarded_connect(self, *args, **kwargs):
+        host = args[0][0]
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            raise RuntimeError(f"Unauthorized external network socket attempted in offline mode: {host}")
+        return original_connect(self, *args, **kwargs)
+
+    original_connect = socket.socket.connect
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+```
+
+
