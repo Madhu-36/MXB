@@ -290,3 +290,12 @@ def monitor_audio_endpoints():
 The audio pipeline recovers within 1.5 seconds without terminating active voice recognition sessions.
 
 
+## 20. Process Supervisor & Self-Healing Watchdog
+The MXB supervisor daemon continuously monitors child inference engines (such as Ollama or llama.cpp server processes) running on localhost.
+
+### Health Check Policy
+- **Heartbeat Endpoint**: `http://127.0.0.1:11434/api/version`.
+- **Interval**: 5-second interval.
+- **Auto-Recovery**: If 3 consecutive heartbeat probes fail, the supervisor sends `SIGKILL` to the hung child process, flushes orphaned VRAM allocations, and restarts the backend process cleanly.
+
+
