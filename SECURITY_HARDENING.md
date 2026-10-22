@@ -10,3 +10,6 @@ Mandated subprocess.Popen with argument lists and shell=False to prevent arbitra
 
 ## Security Standard 4: Document strict path traversal sanitization for filesystem access
 Specified os.path.realpath and os.path.commonpath checks preventing directory traversal attacks.
+
+## Security Standard 5: Detail command parameter whitelisting and regex token validation
+Documented schema validation rejecting unwhitelisted terminal switches and chained shell operators.
