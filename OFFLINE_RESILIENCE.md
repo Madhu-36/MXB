@@ -175,3 +175,24 @@ class CircuitBreakerOpenException(Exception): pass
 ```
 
 
+## 11. Air-Gapped Firewall Rules & Outbound Isolation
+For classified or high-security deployments, MXB can be placed in strict air-gap isolation through automated Windows Advanced Firewall rules.
+
+### PowerShell Air-Gap Script
+```powershell
+# Block all outbound TCP/UDP traffic from MXB application binaries
+New-NetFirewallRule -DisplayName "MXB Core Block Outbound" `
+    -Direction Outbound `
+    -Program "C:\Program Files\MXB\mxb.exe" `
+    -Action Block `
+    -Profile Any
+
+# Permit local loopback IPC for Ollama local server
+New-NetFirewallRule -DisplayName "MXB Permit Localhost IPC" `
+    -Direction Outbound `
+    -Program "C:\Program Files\MXB\mxb.exe" `
+    -RemoteAddress 127.0.0.1 `
+    -Action Allow
+```
+
+
