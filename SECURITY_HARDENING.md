@@ -28,3 +28,6 @@ Documented Authenticode code-signing with EV certificates preventing SmartScreen
 
 ## Security Standard 10: Document local memory bank AES-GCM-256 encryption at rest
 Outlined authenticated encryption for conversation history files stored on local disk.
+
+## Security Standard 11: Detail ephemeral encryption key derivation via Windows DPAPI
+Utilized CryptProtectData Windows DPAPI for securing local encryption master keys with user credentials.
