@@ -16,3 +16,6 @@ Documented schema validation rejecting unwhitelisted terminal switches and chain
 
 ## Security Standard 6: Document prompt injection containment and system instruction demarcation
 Outlined structural XML delimiters and adversarial token filtering protecting LLM system prompts.
+
+## Security Standard 7: Detail sensitive process isolation masking password managers
+Configured process blacklist preventing window title inspection on password managers and banking apps.
