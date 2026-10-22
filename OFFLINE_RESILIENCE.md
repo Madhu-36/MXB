@@ -206,3 +206,13 @@ Updates in air-gapped environments are delivered via cryptographically signed up
 4. An atomic directory rename completes the update upon next application restart.
 
 
+## 13. Offline Document Ingestion Pipeline
+MXB features an offline RAG (Retrieval-Augmented Generation) document processing pipeline that parses user documents directly on the local machine.
+
+### Document Parsers
+- **PDF Documents**: Extracted via `pdfplumber` using pure local Python parsing.
+- **Markdown & Code**: AST parsing via standard Python `ast` and markdown splitters.
+- **Chunking Strategy**: Recursive token splitter targeting 512 tokens with 64-token sliding window overlap.
+- **Local Embedding**: Chunk vectors generated locally via ONNX Runtime using int8 quantized transformer weights.
+
+
