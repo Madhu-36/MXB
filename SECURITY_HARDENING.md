@@ -34,3 +34,6 @@ Utilized CryptProtectData Windows DPAPI for securing local encryption master key
 
 ## Security Standard 12: Document memory redaction filters for API keys and credentials
 Configured high-entropy regex patterns stripping API keys, tokens, and passwords before persistence.
+
+## Security Standard 13: Detail network isolation policies for air-gapped enterprise environments
+Documented outbound Windows Firewall rules for running fully air-gapped without internet access.
