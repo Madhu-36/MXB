@@ -82,3 +82,21 @@ echo "System offline mode active." | piper.exe --model en_US-lessac-medium.onnx 
 ```
 
 
+## 5. Deterministic Regex Rule Engine for Extreme Starvation
+Under severe thermal throttling, memory pressure, or when model weights are temporarily unloading, MXB gracefully degrades to a zero-overhead regex-based pattern matcher.
+
+### Deterministic Action Map
+```json
+{
+  "rules": [
+    {"pattern": "^(?:open|launch)\\s+(?P<app>[a-zA-Z0-9_ ]+)$", "action": "os.launch_app"},
+    {"pattern": "^(?:mute|unmute)\\s+(?:volume|audio)?$", "action": "audio.toggle_mute"},
+    {"pattern": "^(?:set|change)\\s+volume\\s+to\\s+(?P<level>\\d{1,3})%?$", "action": "audio.set_volume"},
+    {"pattern": "^(?:lock|secure)\\s+(?:screen|pc|workstation)$", "action": "system.lock_workstation"}
+  ]
+}
+```
+
+This ensures fundamental operating system control commands never stall or fail, regardless of system load.
+
+
