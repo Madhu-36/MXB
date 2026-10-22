@@ -22,3 +22,6 @@ Configured process blacklist preventing window title inspection on password mana
 
 ## Security Standard 8: Document clipboard history protection and zero scraping guarantee
 Guaranteed clipboard data is never accessed unless explicitly invoked by direct user voice command.
+
+## Security Standard 9: Detail Windows Defender SmartScreen binary signing requirements
+Documented Authenticode code-signing with EV certificates preventing SmartScreen warning prompts.
