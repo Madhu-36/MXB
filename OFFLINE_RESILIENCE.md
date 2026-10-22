@@ -216,3 +216,21 @@ MXB features an offline RAG (Retrieval-Augmented Generation) document processing
 - **Local Embedding**: Chunk vectors generated locally via ONNX Runtime using int8 quantized transformer weights.
 
 
+## 14. Thermal Throttling & Hardware Resource Telemetry
+Local model execution on laptops requires proactive thermal management to prevent hardware degradation and fan noise disruptions.
+
+```python
+class ThermalManager:
+    def __init__(self, temp_threshold_celsius: float = 82.0):
+        self.threshold = temp_threshold_celsius
+
+    def evaluate_inference_throttle(self, current_gpu_temp: float) -> int:
+        if current_gpu_temp >= self.threshold:
+            # Drop context window and switch to smaller quantized draft model
+            return 1024
+        return 4096
+```
+
+The system continuously reads sensor data via Windows Management Instrumentation (WMI) and NVIDIA NVML C-bindings.
+
+
