@@ -7,3 +7,6 @@ Established boundaries restricting assistant tool execution to non-elevated user
 
 ## Security Standard 3: Detail safe subprocess spawning avoiding shell injection
 Mandated subprocess.Popen with argument lists and shell=False to prevent arbitrary command injection.
+
+## Security Standard 4: Document strict path traversal sanitization for filesystem access
+Specified os.path.realpath and os.path.commonpath checks preventing directory traversal attacks.
