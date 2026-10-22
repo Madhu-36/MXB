@@ -244,3 +244,12 @@ To protect user configurations, preferences, and session state from corruption d
 4. Validate checksum on boot; if corrupted, rollback automatically to `config.json.bak`.
 
 
+## 16. Battery-Aware Power Optimization
+When the host laptop is running on battery power (DC), MXB automatically shifts to low-power profile to conserve battery life.
+
+### Battery Optimization Heuristics
+- **Quantization Switching**: Transitions LLM weights from 16-bit to `Q4_K_M` 4-bit integer quantization.
+- **Speculative Decoding**: Suspends dual-model speculative decoding to cut GPU tensor core utilization by 40%.
+- **Audio Capture Polling**: Extends audio ring buffer polling interval from 10ms to 25ms, reducing CPU wakeups.
+
+
