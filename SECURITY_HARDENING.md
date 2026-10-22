@@ -49,3 +49,6 @@ Designed secondary biometric approval gates before executing system-level action
 
 ## Security Standard 17: Detail irreversible action double-confirmation prompts
 Implemented mandatory voice/UI confirmation dialogues before executing shutdowns or file purges.
+
+## Security Standard 18: Document diagnostic log redaction stripping personal markers
+Documented automated regex sanitization stripping usernames, IPs, and MAC addresses from logs.
