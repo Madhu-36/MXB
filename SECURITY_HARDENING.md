@@ -40,3 +40,6 @@ Documented outbound Windows Firewall rules for running fully air-gapped without 
 
 ## Security Standard 14: Document local Ollama REST interface loopback binding
 Enforced strict 127.0.0.1 IP binding for local model server preventing remote LAN exploitation.
+
+## Security Standard 15: Detail TLS 1.3 verification for external web calls
+Mandated strict certificate chain validation and modern cipher suites for web search lookups.
