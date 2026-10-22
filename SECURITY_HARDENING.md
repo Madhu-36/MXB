@@ -37,3 +37,6 @@ Configured high-entropy regex patterns stripping API keys, tokens, and passwords
 
 ## Security Standard 13: Detail network isolation policies for air-gapped enterprise environments
 Documented outbound Windows Firewall rules for running fully air-gapped without internet access.
+
+## Security Standard 14: Document local Ollama REST interface loopback binding
+Enforced strict 127.0.0.1 IP binding for local model server preventing remote LAN exploitation.
