@@ -100,3 +100,15 @@ Under severe thermal throttling, memory pressure, or when model weights are temp
 This ensures fundamental operating system control commands never stall or fail, regardless of system load.
 
 
+## 6. Offline Application Indexing & Trie-Based Search
+MXB maintains an offline index of all locally installed Win32, MSIX, and Windows Store applications without pinging online search providers or Windows Search index telemetry.
+
+### Indexing Sources
+1. Start Menu Directory Paths (`C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs`).
+2. User Programs Directory (`%AppData%\\Microsoft\\Windows\\Start Menu\\Programs`).
+3. App Execution Aliases (`%LocalAppData%\\Microsoft\\WindowsApps`).
+4. Registry Software Uninstall Keys (`HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall`).
+
+Indexed application paths are stored in an in-memory prefix trie with Levenshtein fuzzy matching, delivering match results within 2 milliseconds.
+
+
