@@ -288,3 +288,21 @@ Launching an AI assistant on demand often encounters "cold start" penalties exce
 3. **Dummy Tensor Warmup**: Dispatch a 1-token dummy forward pass during system idle to prime CUDA kernels and allocate memory pools before the user speaks.
 
 
+## 17. TCP Connection Pooling & HTTP/2 Keep-Alive
+For cloud-enabled hybrid queries (such as live weather lookups or duckduckgo searches), establishing fresh TLS handshakes adds 150ms to 300ms of avoidable network latency.
+
+### Connection Reuse Profile
+```python
+import httpx
+
+# Reusable client session with persistent TCP connection pool
+http_client = httpx.AsyncClient(
+    http2=True,
+    timeout=httpx.Timeout(3.0, connect=1.0),
+    limits=httpx.Limits(max_keepalive_connections=5, keepalive_expiry=60.0)
+)
+```
+
+Persistent keep-alive sockets eliminate TLS negotiation overhead for follow-up queries.
+
+
