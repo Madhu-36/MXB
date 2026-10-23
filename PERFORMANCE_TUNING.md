@@ -264,3 +264,18 @@ sync_event = win32event.CreateEvent(None, 0, 0, "Local\MXB_FrameReady")
 Shared-memory ring buffers enable 60 FPS 1080p frame streaming between processes with zero serialization latency (<0.1ms per frame).
 
 
+## 15. Non-Blocking Worker Architecture & Thread Pool Sizing
+Blocking the main PySide6 UI event loop causes noticeable window frame drops and mouse stutter.
+
+### Thread Allocation Matrix
+| Subsystem | Thread Type | Priority | Concurrency Limit |
+|-----------|-------------|----------|-------------------|
+| UI & Event Loop | Main Thread | Normal | 1 (Fixed) |
+| Audio Ingestion & VAD | Dedicated QThread | Above Normal | 1 (Pinned) |
+| STT Inference | ThreadPool Worker | Normal | 1 (Serialized) |
+| Web Search & I/O | Asyncio Event Loop | Below Normal | 4 (Concurrent) |
+| TTS Audio Playback | Dedicated QThread | Above Normal | 1 (Pinned) |
+
+Tasks communicate strictly through thread-safe `queue.Queue` channels without mutex lock contention.
+
+
