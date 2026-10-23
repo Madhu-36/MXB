@@ -142,3 +142,15 @@ MXB breaks LLM sentence tokens at punctuation boundaries (`.`, `,`, `!`, `?`) an
 First audio playback begins within **110 milliseconds** of the first LLM token emission, while subsequent sentence chunks synthesize concurrently in the background.
 
 
+## 8. PySide6 HUD Rendering & Dirty-Rectangle Blitting
+The floating glassmorphism HUD requires silky-smooth 60 FPS rendering without consuming GPU cycles needed by local neural networks.
+
+### GUI Optimization Guidelines
+- **OpenGL Rasterization**: Enforce `QCoreApplication.setAttribute(Qt.AA_UseOpenGLES)` for hardware-accelerated composition.
+- **Dirty-Rect Updates**: Invalidate only modified UI regions (such as the waveform visualizer) rather than triggering full-window repaints:
+  ```python
+  self.update(waveform_bounding_rect)
+  ```
+- **Static Backdrop Caching**: Pre-render the blurred frosted-glass panel into a `QPixmap` texture cache, redrawing only dynamic text and icons.
+
+
