@@ -279,3 +279,12 @@ Blocking the main PySide6 UI event loop causes noticeable window frame drops and
 Tasks communicate strictly through thread-safe `queue.Queue` channels without mutex lock contention.
 
 
+## 16. Cold-Start Optimization via Background Warmup
+Launching an AI assistant on demand often encounters "cold start" penalties exceeding 3.5 seconds while libraries, PyTorch, and model weights load into RAM.
+
+### Background Warmup Sequence
+1. **Windows Task Scheduler Integration**: Start MXB minimized in the system tray at user login with the `--tray-warmup` flag.
+2. **Asynchronous Library Ingestion**: Import heavyweight packages (`torch`, `onnxruntime`, `pywhispercpp`) inside a low-priority background thread.
+3. **Dummy Tensor Warmup**: Dispatch a 1-token dummy forward pass during system idle to prime CUDA kernels and allocate memory pools before the user speaks.
+
+
