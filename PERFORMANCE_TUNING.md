@@ -348,3 +348,20 @@ def adjust_compute_profile(current_gpu_temp: float):
 ```
 
 
+## 21. Continuous Performance & Latency Regression Fixtures
+To guarantee future commits do not degrade performance budgets, MXB runs an automated `pytest-benchmark` regression suite in CI.
+
+```python
+import pytest
+
+def test_benchmark_vad_slice_latency(benchmark):
+    from engine.audio import evaluate_vad_chunk
+    dummy_chunk = b"\x00" * 1024
+    
+    result = benchmark(evaluate_vad_chunk, dummy_chunk)
+    assert benchmark.stats["mean"] < 0.003  # Enforce < 3ms average execution
+```
+
+Any pull request that increases mean latency by more than 5% triggers an automated CI build failure.
+
+
