@@ -316,3 +316,17 @@ By binding directly to the Windows Desktop Duplication API via DXGI:
 - Downsampling to 640x640 vision model input sizes is performed via Direct3D compute shaders in under 0.8ms.
 
 
+## 19. Quantization Sizing & VRAM Footprint Optimization
+Fitting LLM reasoning, speech recognition, and visual perception into consumer GPUs with 6GB to 8GB of VRAM requires optimized quantization schemes.
+
+### Quantization Trade-Off Matrix
+| Model | Precision | VRAM Required | Perplexity Drop | Inference Speed |
+|-------|-----------|---------------|-----------------|-----------------|
+| Llama 3.1 8B | FP16 | 16.0 GB | Baseline | 12 tok/s |
+| Llama 3.1 8B | Q8_0 | 8.5 GB | +0.02 | 34 tok/s |
+| Llama 3.1 8B | Q4_K_M | 4.9 GB | +0.08 | 58 tok/s |
+| Whisper Base | Q5_1 | 0.3 GB | Negligible | 22x Realtime |
+
+Deploying `Q4_K_M` delivers near-lossless reasoning while leaving 3.1 GB of VRAM free for operating system composition and game workloads.
+
+
