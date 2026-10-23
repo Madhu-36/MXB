@@ -154,3 +154,23 @@ The floating glassmorphism HUD requires silky-smooth 60 FPS rendering without co
 - **Static Backdrop Caching**: Pre-render the blurred frosted-glass panel into a `QPixmap` texture cache, redrawing only dynamic text and icons.
 
 
+## 9. Python Garbage Collector Tuning & Pause Elimination
+Standard CPython generational garbage collection (`gc`) can freeze real-time audio threads for 40ms to 100ms when scanning massive object graphs.
+
+### GC Tuning Strategy
+```python
+import gc
+
+def tune_gc_for_realtime():
+    # Freeze long-lived module objects after startup
+    gc.collect()
+    gc.freeze()
+    
+    # Adjust collection thresholds (default: 700, 10, 10)
+    # Drastically reduce generation 0/1/2 collection frequency
+    gc.set_threshold(50000, 50, 50)
+```
+
+Freezing all static imported modules and model weights prevents CPython from inspecting millions of read-only objects during cyclic GC cycles.
+
+
