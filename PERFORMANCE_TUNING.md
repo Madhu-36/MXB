@@ -56,3 +56,22 @@ def configure_cuda_memory_pool():
 This eliminates page fragmentation and locks inference buffers into persistent tensor caches across consecutive voice queries.
 
 
+## 4. Streaming Whisper STT & Beam Search Pruning
+Standard Whisper beam search (beam_size=5) introduces unacceptable latency overheads for interactive desktop commands.
+
+### Greedy Decoding & Chunk Slicing
+- **Beam Size**: Reduced to `beam_size=1` (greedy decoding) for user command intents; temperature fallback disabled.
+- **Audio Framing**: 16kHz mono audio chunked into 30ms sliding windows with 10ms hop size.
+- **VAD Truncation**: Leading and trailing silence frames are stripped before tensor ingestion, reducing compute by up to 60%.
+
+```python
+transcribe_params = {
+    "beam_size": 1,
+    "best_of": 1,
+    "temperature": 0.0,
+    "condition_on_previous_text": False,
+    "compression_ratio_threshold": 2.4,
+}
+```
+
+
