@@ -330,3 +330,21 @@ Fitting LLM reasoning, speech recognition, and visual perception into consumer G
 Deploying `Q4_K_M` delivers near-lossless reasoning while leaving 3.1 GB of VRAM free for operating system composition and game workloads.
 
 
+## 20. Dynamic Compute Scaling & Thermal Throttling Mitigation
+Sustained inference on compact laptops can trigger thermal throttling, cutting CPU/GPU clock speeds in half.
+
+### Adaptive Throttling Heuristics
+```python
+def adjust_compute_profile(current_gpu_temp: float):
+    if current_gpu_temp > 85.0:
+        # Emergency cooling: switch to ultra-compact draft model and throttle threads
+        return {"threads": 2, "max_tokens": 64, "sleep_delay_ms": 10}
+    elif current_gpu_temp > 78.0:
+        # Moderate cooling: disable speculative decoding
+        return {"threads": 4, "max_tokens": 128, "sleep_delay_ms": 0}
+    else:
+        # Full performance mode
+        return {"threads": 8, "max_tokens": 256, "sleep_delay_ms": 0}
+```
+
+
