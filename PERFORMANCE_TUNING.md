@@ -220,3 +220,13 @@ By freezing the system prompt prefix in llama.cpp's KV-cache, the engine skips r
 Prefix caching lowers Time-To-First-Token (TTFT) from 450ms down to 85ms on warm queries.
 
 
+## 12. Speculative Decoding with Draft Quantized Models
+Large language model generation speed is bound by memory bandwidth rather than compute capability.
+
+### Dual-Model Speculative Pipeline
+- **Draft Model**: TinyLlama 1.1B Q4_K_S (Fast candidate generator, 90 tokens/sec).
+- **Target Model**: Llama 3.1 8B Q4_K_M (Verification and high-fidelity output).
+
+The draft model rapidly proposes 4-token speculative candidates which the primary model verifies in a single parallel tensor pass. This yields a **1.7x to 2.2x net throughput increase** on RTX 30/40 series GPUs.
+
+
