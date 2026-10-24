@@ -195,3 +195,12 @@ The primary LLM (Llama 3.1 8B) features an 8,192 token context window. In comple
 Retrieved chunks are packed greedily in descending relevance order until the 3,072 token budget is filled.
 
 
+## 12. Sentence-Window Retrieval with Parent Document Expansion
+Small text chunks (e.g. 100 tokens) yield sharp, accurate vector embeddings, but lack broader context when presented to the LLM. Large chunks (1,000 tokens) dilute embedding specificity.
+
+### Sentence-Window Technique
+- **Embedding Target**: Individual sentences (1-3 sentences) are embedded for high-precision semantic search.
+- **Context Expansion**: Upon retrieving the top sentence matches, MXB retrieves the surrounding 5-sentence window from the parent document before injecting into the prompt.
+- **Parent Metadata**: File path, modification date, and section headers are linked automatically.
+
+
