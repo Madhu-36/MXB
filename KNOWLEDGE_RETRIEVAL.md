@@ -144,3 +144,13 @@ User voice prompts are frequently terse or conversational (e.g., *"how do I conf
 3. Vector similarity search runs on the hypothetical text, capturing dense document paragraphs that discuss the solution.
 
 
+## 8. Local Document Ingestion Engine (PDF, DOCX, XLSX)
+MXB ingests user desktop files locally with zero external network parsing services or external Java dependencies.
+
+### Format Extraction Stack
+- **PDF Documents**: Parsed with `pdfplumber` and `pypdf`, extracting embedded text, fonts, and bounding boxes for tabular layout detection.
+- **Word (.docx)**: Parsed with `python-docx`, maintaining paragraph breaks, bold key points, and list items.
+- **Excel (.xlsx, .csv)**: Parsed via `openpyxl`, transposing tabular sheets into semi-structured Markdown table blocks for token-efficient retrieval.
+- **Plain Text / Code**: Read directly with automatic UTF-8/UTF-16 character encoding detection.
+
+
