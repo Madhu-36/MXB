@@ -116,3 +116,21 @@ class LocalCrossEncoder:
 Cross-encoding improves Mean Reciprocal Rank (MRR@10) from 0.72 to 0.89.
 
 
+## 6. Reciprocal Rank Fusion (RRF) Blending
+Different retrieval backends (BM25 vs. Cosine Similarity) produce scores on completely incompatible numerical scales. Reciprocal Rank Fusion merges ranked lists without requiring score normalization.
+
+### RRF Formula
+$$RRF(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}$$
+Where $r_m(d)$ is the rank of document $d$ in model $m$, and $k$ is a smoothing constant (typically set to $60$).
+
+```python
+def reciprocal_rank_fusion(dense_ranks: list[str], sparse_ranks: list[str], k: int = 60) -> list[tuple[str, float]]:
+    scores = {}
+    for rank, doc_id in enumerate(dense_ranks):
+        scores[doc_id] = scores.get(doc_id, 0.0) + (1.0 / (k + rank + 1))
+    for rank, doc_id in enumerate(sparse_ranks):
+        scores[doc_id] = scores.get(doc_id, 0.0) + (1.0 / (k + rank + 1))
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+```
+
+
