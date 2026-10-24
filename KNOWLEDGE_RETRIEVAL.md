@@ -179,3 +179,19 @@ Repetitive voice queries (e.g., *"what's my wifi password"*, *"show python guide
 3. **Invalidation Policy**: Local file modification events (`ReadDirectoryChangesW`) invalidate cache entries tied to updated documents.
 
 
+## 11. Context Window Token Budget Allocation
+The primary LLM (Llama 3.1 8B) features an 8,192 token context window. In complex multi-turn voice sessions, available tokens must be allocated with strict discipline.
+
+### Token Budget Breakdown
+| Component | Token Reservation | Policy |
+|-----------|-------------------|--------|
+| System Prompt & Persona | 512 tokens | Fixed / Immutable |
+| Real-time System State (Time, App) | 128 tokens | Dynamic Injected |
+| Conversation Turn History | 1,024 tokens | Sliding Recency Window |
+| Retrieved RAG Knowledge Chunks | **3,072 tokens** | Relevance-Ranked |
+| Assistant Response Generation Budget | 1,024 tokens | Generation Ceiling |
+| Safety & Reserved Overhead | 2,432 tokens | Headroom |
+
+Retrieved chunks are packed greedily in descending relevance order until the 3,072 token budget is filled.
+
+
