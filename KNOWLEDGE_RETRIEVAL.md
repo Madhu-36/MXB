@@ -71,3 +71,23 @@ index.setEf(64); // Runtime search beam
 ```
 
 
+## 4. Content-Aware Chunking Strategies
+Naive fixed-character chunking breaks code blocks, paragraphs, and markdown table rows, destroying semantic coherence.
+
+### Granular Chunking Rules
+- **Markdown**: Split along header hierarchies (`#`, `##`, `###`), preserving section titles in chunk metadata.
+- **Technical Prose**: Recursive splitting with a target window of 384 tokens and a 64-token sliding overlap.
+- **Tables**: Markdown and CSV tables are preserved intact without horizontal splits.
+
+```python
+def chunk_markdown(content: str, max_tokens: int = 384, overlap: int = 64) -> list[Chunk]:
+    sections = split_by_headers(content)
+    chunks = []
+    for header_path, text in sections:
+        sub_chunks = recursive_token_split(text, max_tokens, overlap)
+        for chunk in sub_chunks:
+            chunks.append(Chunk(text=f"[{header_path}]\n{chunk}", metadata={"hierarchy": header_path}))
+    return chunks
+```
+
+
