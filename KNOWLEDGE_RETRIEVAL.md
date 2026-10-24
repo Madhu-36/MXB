@@ -170,3 +170,12 @@ Using `tree-sitter`, the parser identifies structural syntax boundaries:
 - File imports and module-level constants are injected into chunk header metadata.
 
 
+## 10. Multi-Tier Semantic Cache for Fast Query Resolution
+Repetitive voice queries (e.g., *"what's my wifi password"*, *"show python guidelines"*) waste GPU cycles if retrieved and generated repeatedly.
+
+### Multi-Tier Caching Stack
+1. **Tier 1 (L1) Exact Match**: In-memory SHA-256 hash lookup of normalized input text (<0.1ms).
+2. **Tier 2 (L2) Semantic Match**: Vector cosine similarity lookup against prior query embeddings. If similarity $> 0.96$, return cached LLM answer with timestamp check.
+3. **Invalidation Policy**: Local file modification events (`ReadDirectoryChangesW`) invalidate cache entries tied to updated documents.
+
+
