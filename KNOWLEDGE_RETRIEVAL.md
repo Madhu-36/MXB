@@ -220,3 +220,22 @@ python -m onnxruntime.quantization.quantize_static     --input_model bge-small.o
 ```
 
 
+## 14. Incremental Indexing & Differential Hash Tracking
+Re-indexing 50,000 files on every boot wastes disk I/O and battery life. MXB utilizes file-system hash tracking to perform differential updates.
+
+### Differential Indexing Algorithm
+```python
+import hashlib
+from pathlib import Path
+
+def get_file_content_hash(path: Path) -> str:
+    hasher = hashlib.md5()
+    hasher.update(path.read_bytes())
+    return hasher.hexdigest()
+
+# Database Schema: file_manifest(path PRIMARY KEY, mtime, content_hash, chunk_count)
+```
+
+Only files whose modification timestamp (`mtime`) and `content_hash` differ from the local catalog are scheduled for chunking and embedding.
+
+
