@@ -134,3 +134,13 @@ def reciprocal_rank_fusion(dense_ranks: list[str], sparse_ranks: list[str], k: i
 ```
 
 
+## 7. Hypothetical Document Embeddings (HyDE) Query Expansion
+User voice prompts are frequently terse or conversational (e.g., *"how do I configure microphone permissions?"*), creating semantic mismatch against detailed technical documentation.
+
+### HyDE Pipeline Workflow
+1. The local lightweight LLM (Llama 3.1 8B) generates a synthetic 2-sentence hypothetical answer:
+   > *"Microphone permissions in Windows 11 are managed under Settings > Privacy & Security > Microphone. Ensure Allow desktop apps to access your microphone is toggled ON."*
+2. The hypothetical answer is embedded into vector space rather than the brief user question.
+3. Vector similarity search runs on the hypothetical text, capturing dense document paragraphs that discuss the solution.
+
+
