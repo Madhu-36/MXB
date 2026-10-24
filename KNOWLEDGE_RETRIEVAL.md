@@ -329,3 +329,30 @@ Real-time interaction requires retrieval to finish in a fraction of the total vo
 Both configurations remain comfortably within the allocated 80ms RAG retrieval budget.
 
 
+## 21. Automated Retrieval Evaluation Fixtures (Recall@K, MRR, NDCG)
+To guard against retrieval quality regression when tuning chunking boundaries or embedding weights, MXB integrates an automated evaluation test suite.
+
+```python
+import pytest
+import numpy as np
+
+def calculate_mrr(retrieved_ids: list[str], ground_truth_id: str) -> float:
+    try:
+        rank = retrieved_ids.index(ground_truth_id) + 1
+        return 1.0 / rank
+    except ValueError:
+        return 0.0
+
+def test_retrieval_mrr_benchmark():
+    eval_dataset = load_rag_eval_fixtures()
+    mrr_scores = []
+    for query, expected_id in eval_dataset:
+        hits = hybrid_retriever.retrieve(query, top_k=10)
+        hit_ids = [h.id for h in hits]
+        mrr_scores.append(calculate_mrr(hit_ids, expected_id))
+    
+    mean_mrr = np.mean(mrr_scores)
+    assert mean_mrr >= 0.85, f"Mean Reciprocal Rank dropped to {mean_mrr:.3f}"
+```
+
+
