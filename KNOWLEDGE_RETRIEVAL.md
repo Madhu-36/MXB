@@ -239,3 +239,17 @@ def get_file_content_hash(path: Path) -> str:
 Only files whose modification timestamp (`mtime`) and `content_hash` differ from the local catalog are scheduled for chunking and embedding.
 
 
+## 15. Conversational Coreference Resolution & Query Rewriting
+In multi-turn conversations, follow-up queries frequently contain ambiguous pronouns:
+- *User: "Show me the project roadmap."*
+- *Assistant: "Here is the roadmap for MXB V2.0."*
+- *User: "What are the security milestones in it?"*
+
+### Local Coreference Rewriter
+Before issuing a RAG vector lookup, the query rewriter expands the prompt:
+- **Raw Query**: *"What are the security milestones in it?"*
+- **Rewritten Query**: *"What are the security milestones in the MXB V2.0 project roadmap?"*
+
+This ensures dense vector search captures the intended document targets despite brief conversational phrasing.
+
+
