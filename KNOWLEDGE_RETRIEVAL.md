@@ -278,3 +278,29 @@ Technical documents often contain diagrams, flowcharts, and architecture tables 
 - **Visual Association**: OCR captions and surrounding text paragraphs are indexed jointly to enable searching for visual architectural diagrams.
 
 
+## 18. Knowledge Boundaries & Vault Isolation
+Users require granular privacy separation between work documents, personal notes, and private keys.
+
+### Vault Security Model
+```json
+{
+  "vaults": [
+    {
+      "name": "General_Desktop",
+      "path": "C:\\Users\\User\\Documents",
+      "access_level": "public",
+      "allow_in_assistant": true
+    },
+    {
+      "name": "Secure_Vault",
+      "path": "C:\\Users\\User\\Documents\\Encrypted_Vault",
+      "access_level": "biometric_required",
+      "allow_in_assistant": false
+    }
+  ]
+}
+```
+
+Folders marked with elevated isolation are excluded from standard indexing and require explicit user authentication prior to query retrieval.
+
+
