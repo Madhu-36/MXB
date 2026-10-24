@@ -304,3 +304,12 @@ Users require granular privacy separation between work documents, personal notes
 Folders marked with elevated isolation are excluded from standard indexing and require explicit user authentication prior to query retrieval.
 
 
+## 19. Vector Database Persistence & Compaction
+Vector indices must persist across system reboots and support compaction without consuming unnecessary disk space.
+
+### Persistence Engine: SQLite-VSS + Flat Parquet
+- **Metadata Storage**: SQLite handles document metadata, inverted term indices, and relationship graphs.
+- **Vector Storage**: Compact binary arrays stored in raw memory-mapped files or SQLite-VSS virtual tables.
+- **Vacuum & Compaction**: Deleted documents flag chunk tombstones; an automated compaction routine purges dead vectors when tombstone volume exceeds 15%.
+
+
