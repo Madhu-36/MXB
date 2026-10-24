@@ -154,3 +154,19 @@ MXB ingests user desktop files locally with zero external network parsing servic
 - **Plain Text / Code**: Read directly with automatic UTF-8/UTF-16 character encoding detection.
 
 
+## 9. Syntax-Aware Code Chunking with Tree-Sitter
+When indexing user source code repositories (Python, JavaScript, C++, Rust), naive line-based chunking splits functions in the middle of loops or logic blocks.
+
+### AST Chunking Rules
+Using `tree-sitter`, the parser identifies structural syntax boundaries:
+- Functions and class definitions are treated as atomic chunks.
+- Docstrings and signatures are prepended to every function chunk:
+  ```python
+  # Symbol: MXB.Engine.AudioPipeline.process_buffer
+  # Imports: numpy, sounddevice
+  def process_buffer(self, buffer: np.ndarray) -> ProcessedFrame:
+      ...
+  ```
+- File imports and module-level constants are injected into chunk header metadata.
+
+
