@@ -269,3 +269,12 @@ MXB V2.0 leverages whisper.cpp for offline transcription [Doc 1], while neural v
 The PySide6 HUD renders clickable citation chips that open the exact local file and highlight the source paragraph.
 
 
+## 17. Multi-Modal Retrieval with Local OCR & Layout Analysis
+Technical documents often contain diagrams, flowcharts, and architecture tables stored as raster images inside PDFs or screenshots.
+
+### Multi-Modal Document Extraction
+- **Image Extraction**: PDF raster images are extracted and passed through local Tesseract OCR.
+- **Spatial Metadata**: Coordinates (`x, y, w, h`) of text blocks are stored alongside the extracted content.
+- **Visual Association**: OCR captions and surrounding text paragraphs are indexed jointly to enable searching for visual architectural diagrams.
+
+
