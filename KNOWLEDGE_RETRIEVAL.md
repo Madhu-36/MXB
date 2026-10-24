@@ -253,3 +253,19 @@ Before issuing a RAG vector lookup, the query rewriter expands the prompt:
 This ensures dense vector search captures the intended document targets despite brief conversational phrasing.
 
 
+## 16. Provenance Tracking & Strict Citation Attribution
+To eliminate hallucinations and enable quick verification, every statement backed by local RAG includes verifiable source citations.
+
+### Citation Annotation Schema
+The system prompt enforces numbered reference anchors:
+```markdown
+MXB V2.0 leverages whisper.cpp for offline transcription [Doc 1], while neural voice output is powered by Piper ONNX [Doc 2].
+
+---
+[Doc 1]: C:\Users\User\Documents\MXB\AUDIO_PIPELINE.md (Section 3)
+[Doc 2]: C:\Users\User\Documents\MXB\OFFLINE_RESILIENCE.md (Section 4)
+```
+
+The PySide6 HUD renders clickable citation chips that open the exact local file and highlight the source paragraph.
+
+
