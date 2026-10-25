@@ -113,3 +113,21 @@ def click_element_by_id(root_window: auto.WindowControl, automation_id: str):
 ```
 
 
+## 5. Low-Level Input Simulation with Win32 SendInput
+When standard UIA control patterns are unavailable (e.g. in legacy Win32 apps or games), MXB falls back to hardware-level keyboard and mouse simulation via `SendInput`.
+
+```c
+// Low-level Win32 Input Injection
+INPUT input;
+input.type = INPUT_KEYBOARD;
+input.ki.wVk = VK_SPACE;
+input.ki.dwFlags = 0; // Key down
+SendInput(1, &input, sizeof(INPUT));
+
+input.ki.dwFlags = KEYEVENTF_KEYUP; // Key up
+SendInput(1, &input, sizeof(INPUT));
+```
+
+All simulated keystrokes include randomized micro-jitter delays (10-30ms) to ensure desktop message queues process inputs without dropped characters.
+
+
