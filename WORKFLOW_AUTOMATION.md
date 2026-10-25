@@ -163,3 +163,25 @@ def snap_window_left(hwnd: int, screen_width: int, screen_height: int):
 Supports predefined layout profiles: `DualSplit`, `QuarterGrid`, `FocusedCenter`, and `ZenPresentation`.
 
 
+## 8. Headless Browser Orchestration via Chrome DevTools Protocol (CDP)
+To interact with modern web applications without installing heavy external browser drivers, MXB connects to existing Chromium browsers via WebSocket CDP sessions.
+
+```python
+import websockets
+import json
+
+async def attach_cdp_tab(ws_url: str):
+    async with websockets.connect(ws_url) as ws:
+        # Navigate tab to target URL
+        await ws.send(json.dumps({
+            "id": 1,
+            "method": "Page.navigate",
+            "params": {"url": "https://calendar.google.com"}
+        }))
+        response = await ws.recv()
+        return json.loads(response)
+```
+
+Enables DOM scraping, cookie extraction, and form entry within user-authenticated browser tabs.
+
+
