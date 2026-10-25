@@ -401,3 +401,12 @@ retry_policy:
 If all attempts fail, the workflow execution context is moved to a dead-letter queue (`dlq_workflows`) for user inspection.
 
 
+## 22. Dry-Run Simulation & Visual Step Preview
+Users can test complex or unfamiliar automations in Dry-Run mode before allowing actions to touch the live operating system.
+
+### Dry-Run Mechanics
+- All read actions (queries, window lookups, file reads) execute normally.
+- All write actions (file writes, clicks, keystrokes, process kills) are intercepted by a mock driver.
+- The PySide6 HUD displays an interactive step-by-step preview showing exact parameters and intended changes.
+
+
