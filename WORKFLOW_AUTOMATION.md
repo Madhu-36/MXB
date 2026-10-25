@@ -285,3 +285,21 @@ def parse_voice_slots(utterance: str) -> dict | None:
 Extracted parameters (`duration=10`, `unit="minutes"`) are bound to the workflow execution context as typed variables.
 
 
+## 14. Human-In-The-Loop Approval Gates
+Privileged or destructive actions (such as deleting files, killing processes, or submitting forms) require explicit user consent.
+
+```
++-------------------------------------------------------------+
+|                     MXB Security Guard                      |
+|                                                             |
+| Action Requested: os.delete_directory                       |
+| Target: C:\Users\User\Downloads\Staging                 |
+| Risk Level: HIGH (Irreversible File Deletion)               |
+|                                                             |
+| [ Confirm (Voice: 'Proceed') ]      [ Cancel (Escape) ]     |
++-------------------------------------------------------------+
+```
+
+Workflows pause in a pending state until confirmation is received via voice keyword or UI button press; unapproved requests timeout after 30 seconds.
+
+
