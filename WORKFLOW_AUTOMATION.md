@@ -266,3 +266,22 @@ user32.RegisterHotKey(None, HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, win
 Supports two-stroke key chords (e.g., `Ctrl+K, Ctrl+W` to open workflow manager).
 
 
+## 13. Voice Trigger Matching & Entity Slot Extraction
+When users invoke workflows via voice, the engine extracts runtime arguments directly from transcribed speech.
+
+### Slot Extraction Engine
+```python
+import re
+
+pattern = re.compile(r"^(?:set|turn)\s+timer\s+for\s+(?P<duration>\d+)\s+(?P<unit>seconds|minutes|hours)$", re.IGNORECASE)
+
+def parse_voice_slots(utterance: str) -> dict | None:
+    match = pattern.match(utterance.strip())
+    if match:
+        return match.groupdict()
+    return None
+```
+
+Extracted parameters (`duration=10`, `unit="minutes"`) are bound to the workflow execution context as typed variables.
+
+
