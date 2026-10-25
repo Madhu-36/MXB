@@ -336,3 +336,12 @@ Scripts dispatched by workflows are executed inside an isolated Windows process 
 - **Output Sanitization**: Stdout/stderr streams are scrubbed of environment tokens and passwords before logging.
 
 
+## 17. Clipboard Transformation Pipelines
+Workflows can capture, transform, and paste clipboard content seamlessly.
+
+### Pipeline Stages
+1. **Read Clipboard**: Supports text, HTML, and image formats (`CF_UNICODETEXT`, `CF_DIB`).
+2. **Transform**: Apply regex replacement, markdown-to-HTML conversion, or LLM summarization.
+3. **Commit & Paste**: Write transformed text back to clipboard and synthesize `Ctrl+V` keypress into foreground application.
+
+
