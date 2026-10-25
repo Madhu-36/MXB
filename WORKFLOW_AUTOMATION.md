@@ -141,3 +141,25 @@ MXB leverages specialized UIA Control Patterns to manipulate UI elements directl
 - **IUIAutomationTogglePattern**: Toggles checkboxes between checked and unchecked states.
 
 
+## 7. Intelligent Window Layout & Snap Automation
+MXB orchestrates multi-window layouts across multiple physical monitors to prepare optimal workspaces for development, research, or gaming.
+
+### Window Operations
+```python
+import win32gui
+import win32con
+
+def snap_window_left(hwnd: int, screen_width: int, screen_height: int):
+    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+    win32gui.SetForegroundWindow(hwnd)
+    # Move window to left half of target display
+    win32gui.SetWindowPos(
+        hwnd, win32con.HWND_TOP,
+        0, 0, screen_width // 2, screen_height,
+        win32con.SWP_SHOWWINDOW
+    )
+```
+
+Supports predefined layout profiles: `DualSplit`, `QuarterGrid`, `FocusedCenter`, and `ZenPresentation`.
+
+
