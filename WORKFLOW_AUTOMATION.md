@@ -131,3 +131,13 @@ SendInput(1, &input, sizeof(INPUT));
 All simulated keystrokes include randomized micro-jitter delays (10-30ms) to ensure desktop message queues process inputs without dropped characters.
 
 
+## 6. Accessibility Control Pattern Handlers
+MXB leverages specialized UIA Control Patterns to manipulate UI elements directly without moving the mouse pointer:
+
+### Supported Patterns
+- **IUIAutomationInvokePattern**: Triggers buttons and menu items directly via internal COM dispatches.
+- **IUIAutomationValuePattern**: Sets or reads text inside input boxes without emulating clipboard typing.
+- **IUIAutomationSelectionItemPattern**: Selects radio buttons, list items, or dropdown options.
+- **IUIAutomationTogglePattern**: Toggles checkboxes between checked and unchecked states.
+
+
