@@ -345,3 +345,23 @@ Workflows can capture, transform, and paste clipboard content seamlessly.
 3. **Commit & Paste**: Write transformed text back to clipboard and synthesize `Ctrl+V` keypress into foreground application.
 
 
+## 18. Windows Action Center Toast Notifications
+Workflows communicate asynchronous progress using native Windows 11 Toast notifications via the WinRT `ToastNotificationManager` API.
+
+### Toast XML Architecture
+```xml
+<toast scenario="reminder">
+    <visual>
+        <binding template="ToastGeneric">
+            <text>MXB Automation Complete</text>
+            <text>Processed 14 report PDFs and archived to Cloud Vault.</text>
+        </binding>
+    </visual>
+    <actions>
+        <action content="Open Folder" arguments="action=open_dir&amp;path=C:\Vault" activationType="foreground"/>
+        <action content="Dismiss" arguments="action=dismiss" activationType="system"/>
+    </actions>
+</toast>
+```
+
+
