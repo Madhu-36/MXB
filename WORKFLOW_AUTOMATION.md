@@ -453,3 +453,25 @@ Workflows can be triggered from external tools (such as IDE extensions, Stream D
 - **Payload**: JSON parameters matching workflow input schema.
 
 
+## 26. Automated Workflow Test Fixtures with Pytest
+MXB includes automated integration test fixtures that simulate workflow execution against mocked desktop environments.
+
+```python
+import pytest
+
+@pytest.fixture
+def mock_uia_environment(monkeypatch):
+    from engine.automation import uia_driver
+    mock = MockUIADriver()
+    monkeypatch.setattr(uia_driver, "find_element", mock.find_element)
+    return mock
+
+def test_workflow_dag_resolution(mock_uia_environment):
+    from engine.automation import WorkflowEngine
+    engine = WorkflowEngine("tests/fixtures/test_workflow.yaml")
+    result = engine.execute(dry_run=True)
+    assert result.status == "COMPLETED"
+    assert len(result.executed_steps) == 3
+```
+
+
