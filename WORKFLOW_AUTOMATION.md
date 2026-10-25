@@ -365,3 +365,13 @@ Workflows communicate asynchronous progress using native Windows 11 Toast notifi
 ```
 
 
+## 19. Audio Feedback & Earcon Cues
+In headless or voice-only mode, auditory cues ("earcons") confirm task states without requiring the user to look at the screen.
+
+### Sound Map
+- `workflow_start.wav`: Low-frequency chime indicating workflow initialization.
+- `step_complete.wav`: Crisp 20ms tactile tick marking intermediate step completion.
+- `workflow_success.wav`: Harmonic chord confirming overall success.
+- `workflow_error.wav`: Gentle dual-tone warning prompting user intervention.
+
+
