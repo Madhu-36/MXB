@@ -211,3 +211,27 @@ def watch_directory(path: str, on_created_callback):
 ```
 
 
+## 10. Cron & Recurring Schedule Orchestrator
+MXB incorporates an in-process cron evaluator supporting standard 5-part cron expressions, interval frequencies, and ISO 8601 timestamps.
+
+### Schedule Rules Schema
+```json
+{
+  "schedules": [
+    {
+      "workflow_id": "backup_memory_bank",
+      "cron": "0 2 * * *",
+      "description": "Daily snapshot at 02:00 AM"
+    },
+    {
+      "workflow_id": "clean_temp_downloads",
+      "interval_hours": 12,
+      "description": "Every 12 hours purge files older than 7 days"
+    }
+  ]
+}
+```
+
+Schedules survive application restarts, persisting execution timestamps in SQLite.
+
+
