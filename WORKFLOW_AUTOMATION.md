@@ -425,3 +425,21 @@ async def run_parallel_steps(step_list, context):
 Limits peak worker concurrency to 4 threads to prevent saturating the Windows thread dispatcher.
 
 
+## 24. Audit Logging & Workflow Telemetry
+To ensure transparency and compliance, every automated action is written to an immutable local audit log.
+
+### Log Entry Structure
+```json
+{
+  "timestamp": "2026-10-25T14:00:00Z",
+  "workflow_id": "daily_standup_prep",
+  "run_id": "9a1b2c3d-4e5f-6a7b",
+  "step_id": "open_term",
+  "action": "os.launch_app",
+  "duration_ms": 142,
+  "status": "SUCCESS",
+  "operator": "user_voice_command"
+}
+```
+
+
