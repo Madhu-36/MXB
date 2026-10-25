@@ -185,3 +185,29 @@ async def attach_cdp_tab(ws_url: str):
 Enables DOM scraping, cookie extraction, and form entry within user-authenticated browser tabs.
 
 
+## 9. File Watcher Triggers via ReadDirectoryChangesW
+Automations can trigger reactively upon filesystem events—such as new downloads, modified markdown files, or log file appends.
+
+### Win32 Directory Notification Loop
+```python
+import win32file
+import win32con
+
+def watch_directory(path: str, on_created_callback):
+    h_dir = win32file.CreateFile(
+        path, win32con.GENERIC_READ,
+        win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
+        None, win32con.OPEN_EXISTING, win32con.FILE_FLAG_BACKUP_SEMANTICS, None
+    )
+    while True:
+        results = win32file.ReadDirectoryChangesW(
+            h_dir, 1024, True,
+            win32con.FILE_NOTIFY_CHANGE_FILE_NAME | win32con.FILE_NOTIFY_CHANGE_LAST_WRITE,
+            None, None
+        )
+        for action, file in results:
+            if action == 1: # File Created
+                on_created_callback(file)
+```
+
+
