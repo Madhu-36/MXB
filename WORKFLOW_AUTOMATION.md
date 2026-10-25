@@ -60,3 +60,36 @@ workflow:
 ```
 
 
+## 3. Directed Acyclic Graph (DAG) Execution Engine
+Workflows with interdependent tasks are compiled into a Directed Acyclic Graph (DAG) where steps without mutual dependencies execute concurrently.
+
+### DAG Compilation & Topological Sort
+```python
+from collections import defaultdict, deque
+
+class WorkflowDAG:
+    def __init__(self, steps: list[dict]):
+        self.adj = defaultdict(list)
+        self.in_degree = defaultdict(int)
+        self.steps = {s["id"]: s for s in steps}
+        for s in steps:
+            for dep in s.get("depends_on", []):
+                self.adj[dep].append(s["id"])
+                self.in_degree[s["id"]] += 1
+
+    def get_execution_order(self) -> list[list[str]]:
+        queue = deque([s_id for s_id in self.steps if self.in_degree[s_id] == 0])
+        stages = []
+        while queue:
+            current_stage = list(queue)
+            stages.append(current_stage)
+            queue.clear()
+            for u in current_stage:
+                for v in self.adj[u]:
+                    self.in_degree[v] -= 1
+                    if self.in_degree[v] == 0:
+                        queue.append(v)
+        return stages
+```
+
+
