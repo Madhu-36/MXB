@@ -384,3 +384,20 @@ Each workflow execution maintains an isolated variable dictionary that prevents 
 - **Global Vault Scope**: Persistent key-value pairs stored in local encrypted SQLite (e.g. `{{ global.default_workspace }}`).
 
 
+## 21. Failure Policies & Exponential Backoff
+Transient failures (such as a busy database lock or a slow browser page load) are handled gracefully via automated retry policies.
+
+```yaml
+retry_policy:
+  max_attempts: 3
+  initial_delay_ms: 250
+  backoff_multiplier: 2.0
+  max_delay_ms: 2000
+  retryable_errors:
+    - "TimeoutError"
+    - "UIAElementNotFoundException"
+```
+
+If all attempts fail, the workflow execution context is moved to a dead-letter queue (`dlq_workflows`) for user inspection.
+
+
