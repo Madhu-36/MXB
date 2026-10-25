@@ -443,3 +443,13 @@ To ensure transparency and compliance, every automated action is written to an i
 ```
 
 
+## 25. Local Webhook & REST Trigger Endpoints
+Workflows can be triggered from external tools (such as IDE extensions, Stream Deck, or local bash scripts) via a loopback REST API.
+
+### Endpoint Specification
+- **URL**: `http://127.0.0.1:48120/api/v2/workflows/{id}/trigger`
+- **Method**: `POST`
+- **Auth**: Pre-shared Bearer token stored in Windows Credential Manager.
+- **Payload**: JSON parameters matching workflow input schema.
+
+
