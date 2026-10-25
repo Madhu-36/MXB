@@ -93,3 +93,23 @@ class WorkflowDAG:
 ```
 
 
+## 4. Windows UI Automation (UIA) Control Traversal
+Rather than relying solely on brittle pixel-coordinate clicking, MXB navigates the Windows Accessibility UI Automation tree via Microsoft UIAutomation Core COM APIs.
+
+### Element Locators
+- **AutomationId**: Unique developer-assigned identifier (e.g., `SubmitButton`).
+- **Name / BoundingRectangle**: Localized control text and layout bounds.
+- **ControlType**: Semantic role (e.g., `UIA_ButtonControlTypeId`, `UIA_EditControlTypeId`).
+
+```python
+import uiautomation as auto
+
+def click_element_by_id(root_window: auto.WindowControl, automation_id: str):
+    control = root_window.Control(AutomationId=automation_id, searchDepth=4)
+    if control.Exists(maxSearchSeconds=2):
+        control.Click(simulateMove=False)
+        return True
+    return False
+```
+
+
