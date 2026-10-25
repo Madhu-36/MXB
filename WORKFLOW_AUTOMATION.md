@@ -245,3 +245,24 @@ Automations can bind to Windows desktop lifecycle events using `WTSRegisterSessi
 - **PBT_APMRESUMEAUTOMATIC**: Re-initialize WASAPI audio device streams upon system wakeup.
 
 
+## 12. Global Hotkey Interception & Chord Combinations
+Fast keyboard shortcuts allow power users to trigger complex workflows with zero voice interaction.
+
+### Win32 RegisterHotKey Integration
+```python
+import ctypes
+from ctypes import wintypes
+
+user32 = ctypes.windll.user32
+MOD_ALT = 0x0001
+MOD_CONTROL = 0x0002
+MOD_NOREPEAT = 0x4000
+
+# Bind Ctrl + Alt + Space to Instant Assistant Trigger
+HOTKEY_ID = 101
+user32.RegisterHotKey(None, HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, wintypes.VK_SPACE)
+```
+
+Supports two-stroke key chords (e.g., `Ctrl+K, Ctrl+W` to open workflow manager).
+
+
