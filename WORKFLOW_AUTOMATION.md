@@ -326,3 +326,13 @@ steps:
 Upon step failure, compensation handlers execute in reverse order (LIFO).
 
 
+## 16. Subprocess Shell Execution Sandboxing
+Scripts dispatched by workflows are executed inside an isolated Windows process container with strict resource limits.
+
+### Sandbox Safeguards
+- **No Elevated Privileges**: Subprocesses spawn with token filtering preventing automatic UAC bypass.
+- **Process Job Objects**: CPU utilization capped at 50%; memory usage limited to 1 GB per execution.
+- **Hard Timeout**: Default 15-second process timeout, after which `TerminateProcess` is called automatically.
+- **Output Sanitization**: Stdout/stderr streams are scrubbed of environment tokens and passwords before logging.
+
+
