@@ -303,3 +303,26 @@ Privileged or destructive actions (such as deleting files, killing processes, or
 Workflows pause in a pending state until confirmation is received via voice keyword or UI button press; unapproved requests timeout after 30 seconds.
 
 
+## 15. Transactional Rollback & Compensation Actions
+If a workflow fails halfway through a 5-step sequence, prior actions must be cleanly undone to avoid leaving the system in an inconsistent state.
+
+### Compensation Pattern Definition
+```yaml
+steps:
+  - id: "backup_file"
+    action: "fs.copy"
+    params: {src: "config.json", dest: "config.json.bak"}
+    rollback:
+      action: "fs.delete"
+      params: {target: "config.json.bak"}
+  - id: "write_new_config"
+    action: "fs.write"
+    params: {target: "config.json", content: "{{ new_data }}"}
+    rollback:
+      action: "fs.copy"
+      params: {src: "config.json.bak", dest: "config.json"}
+```
+
+Upon step failure, compensation handlers execute in reverse order (LIFO).
+
+
