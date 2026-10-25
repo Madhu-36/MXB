@@ -375,3 +375,12 @@ In headless or voice-only mode, auditory cues ("earcons") confirm task states wi
 - `workflow_error.wav`: Gentle dual-tone warning prompting user intervention.
 
 
+## 20. Variable Scope & State Persistence
+Each workflow execution maintains an isolated variable dictionary that prevents cross-tenant state leakage.
+
+### Variable Scopes
+- **Local Scope**: Step outputs and loop variables (e.g. `{{ steps.git_log.stdout }}`); destroyed on completion.
+- **Workflow Scope**: Parameters passed at workflow invocation.
+- **Global Vault Scope**: Persistent key-value pairs stored in local encrypted SQLite (e.g. `{{ global.default_workspace }}`).
+
+
