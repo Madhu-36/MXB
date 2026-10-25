@@ -410,3 +410,18 @@ Users can test complex or unfamiliar automations in Dry-Run mode before allowing
 - The PySide6 HUD displays an interactive step-by-step preview showing exact parameters and intended changes.
 
 
+## 23. Concurrent Execution & Async Thread Pooling
+Steps without dependencies execute in parallel using Python's `asyncio` task groups and a thread pool executor.
+
+```python
+import asyncio
+
+async def run_parallel_steps(step_list, context):
+    async with asyncio.TaskGroup() as tg:
+        tasks = [tg.create_task(execute_step(s, context)) for s in step_list]
+    return [t.result() for t in tasks]
+```
+
+Limits peak worker concurrency to 4 threads to prevent saturating the Windows thread dispatcher.
+
+
