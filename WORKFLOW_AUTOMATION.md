@@ -235,3 +235,13 @@ MXB incorporates an in-process cron evaluator supporting standard 5-part cron ex
 Schedules survive application restarts, persisting execution timestamps in SQLite.
 
 
+## 11. Windows Session State & Power Event Triggers
+Automations can bind to Windows desktop lifecycle events using `WTSRegisterSessionNotification`:
+
+### Monitored Session Events
+- **WTS_SESSION_LOCK**: Automatically pause voice recording and clear active clipboard caches.
+- **WTS_SESSION_UNLOCK**: Restore assistant HUD and run pending scheduled reminders.
+- **PBT_APMSUSPEND**: Flush write-ahead logs and release GPU inference locks before laptop sleep.
+- **PBT_APMRESUMEAUTOMATIC**: Re-initialize WASAPI audio device streams upon system wakeup.
+
+
