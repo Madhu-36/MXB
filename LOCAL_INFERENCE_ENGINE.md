@@ -277,3 +277,17 @@ When multiple asynchronous assistant subsystems request LLM reasoning (e.g., act
 Continuous batching merges incoming prompts into active GPU matrix operations without interrupting running generation streams.
 
 
+## 17. Rolling Context Shifting & KV-Eviction
+During prolonged multi-hour voice sessions, accumulated conversation history eventually fills the 8,192 token window.
+
+### Rolling Shift Strategy
+```python
+def evict_oldest_context(kv_cache, tokens_to_evict: int):
+    # Preserve immutable system prompt tokens (tokens 0 to 512)
+    # Evict the oldest user/assistant turns in the middle
+    kv_cache.shift_left(start_idx=512, shift_amount=tokens_to_evict)
+```
+
+The system summarizes evicted conversation turns and injects a 64-token memory summary into the active prompt, guaranteeing uninterrupted indefinite conversational availability.
+
+
