@@ -76,3 +76,22 @@ llama.llama_new_context_with_model.restype = c_void_p
 Direct memory-mapped DLL linking reduces token dispatch latency to **0.02ms per token**.
 
 
+## 4. Adaptive GPU Layer Offloading & VRAM Budgeting
+Consumer PCs often feature mixed configurations—such as an 8GB NVIDIA RTX 3060 paired with 32GB system RAM. MXB dynamically partitions model layers across VRAM and system memory.
+
+### Dynamic Offloading Heuristic
+```python
+def calculate_optimal_gpu_layers(total_vram_bytes: int, model_params: dict) -> int:
+    # Reserve 1.5 GB VRAM for Windows Desktop Window Manager (DWM) and display composition
+    available_vram = total_vram_bytes - (1536 * 1024 * 1024)
+    layer_size = model_params["bytes_per_layer"]
+    kv_cache_reservation = model_params["context_tokens"] * model_params["bytes_per_token"]
+    
+    usable_budget = available_vram - kv_cache_reservation
+    optimal_layers = max(0, int(usable_budget // layer_size))
+    return min(optimal_layers, model_params["total_layers"])
+```
+
+If full 33-layer offload is possible, execution runs 100% on CUDA; otherwise, split execution utilizes pinned system memory for remaining layers.
+
+
