@@ -152,3 +152,18 @@ To allow 8,192-native models to analyze lengthy document archives (up to 32,768 
 YaRN dynamically scales high-frequency and low-frequency rotary positional dimensions differently, preserving local syntactic precision while expanding global document attention.
 
 
+## 9. Grammar-Constrained Sampling via GBNF
+Large language models naturally generate conversational filler. When calling desktop tools or returning data, outputs must strictly adhere to formal grammars.
+
+### GBNF Grammar Specification
+```ebnf
+# Tool Call Grammar for MXB Intent Dispatcher
+root ::= ToolCall
+ToolCall ::= "{\"action\":\"" Action "\",\"params\":" Params "}"
+Action ::= "os.launch_app" | "volume.set" | "system.shutdown"
+Params ::= "{\"target\":\"" [a-zA-Z0-9_ ]+ "\"}"
+```
+
+The GBNF sampler masks out invalid logit tokens at each step, making it mathematically impossible for the model to produce invalid syntax or hallucinatory keys.
+
+
