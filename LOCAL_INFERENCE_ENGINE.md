@@ -186,3 +186,23 @@ def pydantic_to_gbnf(model_cls: type[BaseModel]) -> str:
 Guarantees 100% deterministic function execution arguments with zero retry overhead.
 
 
+## 11. Multi-Stage Token Sampling Configuration
+Token selection balance creativity and exact determinism through a tuned multi-stage sampling pipeline.
+
+### Sampling Pipeline Order
+1. **Top-K (`top_k=40`)**: Limits candidate pool to the top 40 highest-probability tokens.
+2. **Top-P (`top_p=0.90`)**: Restricts tokens to cumulative probability mass of 90%.
+3. **Min-P (`min_p=0.05`)**: Prunes tokens whose probability is less than 5% of the leading candidate token.
+4. **Temperature (`temp=0.7` for conversation, `temp=0.1` for tool calling)**: Scales logit sharpness.
+
+```python
+sampling_params = {
+    "temperature": 0.2,
+    "top_k": 40,
+    "top_p": 0.90,
+    "min_p": 0.05,
+    "dynatemp_range": 0.0
+}
+```
+
+
