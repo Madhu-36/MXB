@@ -257,3 +257,12 @@ class ModelManager:
 Swapping weights between disk and VRAM takes under 1.8 seconds using high-speed NVMe memory mapping.
 
 
+## 15. Multi-GPU Tensor Parallelism & Split Allocation
+For workstations equipped with dual GPUs (e.g., dual RTX 3080s), MXB splits model weights across physical adapters.
+
+### Tensor Parallelism Configuration
+- **Row-Parallel & Column-Parallel Splitting**: Linear projection layers (`q_proj`, `k_proj`, `v_proj`) are divided across GPU 0 and GPU 1.
+- **Inter-GPU Communication**: Peer-to-peer CUDA IPC via NVLink or direct PCIe transfers.
+- **Split Ratio**: Dynamically balances layers according to each GPU's available VRAM (e.g., `gpu_split="60,40"`).
+
+
