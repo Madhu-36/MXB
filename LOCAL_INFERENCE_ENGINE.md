@@ -360,3 +360,15 @@ To prevent GPU driver crashes or CUDA out-of-memory faults from bringing down th
 - **Self-Healing**: Automatically cleans up GPU context, releases locked files, and re-spawns worker in under 1.5 seconds.
 
 
+## 23. Cross-Hardware Acceleration Profiles
+MXB automatically selects the highest-performing hardware acceleration backend available on the host machine.
+
+### Backend Selection Matrix
+| Hardware Platform | Primary Backend | Precision | Typical Throughput |
+|-------------------|-----------------|-----------|--------------------|
+| NVIDIA GeForce / Quadro | CUDA / TensorRT-LLM | FP16 / INT4 | 55 - 85 tok/sec |
+| AMD Radeon RX 6000/7000 | ROCm / DirectML | FP16 / INT4 | 35 - 55 tok/sec |
+| Intel Arc / Xe Graphics | DirectML / OpenVINO | INT4 | 25 - 40 tok/sec |
+| Intel/AMD CPU Workstations | AVX2 / AVX-512 / AMX | Q4_K_M | 12 - 20 tok/sec |
+
+
