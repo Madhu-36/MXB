@@ -206,3 +206,13 @@ sampling_params = {
 ```
 
 
+## 12. Repetition & Frequency Penalty Optimization
+To prevent local LLMs from entering repetitive loops during verbose technical explanations, MXB tunes token penalty parameters:
+
+### Repetition Controls
+- **Repetition Penalty**: Set to `1.10` over a sliding window of the last 64 tokens.
+- **Frequency Penalty**: Set to `0.05` to discourage re-using the exact same lexical phrases.
+- **Presence Penalty**: Set to `0.02` to gently encourage introducing new topics.
+- **EOS Token Whitelisting**: End-of-sequence (`<|eot_id|>`, `</s>`) tokens are strictly excluded from repetition penalties to ensure clean generation termination.
+
+
