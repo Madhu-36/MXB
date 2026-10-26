@@ -33,3 +33,23 @@ MXB V2.0 embeds a high-performance, air-gapped Large Language Model inference en
 The runtime operates within strict VRAM budgets (3.5 GB to 8.0 GB), providing deterministic sub-300ms Time-To-First-Token (TTFT) and throughput upwards of 55 tokens/second.
 
 
+## 2. GGUF File Format & Binary Metadata Layout
+MXB exclusively standardizes on the **GGUF (GGML Universal File)** binary format for packaging weights, hyperparameter metadata, and vocabulary tokens into a single self-describing file.
+
+### GGUF Binary Structure
+1. **Magic Header**: `0x46554747` (`GGUF` in ASCII).
+2. **Version**: Version 3 with 64-bit alignment support.
+3. **Metadata KV Pairs**: Model architecture (`llama`, `qwen2`, `mistral`), context length, RoPE parameters, and tensor block shapes.
+4. **Tensor Info Catalog**: Name, data type (`Q4_K_M`, `Q5_K_S`, `Q8_0`), byte offsets, and dimension shapes.
+5. **Tensor Binary Data**: Contiguous 32-byte aligned raw parameter weights.
+
+```python
+def inspect_gguf_metadata(filepath: str) -> dict:
+    with open(filepath, "rb") as f:
+        magic = f.read(4)
+        assert magic == b"GGUF", "Invalid GGUF binary magic header"
+        version, tensor_count, metadata_kv_count = struct.unpack("<III", f.read(12))
+        return {"version": version, "tensors": tensor_count, "metadata_kvs": metadata_kv_count}
+```
+
+
