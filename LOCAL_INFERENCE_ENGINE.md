@@ -351,3 +351,12 @@ llama-quantize.exe models/llama-8b-f16.gguf models/llama-8b-q4_k_m.gguf Q4_K_M
 `Q4_K_M` uses 4-bit quantization for attention weights and 6-bit for feed-forward gating tensors, maintaining optimal perplexity.
 
 
+## 22. Subprocess Supervisor & Crash Recovery Daemon
+To prevent GPU driver crashes or CUDA out-of-memory faults from bringing down the MXB UI, inference backends execute in an isolated worker process.
+
+### Watchdog Policies
+- **Heartbeat Check**: Polled via local loopback socket every 3 seconds.
+- **OOM Protection**: Monitored via Windows job object; kills worker before system freeze if RAM threshold is breached.
+- **Self-Healing**: Automatically cleans up GPU context, releases locked files, and re-spawns worker in under 1.5 seconds.
+
+
