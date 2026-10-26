@@ -95,3 +95,19 @@ def calculate_optimal_gpu_layers(total_vram_bytes: int, model_params: dict) -> i
 If full 33-layer offload is possible, execution runs 100% on CUDA; otherwise, split execution utilizes pinned system memory for remaining layers.
 
 
+## 5. Pinned Host Memory & Zero-Copy Tensor Transfers
+When layers are split between CPU and GPU, transferring intermediate activation tensors across the PCIe bus can bottleneck generation.
+
+### CUDA Pinned Memory Allocation
+MXB allocates CPU host memory using page-locked (pinned) buffers via `cudaHostAlloc`:
+- Bypasses standard Windows virtual memory paging and swap space.
+- Enables high-speed Asynchronous DMA (Direct Memory Access) transfers.
+- Sustains transfer throughput exceeding **24 GB/sec** across PCIe 4.0 x16 lanes.
+
+```c
+// Allocate Page-Locked Pinned Buffer
+void* pinned_buffer;
+cudaHostAlloc(&pinned_buffer, activation_size_bytes, cudaHostAllocPortable);
+```
+
+
