@@ -291,3 +291,25 @@ def evict_oldest_context(kv_cache, tokens_to_evict: int):
 The system summarizes evicted conversation turns and injects a 64-token memory summary into the active prompt, guaranteeing uninterrupted indefinite conversational availability.
 
 
+## 18. Asynchronous Token Streaming Callbacks
+To start audio playback and UI rendering without waiting for full response completion, tokens are emitted via asynchronous generators.
+
+```python
+from collections.abc import AsyncGenerator
+
+async def stream_inference(prompt: str) -> AsyncGenerator[str, None]:
+    token_queue = asyncio.Queue()
+    
+    def on_token(token_str: str):
+        token_queue.put_nowait(token_str)
+        
+    threading.Thread(target=run_llama_generate, args=(prompt, on_token), daemon=True).start()
+    
+    while True:
+        tok = await token_queue.get()
+        if tok is None: # EOS
+            break
+        yield tok
+```
+
+
