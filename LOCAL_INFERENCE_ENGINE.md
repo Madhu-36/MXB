@@ -111,3 +111,16 @@ cudaHostAlloc(&pinned_buffer, activation_size_bytes, cudaHostAllocPortable);
 ```
 
 
+## 6. KV-Cache Quantization & Memory Footprint Reduction
+At 8,192 context tokens, an FP16 Key-Value cache for an 8B model consumes over 2.4 GB of precious VRAM. MXB implements paged KV-cache quantization.
+
+### Quantization Modes
+- **Q8_0 KV-Cache**: 8-bit integer quantization; cuts cache VRAM by **50%** (1.2 GB) with zero measurable degradation in response quality.
+- **Q4_0 KV-Cache**: 4-bit integer quantization; cuts cache VRAM by **75%** (600 MB); ideal for 4GB budget laptops.
+
+```bash
+# Model Execution with Quantized KV Cache
+mxb-engine.exe --model llama-3.1-8b-q4_k_m.gguf --cache-type-k q8_0 --cache-type-v q8_0 -c 8192
+```
+
+
