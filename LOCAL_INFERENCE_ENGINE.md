@@ -337,3 +337,17 @@ Downloading 5GB+ GGUF weights on consumer connections requires resilient chunkin
 - **Automated SHA-256 Validation**: Hashes binary stream on-the-fly and compares against HuggingFace manifest.
 
 
+## 21. Post-Training Quantization Tooling (llama-quantize)
+MXB provides embedded tooling for users to convert unquantized FP16 HuggingFace Safetensor models into optimized GGUF quantizations.
+
+```bash
+# FP16 to GGUF conversion
+python convert_hf_to_gguf.py models/Llama-3.1-8B/ --outfile models/llama-8b-f16.gguf
+
+# Quantize to Q4_K_M (Medium 4-bit)
+llama-quantize.exe models/llama-8b-f16.gguf models/llama-8b-q4_k_m.gguf Q4_K_M
+```
+
+`Q4_K_M` uses 4-bit quantization for attention weights and 6-bit for feed-forward gating tensors, maintaining optimal perplexity.
+
+
