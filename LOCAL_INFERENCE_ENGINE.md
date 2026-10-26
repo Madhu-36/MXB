@@ -167,3 +167,22 @@ Params ::= "{\"target\":\"" [a-zA-Z0-9_ ]+ "\"}"
 The GBNF sampler masks out invalid logit tokens at each step, making it mathematically impossible for the model to produce invalid syntax or hallucinatory keys.
 
 
+## 10. Automatic Pydantic-to-GBNF Tool Schema Compilation
+MXB automatically compiles Python Pydantic tool schemas into strict GBNF grammars at runtime.
+
+```python
+from pydantic import BaseModel, Field
+
+class VolumeControlParams(BaseModel):
+    level: int = Field(ge=0, le=100, description="Volume level from 0 to 100")
+    mute: bool = Field(default=False)
+
+def pydantic_to_gbnf(model_cls: type[BaseModel]) -> str:
+    # Converts JSON schema constraints into GBNF regex token rules
+    schema = model_cls.model_json_schema()
+    return compile_grammar(schema)
+```
+
+Guarantees 100% deterministic function execution arguments with zero retry overhead.
+
+
