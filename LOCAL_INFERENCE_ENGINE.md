@@ -313,3 +313,17 @@ async def stream_inference(prompt: str) -> AsyncGenerator[str, None]:
 ```
 
 
+## 19. Universal Prompt Template Compilation
+Different GGUF model families require distinct special demarcation tokens for system, user, and assistant roles.
+
+### Supported Templates
+- **Llama 3 / 3.1**: `<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+{{ sys }}<|eot_id|>`
+- **ChatML**: `<|im_start|>system
+{{ sys }}<|im_end|>`
+- **Mistral Instruct**: `[INST] {{ prompt }} [/INST]`
+
+MXB parses the model's internal Jinja2 chat template metadata directly from the GGUF file header, automatically formatting role tokens without manual configuration.
+
+
