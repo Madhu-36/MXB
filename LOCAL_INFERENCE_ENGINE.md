@@ -133,3 +133,22 @@ Standard attention matrix computation exhibits $O(N^2)$ memory reads and writes 
 - **Speedup**: Delivers **2.8x faster prompt pre-fill** on 4K+ context prompts while cutting memory bandwidth contention by 65%.
 
 
+## 8. RoPE Frequency Scaling & YaRN Context Extension
+To allow 8,192-native models to analyze lengthy document archives (up to 32,768 tokens) without catastrophic perplexity explosion, MXB applies **YaRN (Yet another RoPE extensioN)**.
+
+### YaRN Hyperparameters
+```json
+{
+  "rope_scaling_type": "yarn",
+  "rope_freq_base": 500000.0,
+  "rope_freq_scale": 1.0,
+  "yarn_orig_ctx": 8192,
+  "yarn_target_ctx": 32768,
+  "yarn_ext_factor": 1.0,
+  "yarn_attn_factor": 1.0
+}
+```
+
+YaRN dynamically scales high-frequency and low-frequency rotary positional dimensions differently, preserving local syntactic precision while expanding global document attention.
+
+
