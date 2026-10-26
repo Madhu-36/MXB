@@ -372,3 +372,28 @@ MXB automatically selects the highest-performing hardware acceleration backend a
 | Intel/AMD CPU Workstations | AVX2 / AVX-512 / AMX | Q4_K_M | 12 - 20 tok/sec |
 
 
+## 24. Automated Inference Benchmarking Fixtures with Pytest
+MXB includes automated benchmark fixtures measuring generation throughput and Time-To-First-Token (TTFT).
+
+```python
+import pytest
+import time
+
+def test_inference_ttft_and_throughput(inference_engine):
+    prompt = "Explain the difference between TCP and UDP in 50 words."
+    t0 = time.perf_counter()
+    tokens = []
+    
+    for i, tok in enumerate(inference_engine.stream(prompt)):
+        if i == 0:
+            ttft = time.perf_counter() - t0
+        tokens.append(tok)
+        
+    total_time = time.perf_counter() - t0
+    tps = len(tokens) / total_time
+    
+    assert ttft < 0.450, f"TTFT exceeded budget: {ttft:.3f}s"
+    assert tps >= 35.0, f"Throughput dropped below SLA: {tps:.1f} tok/s"
+```
+
+
