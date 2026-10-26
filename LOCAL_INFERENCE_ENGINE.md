@@ -266,3 +266,14 @@ For workstations equipped with dual GPUs (e.g., dual RTX 3080s), MXB splits mode
 - **Split Ratio**: Dynamically balances layers according to each GPU's available VRAM (e.g., `gpu_split="60,40"`).
 
 
+## 16. Continuous Batching & Priority Task Scheduling
+When multiple asynchronous assistant subsystems request LLM reasoning (e.g., active user voice query vs. background document indexing), requests are batched dynamically.
+
+### Queue Priority Levels
+1. **Priority 1 (Interactive Voice)**: Real-time user audio; pre-empts background tasks with zero delay.
+2. **Priority 2 (UI Interaction)**: Hotkey commands and text chat entries.
+3. **Priority 3 (Background Tasks)**: RAG document summarization, memory consolidation.
+
+Continuous batching merges incoming prompts into active GPU matrix operations without interrupting running generation streams.
+
+
