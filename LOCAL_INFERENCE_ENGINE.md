@@ -327,3 +327,13 @@ Different GGUF model families require distinct special demarcation tokens for sy
 MXB parses the model's internal Jinja2 chat template metadata directly from the GGUF file header, automatically formatting role tokens without manual configuration.
 
 
+## 20. Model Zoo Downloader & Multi-Threaded Chunk Resuming
+Downloading 5GB+ GGUF weights on consumer connections requires resilient chunking and integrity protection.
+
+### Downloader Capabilities
+- **Multi-Part HTTP Range Requests**: Downloads 16 chunks concurrently over HTTP/2.
+- **Resilient Resume**: Survives network drops; resumes from the exact last downloaded byte.
+- **Pre-Allocation**: Allocates sparse files on disk via `SetFileValidData` to prevent disk fragmentation.
+- **Automated SHA-256 Validation**: Hashes binary stream on-the-fly and compares against HuggingFace manifest.
+
+
