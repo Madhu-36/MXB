@@ -137,3 +137,15 @@ def redact_log_record(text: str) -> str:
 ```
 
 
+## 7. Loopback Prometheus & StatsD Exporter
+For system administrators or local monitoring dashboards (e.g. Grafana on desktop), MXB exposes a Prometheus metrics endpoint.
+
+### Configuration
+- **Bind Address**: Strictly bound to `127.0.0.1:9095/metrics` (remote connections refused).
+- **Core Metrics**:
+  - `mxb_audio_latency_seconds`: Gauge of end-to-end turn latency.
+  - `mxb_llm_tokens_per_second`: Instantaneous token generation rate.
+  - `mxb_vram_used_bytes`: GPU memory allocated by local model runtime.
+  - `mxb_vad_triggers_total`: Counter of voice activity events.
+
+
