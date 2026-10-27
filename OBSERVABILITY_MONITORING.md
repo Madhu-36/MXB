@@ -30,3 +30,26 @@ MXB V2.0 incorporates an enterprise-grade, privacy-first observability platform.
 - **Deterministic Redaction**: PII, passwords, paths, and raw user audio are scrubbed prior to log serialization.
 
 
+## 2. Structured JSON Logging & Rotating File Handlers
+All subsystem log records are formatted as structured JSON Lines (JSONL), ensuring machine-readability and zero parsing ambiguity.
+
+### JSON Log Record Schema
+```json
+{
+  "timestamp": "2026-10-27T14:15:30.124592Z",
+  "level": "INFO",
+  "subsystem": "engine.stt",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "message": "Whisper greedy transcription completed",
+  "metrics": {
+    "audio_duration_ms": 1420,
+    "inference_duration_ms": 184,
+    "rtf": 0.13
+  }
+}
+```
+
+Log files rotate automatically at 25 MB with a maximum retention of 5 archive generations (`mxb.log.1.gz` through `mxb.log.5.gz`).
+
+
