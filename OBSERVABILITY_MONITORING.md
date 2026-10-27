@@ -345,3 +345,12 @@ If an unhandled exception occurs, MXB offers to package an anonymized diagnostic
 4. Transmission requires explicit user click; never automated.
 
 
+## 22. Log Retention Policies & Automatic Compaction
+To avoid unconstrained disk growth on small SSDs, MXB enforces strict storage limits.
+
+### Retention Rules
+- Total log directory (`%APPDATA%\MXB\logs`) capped at **250 MB**.
+- Crash dumps older than 14 days are automatically pruned.
+- Completed diagnostic archives are compressed using LZMA/gzip.
+
+
