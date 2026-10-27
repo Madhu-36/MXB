@@ -354,3 +354,22 @@ To avoid unconstrained disk growth on small SSDs, MXB enforces strict storage li
 - Completed diagnostic archives are compressed using LZMA/gzip.
 
 
+## 23. Immutable Audit Trail via Cryptographic Hash Chaining
+High-risk automation events (e.g. system file deletions, password autofill, privilege elevation) are linked in a cryptographic blockchain-like ledger.
+
+```python
+def create_audit_entry(event_data: dict, previous_hash: str) -> dict:
+    hasher = hashlib.sha256()
+    payload = json.dumps(event_data, sort_keys=True)
+    hasher.update((previous_hash + payload).encode("utf-8"))
+    
+    return {
+        "event": event_data,
+        "prev_hash": previous_hash,
+        "entry_hash": hasher.hexdigest()
+    }
+```
+
+Prevents tampering or retroactive manipulation of security audit logs.
+
+
