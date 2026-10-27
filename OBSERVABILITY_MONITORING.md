@@ -203,3 +203,25 @@ Tracking VAD efficiency prevents assistant false wake-ups and trailing sentence 
 - **Truncation Events**: Occurrences where speech was cut prematurely due to short silence thresholds.
 
 
+## 12. Flight Recorder Circular Ring Buffer
+To provide high-fidelity diagnostics without consuming gigabytes of disk space, MXB maintains an encrypted circular flight recorder in SQLite.
+
+```sql
+CREATE TABLE IF NOT EXISTS flight_recorder (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    subsystem TEXT,
+    event_payload BLOB
+);
+
+-- Circular Pruning Trigger: Cap table to last 10,000 events
+CREATE TRIGGER IF NOT EXISTS prune_flight_recorder
+AFTER INSERT ON flight_recorder
+BEGIN
+    DELETE FROM flight_recorder WHERE id <= NEW.id - 10000;
+END;
+```
+
+Payloads are encrypted with local AES-GCM-256 keys derived via Windows DPAPI.
+
+
