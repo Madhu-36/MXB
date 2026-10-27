@@ -149,3 +149,27 @@ For system administrators or local monitoring dashboards (e.g. Grafana on deskto
   - `mxb_vad_triggers_total`: Counter of voice activity events.
 
 
+## 8. Real-Time GPU Hardware Telemetry via NVML
+Accurate profiling of local LLM performance requires direct monitoring of GPU clock speeds, power draw, and VRAM utilization.
+
+```python
+import pynvml
+
+def sample_gpu_telemetry(device_index: int = 0) -> dict:
+    pynvml.nvmlInit()
+    handle = pynvml.nvmlDeviceGetHandleByIndex(device_index)
+    
+    mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+    power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0  # Watts
+    util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+    
+    return {
+        "vram_used_mb": mem.used // (1024 * 1024),
+        "gpu_temp_c": temp,
+        "power_watts": power,
+        "gpu_util_pct": util.gpu
+    }
+```
+
+
