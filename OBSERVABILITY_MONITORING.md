@@ -335,3 +335,13 @@ To track knowledge retrieval accuracy over time, RAG queries log similarity scor
 - Cosine similarity distance distribution of the top-5 retrieved chunks.
 
 
+## 21. Privacy-Compliant Crash Report Packaging
+If an unhandled exception occurs, MXB offers to package an anonymized diagnostic report.
+
+### Packaging Flow
+1. Bundle redacted JSON logs, mini-dump, and system hardware specifications.
+2. Store package locally as `mxb_diagnostic_report.zip`.
+3. Present interactive PySide6 preview dialog showing every file in the archive.
+4. Transmission requires explicit user click; never automated.
+
+
