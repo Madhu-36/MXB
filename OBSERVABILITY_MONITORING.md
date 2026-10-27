@@ -194,3 +194,12 @@ Audio discontinuities cause speech recognition failures and crackling synthesize
 - **Zero-Crossing Silence Ratio**: Detects hardware microphone disconnections or muted inputs.
 
 
+## 11. VAD Metric Logging & False-Trigger Analysis
+Tracking VAD efficiency prevents assistant false wake-ups and trailing sentence cut-offs.
+
+### Tracked Heuristics
+- **False Trigger Rate (FTR)**: Audio segments flagged as speech that produce 0 words in Whisper.
+- **End-Of-Speech (EOS) Latency**: Milliseconds between user silence onset and speech termination trigger.
+- **Truncation Events**: Occurrences where speech was cut prematurely due to short silence thresholds.
+
+
