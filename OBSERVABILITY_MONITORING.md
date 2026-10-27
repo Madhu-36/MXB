@@ -75,3 +75,18 @@ with tracer.start_as_current_span("voice_interaction_turn") as root_span:
 ```
 
 
+## 4. Sub-Millisecond Span Timing & Span Hierarchy
+Spans nested within the root interaction turn measure localized execution slices with microsecond granularity.
+
+```
+[ voice_interaction_turn : 740 ms ]
+|-- [ vad_slice_detection : 110 ms ]
+|-- [ whisper_stt_inference : 215 ms ]
+|-- [ hybrid_rag_retrieval : 38 ms ]
+|-- [ llm_ttft_generation : 240 ms ]
+`-- [ piper_tts_audio_first_chunk : 137 ms ]
+```
+
+Span boundaries capture hardware state transitions, enabling instant isolation of performance regressions.
+
+
