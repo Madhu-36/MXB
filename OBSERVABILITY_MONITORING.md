@@ -53,3 +53,25 @@ All subsystem log records are formatted as structured JSON Lines (JSONL), ensuri
 Log files rotate automatically at 25 MB with a maximum retention of 5 archive generations (`mxb.log.1.gz` through `mxb.log.5.gz`).
 
 
+## 3. OpenTelemetry Distributed Tracing Integration
+MXB integrates OpenTelemetry (OTel) distributed tracing primitives across multi-threaded and asynchronous boundaries.
+
+### Trace Context Propagation
+A unique `TraceID` (128-bit hex) is generated the instant user speech is detected by the Voice Activity Detector (VAD). This context flows through:
+1. Audio capture ring buffer.
+2. Whisper C++ inference worker.
+3. RAG semantic retrieval search.
+4. Llama 3.1 token generation stream.
+5. Piper neural TTS audio playback.
+
+```python
+from opentelemetry import trace
+
+tracer = trace.get_tracer("mxb.core")
+
+with tracer.start_as_current_span("voice_interaction_turn") as root_span:
+    root_span.set_attribute("audio.input_device", "USB_Microphone_WASAPI")
+    process_audio_pipeline(trace_context=root_span.get_span_context())
+```
+
+
