@@ -185,3 +185,12 @@ To monitor background thread contention, MXB samples system CPU and NVMe disk pe
 Counters detect when anti-virus scanning or Windows updates compete with model loading I/O.
 
 
+## 10. WASAPI Audio Buffer Under-Run & Dropout Tracking
+Audio discontinuities cause speech recognition failures and crackling synthesized audio.
+
+### Audio Stream Metrics
+- **WASAPI Buffer Under-run Counter**: Tracks `AUDCLNT_E_BUFFER_ERROR` occurrences when the real-time thread misses its WASAPI render deadline.
+- **Microphone Sample Drift**: Measures drift between hardware clock and software consumption buffer.
+- **Zero-Crossing Silence Ratio**: Detects hardware microphone disconnections or muted inputs.
+
+
