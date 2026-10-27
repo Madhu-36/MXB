@@ -116,3 +116,24 @@ LONG WINAPI MXBUnhandledCrashFilter(EXCEPTION_POINTERS* pExceptionPointers) {
 Generates compact (80-150 KB) mini-dumps containing call stacks, thread states, and registers without memory page dumps.
 
 
+## 6. Deterministic Privacy Redaction Pipeline
+Diagnostic logs must never capture user credentials, local usernames, or confidential conversation transcripts.
+
+### Redaction Engine Regex Rules
+```python
+import re
+
+PATTERNS = [
+    (re.compile(r"C:\\Users\\[^\\/]+", re.IGNORECASE), "C:\\Users\\[REDACTED_USER]"),
+    (re.compile(r"(ghp_[a-zA-Z0-9]{36}|AIza[0-9A-Za-z-_]{35})"), "[REDACTED_API_KEY]"),
+    (re.compile(r"\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}"), "[REDACTED_CARD]"),
+    (re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}"), "[REDACTED_EMAIL]")
+]
+
+def redact_log_record(text: str) -> str:
+    for pattern, replacement in PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+```
+
+
