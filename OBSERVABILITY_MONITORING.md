@@ -308,3 +308,12 @@ Latency bottlenecks are dissected visually using waterfall timelines rendered fr
 Pinpoints precisely whether delays originate in audio capture, neural generation, or disk I/O.
 
 
+## 18. Network Circuit Breaker Telemetry
+For optional cloud-enabled features (e.g. web search), circuit breaker telemetry records connection health.
+
+### Telemetry Events
+- `breaker.state_changed`: Emitted when transitioning between `CLOSED`, `OPEN`, and `HALF_OPEN`.
+- `breaker.consecutive_failures`: Counter of failed socket/DNS handshakes.
+- `breaker.fallback_invoked`: Counter of queries rerouted to local offline fallback.
+
+
