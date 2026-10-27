@@ -246,3 +246,20 @@ class ProcessWatchdog:
 ```
 
 
+## 14. Automated Health Check Tool: 'mxb doctor'
+The `mxb doctor` CLI command runs comprehensive self-diagnostics to verify runtime readiness before running workloads.
+
+### Check Suite
+```bash
+$ mxb doctor
+[✓] Windows OS: Windows 11 Build 22631 (64-bit)
+[✓] Audio Input: Default WASAPI Capture Device Active (16kHz 16-bit Mono)
+[✓] Audio Output: Default WASAPI Render Device Active (48kHz Stereo)
+[✓] CUDA Acceleration: NVIDIA GeForce RTX 3060 (Compute Capability 8.6)
+[✓] VRAM Availability: 8,192 MB Total / 6,140 MB Free
+[✓] Local Model Files: llama-3.1-8b-q4_k_m.gguf (SHA-256 Verified)
+[✓] Loopback Socket: 127.0.0.1 IPC Responsive (<0.5ms)
+>> All 7 health checks passed successfully.
+```
+
+
