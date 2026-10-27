@@ -225,3 +225,24 @@ END;
 Payloads are encrypted with local AES-GCM-256 keys derived via Windows DPAPI.
 
 
+## 13. Subprocess Heartbeat Daemon & Deadman Switch
+Child processes (such as the Ollama inference backend or computer vision worker) must be monitored for deadlocks or frozen threads.
+
+### Watchdog Architecture
+```python
+class ProcessWatchdog:
+    def __init__(self, target_pid: int, timeout_sec: float = 5.0):
+        self.target_pid = target_pid
+        self.timeout = timeout_sec
+        self.last_heartbeat = time.time()
+
+    def record_pulse(self):
+        self.last_heartbeat = time.time()
+
+    def check_health(self):
+        if time.time() - self.last_heartbeat > self.timeout:
+            log.error(f"Child process PID {self.target_pid} missed heartbeat. Triggering restart.")
+            self.terminate_and_respawn()
+```
+
+
