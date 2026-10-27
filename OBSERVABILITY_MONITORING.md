@@ -317,3 +317,12 @@ For optional cloud-enabled features (e.g. web search), circuit breaker telemetry
 - `breaker.fallback_invoked`: Counter of queries rerouted to local offline fallback.
 
 
+## 19. Local LLM Generation Metrics Collection
+Every local LLM completion computes precise throughput and prompt evaluation metrics:
+
+### Metric Fields
+- **Prompt Eval Speed**: Tokens per second during system prompt & context pre-fill ($TPS_{eval}$).
+- **Token Generation Speed**: Output generation throughput ($TPS_{gen}$).
+- **KV-Cache Hit Ratio**: Percentage of prompt tokens served from prefix cache ($0.0$ to $1.0$).
+
+
