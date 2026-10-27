@@ -326,3 +326,12 @@ Every local LLM completion computes precise throughput and prompt evaluation met
 - **KV-Cache Hit Ratio**: Percentage of prompt tokens served from prefix cache ($0.0$ to $1.0$).
 
 
+## 20. RAG Retrieval Telemetry & Relevance Scoring
+To track knowledge retrieval accuracy over time, RAG queries log similarity scores without logging document text.
+
+### Logged Parameters
+- Number of candidate chunks retrieved from BM25 and vector search.
+- Mean reciprocal rank of selected citations.
+- Cosine similarity distance distribution of the top-5 retrieved chunks.
+
+
