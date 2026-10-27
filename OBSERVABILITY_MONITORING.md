@@ -373,3 +373,22 @@ def create_audit_entry(event_data: dict, previous_hash: str) -> dict:
 Prevents tampering or retroactive manipulation of security audit logs.
 
 
+## 24. Automated Observability Test Fixtures with Pytest
+MXB verifies telemetry emission and redaction rules as part of its automated test suite.
+
+```python
+import pytest
+
+def test_telemetry_redaction_pipeline():
+    from engine.telemetry import redact_log_record
+    
+    sensitive_line = "Failed to load C:\\Users\\JohnDoe\\secret_key=ghp_123456789012345678901234567890123456"
+    redacted = redact_log_record(sensitive_line)
+    
+    assert "JohnDoe" not in redacted
+    assert "ghp_1234" not in redacted
+    assert "[REDACTED_USER]" in redacted
+    assert "[REDACTED_API_KEY]" in redacted
+```
+
+
