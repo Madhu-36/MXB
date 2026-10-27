@@ -173,3 +173,15 @@ def sample_gpu_telemetry(device_index: int = 0) -> dict:
 ```
 
 
+## 9. Windows Performance Data Helper (PDH) Telemetry
+To monitor background thread contention, MXB samples system CPU and NVMe disk performance using the Windows PDH API.
+
+### Sampled Counters
+- `\Processor Information(_Total)\% Processor Utility`
+- `\Process(mxb)\% User Time`
+- `\PhysicalDisk(_Total)\Avg. Disk sec/Read`
+- `\Memory\Available MBytes`
+
+Counters detect when anti-virus scanning or Windows updates compete with model loading I/O.
+
+
