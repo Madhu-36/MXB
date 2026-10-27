@@ -90,3 +90,29 @@ Spans nested within the root interaction turn measure localized execution slices
 Span boundaries capture hardware state transitions, enabling instant isolation of performance regressions.
 
 
+## 5. Native Windows Crash MiniDump Generation
+Unrecoverable C++ segmentation faults or CUDA driver exceptions inside `llama.dll` or `whisper.dll` trigger the native Windows unhandled exception filter.
+
+### MiniDump Capture Routine
+```c
+#include <windows.h>
+#include <dbghelp.h>
+
+LONG WINAPI MXBUnhandledCrashFilter(EXCEPTION_POINTERS* pExceptionPointers) {
+    HANDLE hFile = CreateFileA("C:\\ProgramData\\MXB\\crashes\\crash.dmp", 
+        GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile != INVALID_HANDLE_VALUE) {
+        MINIDUMP_EXCEPTION_INFORMATION mei;
+        mei.ThreadId = GetCurrentThreadId();
+        mei.ExceptionPointers = pExceptionPointers;
+        mei.ClientPointers = FALSE;
+        MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile, MiniDumpNormal, &mei, NULL, NULL);
+        CloseHandle(hFile);
+    }
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+```
+
+Generates compact (80-150 KB) mini-dumps containing call stacks, thread states, and registers without memory page dumps.
+
+
