@@ -263,3 +263,13 @@ $ mxb doctor
 ```
 
 
+## 15. Real-Time HUD Diagnostic Overlay
+Developers and power users can toggle an on-screen diagnostic overlay (`Ctrl+Shift+D`) inside the PySide6 glassmorphic HUD.
+
+### Rendered Widgets
+- **Live Waveform & RMS Visualizer**: Real-time microphone input gain.
+- **Latency Sparkline**: Rolling 10-turn interaction latency chart.
+- **Hardware Gauge**: Instantaneous CPU, VRAM, and GPU temperature dials.
+- **Active Trace Inspector**: Drill-down view of the most recent pipeline span.
+
+
