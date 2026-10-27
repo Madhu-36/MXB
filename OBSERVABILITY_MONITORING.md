@@ -292,3 +292,19 @@ def audit_memory_allocation(snapshot_baseline):
 Automated hourly audits verify that UI pixmaps, vector embeddings, and audio buffers are garbage-collected properly.
 
 
+## 17. End-to-End Latency Waterfall Visualization
+Latency bottlenecks are dissected visually using waterfall timelines rendered from OpenTelemetry span dumps.
+
+```
+0ms         200ms        400ms        600ms        800ms
+|------------|------------|------------|------------|
+[ VAD: 110ms ]
+             [ STT: 215ms ]
+                          [ RAG: 38ms ]
+                          [ LLM TTFT: 240ms ]
+                                            [ TTS: 137ms ]
+```
+
+Pinpoints precisely whether delays originate in audio capture, neural generation, or disk I/O.
+
+
