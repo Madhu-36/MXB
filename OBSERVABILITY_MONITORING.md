@@ -273,3 +273,22 @@ Developers and power users can toggle an on-screen diagnostic overlay (`Ctrl+Shi
 - **Active Trace Inspector**: Drill-down view of the most recent pipeline span.
 
 
+## 16. Memory Leak Profiling & PyObject Auditing
+Long-running background assistant applications must maintain a flat memory footprint over weeks of continuous operation.
+
+### Tracemalloc Snapshot Profiling
+```python
+import tracemalloc
+
+def audit_memory_allocation(snapshot_baseline):
+    current = tracemalloc.take_snapshot()
+    stats = current.compare_to(snapshot_baseline, "lineno")
+    
+    for stat in stats[:5]:
+        if stat.size_diff > 1024 * 1024:  # Leaks > 1MB
+            log.warning(f"Memory growth detected: {stat}")
+```
+
+Automated hourly audits verify that UI pixmaps, vector embeddings, and audio buffers are garbage-collected properly.
+
+
