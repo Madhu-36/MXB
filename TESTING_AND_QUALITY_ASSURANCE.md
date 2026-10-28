@@ -231,3 +231,12 @@ Integration tests execute full real-time pipelines from synthetic WAV audio file
 3. *"Summarize this document"* -> Vision capture -> OCR parsed -> LLM prompt formatted -> Response synthesized.
 
 
+## 15. RAG Information Retrieval Evaluation Suite
+The local RAG pipeline is continuously benchmarked against a curated document test collection (50 documents, 200 question-answer pairs).
+
+### Metrics Tracked
+- **Recall@5**: Target $\ge 92\%$ (Ensures relevant chunk is in top 5 candidates).
+- **Mean Reciprocal Rank (MRR@10)**: Target $\ge 0.85$ (Evaluates rank position of ground-truth evidence).
+- **Normalized Discounted Cumulative Gain (NDCG@10)**: Target $\ge 0.88$.
+
+
