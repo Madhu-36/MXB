@@ -25,3 +25,18 @@ MXB V2.0 operates at the confluence of real-time audio streams, neural model inf
 - **Air-Gapped CI Validation**: Automated tests run with socket connections locked to loopback (`127.0.0.1`), ensuring zero stealth telemetry or network reliance.
 
 
+## 2. Multi-Tiered Test Architecture & Coverage SLAs
+Quality targets are enforced through strict branch and line coverage thresholds measured via `coverage.py`.
+
+### SLA Matrix
+| Subsystem Tier | Target Line Coverage | Target Branch Coverage | Maximum Allowed Latency |
+|----------------|----------------------|------------------------|-------------------------|
+| Core Engine (`engine/`) | >= 92% | >= 88% | < 50ms per test |
+| Audio Pipeline (`audio/`) | >= 85% | >= 80% | < 100ms per test |
+| UI & HUD (`ui/`) | >= 80% | >= 75% | < 250ms per test |
+| Safety & Sandboxing (`safety/`) | **100%** | **100%** | < 10ms per test |
+| Automation & Workflows (`automation/`) | >= 90% | >= 85% | < 150ms per test |
+
+Any pull request that drops safety test coverage below 100% or global coverage below 88% fails the automated CI gate.
+
+
