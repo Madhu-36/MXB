@@ -40,3 +40,24 @@ Quality targets are enforced through strict branch and line coverage thresholds 
 Any pull request that drops safety test coverage below 100% or global coverage below 88% fails the automated CI gate.
 
 
+## 3. Pytest Configuration & Test Tagging Taxonomy
+MXB centralizes its test suite configuration in `pytest.ini` with custom markers isolating long-running hardware tests from rapid unit passes.
+
+```ini
+[pytest]
+minversion = 8.0
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = -ra -q --strict-markers --durations=10
+markers =
+    unit: Fast in-memory unit tests with zero I/O
+    audio: Tests requiring virtual WASAPI audio loopback
+    llm: Tests validating local model inference and GBNF grammars
+    gui: Tests exercising PySide6 windows via pytest-qt
+    slow: Long-running stress, memory leak, or benchmark tests
+    chaos: Fault-injection and hardware disconnection scenarios
+```
+
+
