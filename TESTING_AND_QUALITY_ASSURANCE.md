@@ -61,3 +61,24 @@ markers =
 ```
 
 
+## 4. Win32 & COM API Mocking Framework
+Native Windows APIs (`win32gui`, `win32process`, `win32con`, and COM `pythoncom`) require robust abstraction stubs when tests run on headless CI runners.
+
+```python
+from unittest.mock import MagicMock
+import pytest
+
+@pytest.fixture
+def mock_win32_desktop(monkeypatch):
+    mock_gui = MagicMock()
+    mock_gui.GetForegroundWindow.return_value = 0x10294
+    mock_gui.GetWindowText.return_value = "Visual Studio Code"
+    mock_gui.GetWindowRect.return_value = (0, 0, 1920, 1080)
+    
+    monkeypatch.setattr("win32gui.GetForegroundWindow", mock_gui.GetForegroundWindow)
+    monkeypatch.setattr("win32gui.GetWindowText", mock_gui.GetWindowText)
+    monkeypatch.setattr("win32gui.GetWindowRect", mock_gui.GetWindowRect)
+    return mock_gui
+```
+
+
