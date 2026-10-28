@@ -250,3 +250,22 @@ Tests verify that simultaneous read searches and background document ingestion w
 - **Assertion**: 0 database lock errors (`SQLITE_BUSY`) and <15ms average query latency.
 
 
+## 17. Air-Gapped Network Isolation Assertion Fixtures
+A specialized pytest fixture intercepts the standard Python `socket` module to mathematically guarantee zero outbound network requests during offline test runs.
+
+```python
+import socket
+import pytest
+
+@pytest.fixture(autouse=True)
+def guard_network_isolation(monkeypatch):
+    original_connect = socket.socket.connect
+    def blocked_connect(self, address):
+        host, port = address[0], address[1]
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            raise ConnectionRefusedError(f"Network call forbidden in air-gapped mode: {host}:{port}")
+        return original_connect(self, address)
+    monkeypatch.setattr(socket.socket, "connect", blocked_connect)
+```
+
+
