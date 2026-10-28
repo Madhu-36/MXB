@@ -334,3 +334,14 @@ def test_watchdog_kills_hung_worker(watchdog_supervisor):
 ```
 
 
+## 23. Automated Security Penetration Tests
+Security test fixtures probe all tool arguments for injection vectors:
+
+### Tested Attack Vectors
+- **Directory Traversal**: `../../../../Windows/System32/cmd.exe` in file tools.
+- **Chained Shell Operators**: `test.txt && rm -rf /` in terminal tools.
+- **Environment Variable Poisoning**: `%PATH%` or `$SHELL` manipulation.
+
+All inputs must be strictly normalized and rejected by the safety layer before reaching system calls.
+
+
