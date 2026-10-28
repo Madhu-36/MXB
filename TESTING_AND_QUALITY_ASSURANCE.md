@@ -290,3 +290,13 @@ def test_interaction_turn_memory_neutrality(assistant_runtime):
 ```
 
 
+## 19. Sub-Second Latency Benchmark Assertions
+Performance regressions are caught in CI using `pytest-benchmark` against established SLAs.
+
+### Benchmark SLA Assertions
+- `test_benchmark_vad_chunk`: Mean execution $< 2.0	ext{ ms}$.
+- `test_benchmark_token_eval`: Throughput $\ge 35	ext{ tokens/sec}$.
+- `test_benchmark_embedding_cosine`: 10,000 vectors $< 1.5	ext{ ms}$.
+- `test_benchmark_hud_frame_render`: Frame time $< 16.6	ext{ ms}$ (60 FPS locked).
+
+
