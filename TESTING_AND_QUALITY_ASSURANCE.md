@@ -365,3 +365,24 @@ pytest --cov=engine --cov=ui --cov=safety --cov-report=term-missing --cov-report
 Detailed line-by-line branch analysis highlights untested edge cases and dead code paths.
 
 
+## 26. GitHub Actions Continuous Integration Architecture
+Every push and pull request triggers a multi-stage GitHub Actions pipeline:
+
+```yaml
+name: MXB Quality Gate
+on: [push, pull_request]
+jobs:
+  lint-and-typecheck:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ruff check .
+      - run: mypy engine/ ui/
+  unit-and-integration:
+    needs: lint-and-typecheck
+    runs-on: windows-latest
+    steps:
+      - run: pytest -m "unit or audio or gui" --cov=engine
+```
+
+
