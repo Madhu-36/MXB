@@ -167,3 +167,14 @@ def validate_tool_call_conformance(raw_llm_output: str, expected_schema: dict):
 ```
 
 
+## 10. LLM-as-a-Judge Conversational Evaluation
+Conversational quality, helpfulness, and tone are evaluated automatically using an independent local evaluation judge model (Llama-3.1-70B or Qwen2.5-32B).
+
+### Evaluation Rubric
+- **Factual Grounding (1-5)**: Is the response strictly grounded in retrieved local context?
+- **Conciseness (1-5)**: Does the assistant deliver concise, voice-friendly answers (<3 sentences)?
+- **Tool Precision (1-5)**: Did the assistant select the single most appropriate tool?
+
+Outputs scoring below 4.0 on any metric are automatically flagged for prompt tuning.
+
+
