@@ -150,3 +150,20 @@ def test_safety_guardrail_rejection(assistant_runtime, attack_prompt):
 ```
 
 
+## 9. GBNF Grammar Conformance Validation Harness
+Local LLM tool calling is validated to guarantee outputs strictly comply with formal JSON schemas without syntax errors.
+
+```python
+import json
+import jsonschema
+
+def validate_tool_call_conformance(raw_llm_output: str, expected_schema: dict):
+    # Parse output to ensure valid JSON syntax
+    parsed = json.loads(raw_llm_output)
+    # Validate against strict Pydantic JSON schema
+    jsonschema.validate(instance=parsed, schema=expected_schema)
+    assert "action" in parsed
+    assert "params" in parsed
+```
+
+
