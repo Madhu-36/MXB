@@ -240,3 +240,13 @@ The local RAG pipeline is continuously benchmarked against a curated document te
 - **Normalized Discounted Cumulative Gain (NDCG@10)**: Target $\ge 0.88$.
 
 
+## 16. Vector Database Concurrency & Stress Tests
+Tests verify that simultaneous read searches and background document ingestion writes do not deadlock SQLite or SQLite-VSS.
+
+### Concurrency Stress Test
+- **Readers**: 8 concurrent threads executing continuous nearest-neighbor queries.
+- **Writers**: 2 background worker threads inserting new chunk embeddings in WAL mode.
+- **Duration**: 60 seconds of sustained load.
+- **Assertion**: 0 database lock errors (`SQLITE_BUSY`) and <15ms average query latency.
+
+
