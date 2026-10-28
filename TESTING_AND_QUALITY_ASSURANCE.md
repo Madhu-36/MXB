@@ -178,3 +178,22 @@ Conversational quality, helpfulness, and tone are evaluated automatically using 
 Outputs scoring below 4.0 on any metric are automatically flagged for prompt tuning.
 
 
+## 11. PySide6 GUI Testing with pytest-qt
+Graphical user interface tests run headlessly in CI using `pytest-qt` to simulate user mouse clicks, keyboard navigation, and window states.
+
+```python
+import pytest
+from PySide6.QtCore import Qt
+
+def test_hud_toggle_activation(qtbot):
+    from ui.hud import FloatingHUDWindow
+    hud = FloatingHUDWindow()
+    qtbot.addWidget(hud)
+    
+    assert not hud.isVisible()
+    hud.toggle_visibility()
+    assert hud.isVisible()
+    assert hud.windowOpacity() == 1.0
+```
+
+
