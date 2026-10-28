@@ -197,3 +197,12 @@ def test_hud_toggle_activation(qtbot):
 ```
 
 
+## 12. Automated Visual Screenshot Regression Diffing
+To prevent subtle CSS, font rendering, or alpha-translucency glitches from degrading UI polish, the CI runner compares rendered widgets against approved reference PNGs.
+
+### Diffing Pipeline
+- Render widget into a high-DPI `QImage` offscreen buffer.
+- Compute pixel difference with baseline image using Mean Absolute Error (MAE).
+- Fail test if MAE $> 0.005$ (0.5% pixel drift tolerance for anti-aliasing variations).
+
+
