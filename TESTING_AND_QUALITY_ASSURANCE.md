@@ -206,3 +206,19 @@ To prevent subtle CSS, font rendering, or alpha-translucency glitches from degra
 - Fail test if MAE $> 0.005$ (0.5% pixel drift tolerance for anti-aliasing variations).
 
 
+## 13. UI Automation (UIA) Mocking Framework
+Desktop automation workflows are tested against an in-memory virtual UIA tree structure without needing live third-party applications running.
+
+```python
+class MockUIAControl:
+    def __init__(self, automation_id: str, control_type: str, name: str):
+        self.AutomationId = automation_id
+        self.ControlType = control_type
+        self.Name = name
+        self.clicked = False
+
+    def Click(self, simulateMove=False):
+        self.clicked = True
+```
+
+
