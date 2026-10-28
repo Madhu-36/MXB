@@ -222,3 +222,12 @@ class MockUIAControl:
 ```
 
 
+## 14. End-to-End Voice-to-Execution Scenarios
+Integration tests execute full real-time pipelines from synthetic WAV audio files through to mocked operating system tool execution.
+
+### Validated Flows
+1. *"Launch terminal"* -> Audio captured -> Whisper transcribes -> Intent routes to `os.launch_app` -> App launch stub invoked -> Voice response synthesized.
+2. *"Set volume to 50%"* -> Audio captured -> Slot extracted -> `volume.set(50)` executed -> Voice response synthesized.
+3. *"Summarize this document"* -> Vision capture -> OCR parsed -> LLM prompt formatted -> Response synthesized.
+
+
