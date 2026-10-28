@@ -309,3 +309,13 @@ To test real-world resilience, simulated hardware faults are injected during act
 - **GPU Driver Timeout (TDR)**: CUDA context loss triggers fallback to CPU inference within 2.0 seconds.
 
 
+## 21. Database Corruption & Rollback Test Scenarios
+Memory and configuration persistence are stress-tested against unexpected process kills:
+
+### Recovery Testing Steps
+1. Open active transaction on `memory_bank.db`.
+2. Write random bytes over active journal file simulating power outage.
+3. Restart MXB runtime.
+4. Verify engine detects corrupt header, rolls back to snapshot `memory_bank.bak`, and successfully restores operation.
+
+
