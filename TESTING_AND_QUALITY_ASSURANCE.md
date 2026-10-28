@@ -82,3 +82,24 @@ def mock_win32_desktop(monkeypatch):
 ```
 
 
+## 5. Virtual WASAPI Audio Loopback Fixtures
+To test speech recognition and Voice Activity Detection (VAD) without physical microphone hardware, MXB injects pre-recorded PCM buffers into a simulated WASAPI stream.
+
+### Audio Injection Fixture
+```python
+import numpy as np
+import pytest
+
+@pytest.fixture
+def synthetic_speech_stream():
+    def _generate(sample_rate=16000, duration_sec=2.0, frequency_hz=440):
+        t = np.linspace(0, duration_sec, int(sample_rate * duration_sec), endpoint=False)
+        # Synthesize sine wave with simulated speech envelope
+        waveform = 0.5 * np.sin(2 * np.pi * frequency_hz * t) * np.hanning(len(t))
+        return (waveform * 32767).astype(np.int16).tobytes()
+    return _generate
+```
+
+Allows deterministic assertion of VAD speech detection thresholds without acoustic room noise.
+
+
