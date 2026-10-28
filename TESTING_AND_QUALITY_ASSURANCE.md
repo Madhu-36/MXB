@@ -103,3 +103,13 @@ def synthetic_speech_stream():
 Allows deterministic assertion of VAD speech detection thresholds without acoustic room noise.
 
 
+## 6. Text-to-Speech Waveform Verification
+Synthesized voice output from Piper ONNX is validated against reference acoustic profiles:
+
+### Verification Assertions
+- **Sampling Rate**: Enforce exactly 22,050 Hz 16-bit mono PCM.
+- **Audio Energy**: Validate non-zero RMS volume preventing silent synthesis bugs.
+- **Spectral Centroid**: Ensure synthesized speech falls within natural human vocal frequencies (300 Hz - 3400 Hz).
+- **Zero-Latency Buffering**: Verify first audio chunk arrives within 120ms of generation start.
+
+
