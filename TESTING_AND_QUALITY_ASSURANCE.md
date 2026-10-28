@@ -354,3 +354,14 @@ Tests run across multiple hardware profiles to guarantee compatibility across di
 3. **Runner C (CPU Reference)**: Pure AVX-512 CPU-only fallback environment.
 
 
+## 25. Code Coverage Enforcement & Branch Reporting
+Test runs generate HTML and XML coverage reports verifying that every conditional branch is exercised.
+
+```bash
+# Coverage Run Command
+pytest --cov=engine --cov=ui --cov=safety --cov-report=term-missing --cov-report=xml --cov-fail-under=88
+```
+
+Detailed line-by-line branch analysis highlights untested edge cases and dead code paths.
+
+
