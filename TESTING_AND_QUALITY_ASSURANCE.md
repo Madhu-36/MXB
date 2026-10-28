@@ -300,3 +300,12 @@ Performance regressions are caught in CI using `pytest-benchmark` against establ
 - `test_benchmark_hud_frame_render`: Frame time $< 16.6	ext{ ms}$ (60 FPS locked).
 
 
+## 20. Hardware Chaos Engineering: Device Hot-Unplug
+To test real-world resilience, simulated hardware faults are injected during active voice streams:
+
+### Chaos Scenarios
+- **Microphone Disconnected Mid-Sentence**: Audio read returns `AUDCLNT_E_DEVICE_INVALIDATED`; engine must transition to standby and rebind upon reconnection.
+- **Audio Output Device Swapped**: WASAPI stream switches from USB headset to laptop speakers without throwing unhandled exceptions.
+- **GPU Driver Timeout (TDR)**: CUDA context loss triggers fallback to CPU inference within 2.0 seconds.
+
+
