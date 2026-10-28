@@ -113,3 +113,23 @@ Synthesized voice output from Piper ONNX is validated against reference acoustic
 - **Zero-Latency Buffering**: Verify first audio chunk arrives within 120ms of generation start.
 
 
+## 7. Speech-to-Text Word Error Rate (WER) Benchmark Suite
+Continuous integration automatically evaluates the local Whisper transcription engine against a standard 100-sample voice benchmark corpus.
+
+```python
+import jiwer
+
+def evaluate_wer_benchmark(whisper_engine, benchmark_dataset):
+    references = []
+    hypotheses = []
+    
+    for audio_path, expected_transcript in benchmark_dataset:
+        transcription = whisper_engine.transcribe(audio_path)
+        references.append(expected_transcript)
+        hypotheses.append(transcription.text)
+        
+    error_rate = jiwer.wer(references, hypotheses)
+    assert error_rate < 0.08, f"Word Error Rate exceeded threshold: {error_rate:.2%}"
+```
+
+
