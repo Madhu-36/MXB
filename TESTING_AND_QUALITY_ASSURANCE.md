@@ -386,3 +386,14 @@ jobs:
 ```
 
 
+## 27. Production Release Gate & Automated Smoke Tests
+Before any binary release (`v2.x.exe`) is published, an automated smoke test suite executes on a clean Windows virtual machine.
+
+### Smoke Checklist
+- [x] Clean install via MSIX / installer executable without administrator prompts.
+- [x] Cold-start launch to tray in under 3.5 seconds.
+- [x] Initial setup wizard successfully downloads and verifies GGUF model weights.
+- [x] Microphone detection and WASAPI audio stream initialization confirmed.
+- [x] Five standard voice interaction turns complete with $< 850	ext{ ms}$ latency.
+
+
