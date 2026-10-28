@@ -269,3 +269,24 @@ def guard_network_isolation(monkeypatch):
 ```
 
 
+## 18. Memory Leak Detection & PyObject Retention Tests
+Long-running assistant applications must exhibit flat memory consumption over thousands of interaction cycles.
+
+### Leak Test Routine
+```python
+def test_interaction_turn_memory_neutrality(assistant_runtime):
+    import gc
+    gc.collect()
+    baseline_count = len(gc.get_objects())
+    
+    # Simulate 50 sequential voice interactions
+    for _ in range(50):
+        assistant_runtime.process_simulated_turn("What time is it?")
+        
+    gc.collect()
+    final_count = len(gc.get_objects())
+    # Enforce object growth limit (<50 lingering objects across 50 turns)
+    assert final_count - baseline_count < 50
+```
+
+
