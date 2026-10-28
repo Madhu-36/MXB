@@ -319,3 +319,18 @@ Memory and configuration persistence are stress-tested against unexpected proces
 4. Verify engine detects corrupt header, rolls back to snapshot `memory_bank.bak`, and successfully restores operation.
 
 
+## 22. Subprocess Crash Recovery & Watchdog Tests
+Tests verify the engine watchdog supervisor terminates hung child processes and cleans up orphaned resources.
+
+```python
+def test_watchdog_kills_hung_worker(watchdog_supervisor):
+    worker_pid = watchdog_supervisor.spawn_worker()
+    # Simulate deadlock by sending SIGSTOP or freezing process
+    watchdog_supervisor.simulate_worker_freeze(worker_pid)
+    time.sleep(6) # Exceeds 5-second heartbeat timeout
+    
+    assert watchdog_supervisor.is_worker_alive(worker_pid) is False
+    assert watchdog_supervisor.active_worker_count() == 1 # Re-spawned
+```
+
+
