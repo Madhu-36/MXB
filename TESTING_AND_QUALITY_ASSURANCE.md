@@ -345,3 +345,12 @@ Security test fixtures probe all tool arguments for injection vectors:
 All inputs must be strictly normalized and rejected by the safety layer before reaching system calls.
 
 
+## 24. Cross-Hardware Execution Matrix in CI
+Tests run across multiple hardware profiles to guarantee compatibility across diverse user configurations:
+
+### CI Runner Matrix
+1. **Runner A (NVIDIA CUDA)**: Windows Server with NVIDIA T4 GPU (CUDA 12.4).
+2. **Runner B (DirectML)**: Windows 11 with AMD/Intel GPU emulation.
+3. **Runner C (CPU Reference)**: Pure AVX-512 CPU-only fallback environment.
+
+
