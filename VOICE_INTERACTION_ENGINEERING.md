@@ -286,3 +286,12 @@ Bluetooth headsets switch into low-quality Hands-Free Profile (HFP, 8kHz mono) w
 - **HFP Fallback Mitigation**: If the headset microphone must be used, MXB applies real-time bandwidth extension to reconstruct missing high frequencies between 4kHz and 8kHz.
 
 
+## 22. Low-Latency WASAPI Exclusive Mode Streaming
+Standard Windows shared audio streams traverse the Windows Audio Engine mixer, adding 20ms to 40ms of latency.
+
+### WASAPI Exclusive Mode Configuration
+- **Exclusive Buffer**: Direct memory access to audio hardware ring buffers.
+- **Latency**: Decreased from 35ms down to **4.8 milliseconds**.
+- **Under-run Prevention**: Circular lockless FIFO buffers hold 2 emergency fallback periods (96 samples) to absorb CPU thread scheduling jitter.
+
+
