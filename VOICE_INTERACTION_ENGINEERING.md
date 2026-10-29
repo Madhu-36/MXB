@@ -267,3 +267,14 @@ The floating PySide6 HUD renders dynamic audio waveform particles and facial ava
 - The GUI renderer interpolates viseme transition curves at 60 FPS, ensuring visuals match audio playback down to the millisecond.
 
 
+## 20. Non-Verbal Auditory Cues & Earcon Sound Design
+Voice responses are not always required; brief system actions (e.g. setting volume, launching an app) are confirmed faster using tactile auditory icons ("earcons").
+
+### Acoustic Sound Palette
+- **Wakeup Ack**: 440 Hz -> 880 Hz upward sine sweep (40ms) confirming listening state.
+- **Action Done**: Dual-tone major third chord (`C5-E5`, 60ms) confirming command execution.
+- **Error / Block**: Gentle descending minor third (`A4-F#4`, 90ms) prompting retry.
+
+Earcons provide instantaneous feedback without interrupting conversational flow.
+
+
