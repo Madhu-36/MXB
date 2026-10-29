@@ -247,3 +247,14 @@ Waiting for a full multi-sentence reply to synthesize adds 500ms+ of silence. MX
 Initial voice playback starts within **110 milliseconds**, while subsequent clauses synthesize concurrently.
 
 
+## 18. SSML Parsing & Emotional Pitch Inflection
+Monotone robotic voices cause listening fatigue. MXB parses lightweight SSML tags to dynamically modulate vocal prosody.
+
+### Supported SSML Tags
+- `<break time="200ms"/>`: Inserts natural breathing pauses.
+- `<emphasis level="strong">`: Raises fundamental frequency ($F_0$) pitch and amplitude.
+- `<prosody rate="fast" pitch="+15%">`: Speeds up urgent warnings or alerts.
+
+Tags are parsed in a pre-synthesis AST pass, converting XML nodes into Piper phoneme length and pitch multipliers.
+
+
