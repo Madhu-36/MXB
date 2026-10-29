@@ -316,3 +316,16 @@ void push_audio_frame(SPSCQueue* q, const int16_t* frame, size_t count) {
 ```
 
 
+## 24. Dual Operation: Push-to-Talk vs Continuous Far-Field
+MXB supports dual acoustic listening modes tailored to environmental context:
+
+### Mode Comparison
+| Parameter | Continuous Far-Field Mode | Push-to-Talk (PTT) Mode |
+|-----------|---------------------------|-------------------------|
+| Activation | Neural VAD + Voice Keyword | Global Hotkey (`Caps Lock` / Mouse 5) |
+| Microphone State | Always-On Circular Buffer | Muted Until Keydown |
+| Background CPU | 0.8% - 1.2% | 0.0% |
+| Privacy Profile | Local Buffer / No Cloud | Absolute Hardware Isolation |
+| Best For | Home Office / Private Desk | Open Office / Coffee Shop |
+
+
