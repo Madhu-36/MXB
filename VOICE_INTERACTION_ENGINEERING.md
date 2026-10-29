@@ -278,3 +278,11 @@ Voice responses are not always required; brief system actions (e.g. setting volu
 Earcons provide instantaneous feedback without interrupting conversational flow.
 
 
+## 21. Bluetooth Audio Profile Management (A2DP vs HFP)
+Bluetooth headsets switch into low-quality Hands-Free Profile (HFP, 8kHz mono) when microphone input is opened, destroying playback audio quality.
+
+### Smart Bluetooth Routing
+- **Dual Endpoint Separation**: MXB configures capture streams on the laptop's internal studio array while routing playback to the high-quality Bluetooth A2DP profile (48kHz stereo).
+- **HFP Fallback Mitigation**: If the headset microphone must be used, MXB applies real-time bandwidth extension to reconstruct missing high frequencies between 4kHz and 8kHz.
+
+
