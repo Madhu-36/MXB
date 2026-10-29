@@ -139,3 +139,12 @@ A natural assistant allows the user to speak at any moment to interrupt or chang
 6. Microphone audio ring buffer rewinds 150ms to capture the user's opening syllable cleanly.
 
 
+## 10. Streaming Whisper STT & Rolling Audio Framing
+Waiting for complete utterance termination before beginning transcription introduces noticeable conversational latency.
+
+### Rolling Audio Framing
+- **Chunk Size**: 480ms audio frames ingested every 160ms.
+- **Prefix Conditioning**: Previous partial decoded tokens are passed as `prompt_tokens` to bias the autoregressive decoder.
+- **Timestamp Tracking**: Word-level timestamps identify exact word boundaries, updating the PySide6 subtitle strip in real-time.
+
+
