@@ -127,3 +127,15 @@ Humans pause naturally between sentences to breathe or gather their thoughts. Pr
 - **Sentence Completion Acceleration**: If an imperative sentence matches complete command intent (e.g. *"mute sound"*), hangover contracts to **350 milliseconds** for rapid execution.
 
 
+## 9. Conversational Barge-In & Sub-50ms Audio Interruption
+A natural assistant allows the user to speak at any moment to interrupt or change directions.
+
+### Barge-In Interruption Flow
+1. User begins speaking while Piper TTS is active.
+2. WebRTC AEC cancels the assistant's voice, enabling Silero VAD to detect user vocal chords.
+3. VAD emits high-priority `BargeInDetectedEvent`.
+4. Audio output buffer is flushed instantly via `WASAPI::Reset()`.
+5. Active LLM generation worker is halted with cancellation tokens.
+6. Microphone audio ring buffer rewinds 150ms to capture the user's opening syllable cleanly.
+
+
