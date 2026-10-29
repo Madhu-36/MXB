@@ -77,3 +77,13 @@ Modern laptops and USB conference microphones feature 2-to-4 microphone arrays. 
 - **Null Placement**: Steers deep acoustic nulls toward laptop cooling fan exhausts and internal chassis noise sources.
 
 
+## 5. Dual-Stage Stationary & Neural Noise Suppression
+Consumer environments contain both steady background noise (fans, PC cooling, refrigerator hum) and dynamic transient noise (dishes, traffic, pet sounds).
+
+### Hybrid Suppression Stack
+- **Stage 1 (Stationary Spectral Subtraction)**: Computes ambient noise floor profiles during silence frames and subtracts stationary frequencies.
+- **Stage 2 (RNNoise Recurrent Neural Network)**: A lightweight GRU network (85,000 parameters) analyzes 22 Bark frequency bands to separate human vocal tract formants from non-stationary noise.
+
+Execution overhead is under 0.8% CPU on a single core while delivering up to 24 dB Signal-to-Noise Ratio (SNR) improvements.
+
+
