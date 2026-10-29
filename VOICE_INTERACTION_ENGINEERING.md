@@ -342,3 +342,24 @@ Voice interaction latency is tracked across every pipeline boundary using hardwa
 - **Total Voice-to-Ear Latency**: **619 ms** (Comfortably under the 850ms target)
 
 
+## 26. Automated Audio Quality Benchmarks: PESQ & STOI
+To guarantee pre-processing filters do not degrade speech intelligibility, automated tests evaluate processed audio against standard metrics.
+
+```python
+import pesq
+import pystoi
+
+def test_audio_preprocessor_intelligibility():
+    clean_reference = load_audio("tests/fixtures/clean_speech.wav")
+    degraded_noisy = load_audio("tests/fixtures/speech_with_cafe_noise.wav")
+    
+    processed = webrtc_apm_process(degraded_noisy)
+    
+    pesq_score = pesq.pesq(16000, clean_reference, processed, "wb")
+    stoi_score = pystoi.stoi(clean_reference, processed, 16000)
+    
+    assert pesq_score >= 3.2, f"PESQ dropped below standard: {pesq_score:.2f}"
+    assert stoi_score >= 0.88, f"STOI intelligibility dropped: {stoi_score:.2f}"
+```
+
+
