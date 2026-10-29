@@ -181,3 +181,14 @@ whisper_params.initial_prompt = initial_prompt
 Biases token logit priors, raising technical entity transcription accuracy from 74% to **96.8%**.
 
 
+## 13. Speaker Identification via ECAPA-TDNN Embeddings
+In shared office environments or family living rooms, MXB must distinguish the primary user's voice from background conversations.
+
+### Voiceprint Verification
+- **Architecture**: ECAPA-TDNN neural network generating 192-dimensional speaker embeddings.
+- **Enrollment**: User records three 5-second calibration sentences at initial setup.
+- **Cosine Verification**: Incoming voice turns compute cosine similarity against the enrolled owner embedding:
+  $$	ext{Similarity} = rac{v_{turn} \cdot v_{enrolled}}{\|v_{turn}\| \|v_{enrolled}\|}$$
+If similarity $< 0.72$, the turn is flagged as secondary speaker and ignored.
+
+
