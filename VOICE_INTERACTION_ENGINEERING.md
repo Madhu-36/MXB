@@ -87,3 +87,12 @@ Consumer environments contain both steady background noise (fans, PC cooling, re
 Execution overhead is under 0.8% CPU on a single core while delivering up to 24 dB Signal-to-Noise Ratio (SNR) improvements.
 
 
+## 6. Adaptive Automatic Gain Control (AGC2)
+Users speak at varying volumes—from quiet whispers late at night to loud speech across the room.
+
+### AGC2 Dynamic Leveling
+- **Target RMS Level**: Normalized to **-18 dBFS** for optimal Whisper Mel-spectrogram feature extraction.
+- **Compression Knee**: Soft-knee limiter preventing digital clipping when users suddenly laugh or speak loudly.
+- **Fast Attack, Slow Decay**: 10ms attack time prevents clipping, while 500ms release avoids volume pumping during short vocal pauses.
+
+
