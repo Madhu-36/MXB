@@ -228,3 +228,22 @@ def duck_background_audio(target_scalar=0.20, fade_duration_sec=0.15):
 Restores volume to 100% via a gentle 250ms ramp when assistant speech completes.
 
 
+## 17. Low-Latency Neural Speech Synthesis via Piper VITS
+Waiting for a full multi-sentence reply to synthesize adds 500ms+ of silence. MXB streams text chunks directly to the synthesizer.
+
+```
+[ LLM Sentence Token Generator ]
+              |
+              v (Punctuation Token Boundary: '.', '!', '?')
+    [ Sentence Buffer ]
+              |
+              v
+    (Piper ONNX VITS Model) ---> [ 22,050 Hz PCM Buffer ]
+                                           |
+                                           v
+                             [ WASAPI Direct Stream Render ]
+```
+
+Initial voice playback starts within **110 milliseconds**, while subsequent clauses synthesize concurrently.
+
+
