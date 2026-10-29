@@ -209,3 +209,22 @@ Users frequently say *"um"*, *"uh"*, or pause mid-sentence while searching for w
 - **Visual Eye Contact Fusion**: (Optional) Multi-modal webcam glance detection confirms if the user is still looking at the screen while speaking.
 
 
+## 16. Windows System Audio Ducking
+When the assistant speaks, background music, gaming audio, and video playback are smoothly ducked.
+
+### Win32 Core Audio Volume Ducking
+```python
+from pycaw.pycaw import AudioUtilities, ISimpleAudioVolume
+
+def duck_background_audio(target_scalar=0.20, fade_duration_sec=0.15):
+    sessions = AudioUtilities.GetAllSessions()
+    for session in sessions:
+        if session.Process and session.Process.name() != "mxb.exe":
+            volume = session._ctl.QueryInterface(ISimpleAudioVolume)
+            # Smoothly transition volume downward
+            volume.SetMasterVolume(target_scalar, None)
+```
+
+Restores volume to 100% via a gentle 250ms ramp when assistant speech completes.
+
+
