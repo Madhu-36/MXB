@@ -52,3 +52,19 @@ apm = webrtc_apm.AudioProcessor(
 ```
 
 
+## 3. Acoustic Echo Cancellation (AEC3) & Reference Loopback
+When MXB speaks through the laptop speakers, its own voice leaks directly into the microphone. Without AEC, the assistant transcribes its own output, triggering an infinite conversational loop.
+
+### AEC3 Reference Architecture
+- **Reference Stream**: Windows WASAPI Loopback captures the exact PCM output buffer sent to the speakers.
+- **Adaptive Filter**: AEC3 continuously computes room impulse response (RIR) transfer functions.
+- **Echo Subtraction**: The synthesized signal is subtracted from the microphone capture with $> 45	ext{ dB}$ Echo Return Loss Enhancement (ERLE).
+
+```c
+// Feed speaker playback reference into AEC filter
+ApmProcessReverseStream(apm_handle, speaker_pcm_16k, frame_size);
+// Process microphone stream and subtract acoustic echo
+ApmProcessStream(apm_handle, mic_pcm_16k, clean_output_pcm);
+```
+
+
