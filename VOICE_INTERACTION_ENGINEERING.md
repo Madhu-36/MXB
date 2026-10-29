@@ -363,3 +363,12 @@ def test_audio_preprocessor_intelligibility():
 ```
 
 
+## 27. Automated Acoustic Regression Test Suite
+Automated regression fixtures run on every pull request to ensure acoustic performance remains bulletproof:
+
+### Test Scenarios
+- **Whisper Hallucination Test**: Injects 30 seconds of quiet air conditioning noise; asserts 0 words transcribed.
+- **Barge-In Reaction Time**: Injects speech 1.0 second into active TTS; asserts audio stream reset within 50ms.
+- **Rapid Turn Pacing**: Simulates rapid conversational banter with 200ms speaker transitions without dropped turns.
+
+
