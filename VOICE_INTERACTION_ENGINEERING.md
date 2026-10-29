@@ -68,3 +68,12 @@ ApmProcessStream(apm_handle, mic_pcm_16k, clean_output_pcm);
 ```
 
 
+## 4. Multi-Channel Microphone Array Beamforming
+Modern laptops and USB conference microphones feature 2-to-4 microphone arrays. MXB exploits spatial separation using Minimum Variance Distortionless Response (MVDR) beamforming.
+
+### Spatial Filtering Pipeline
+- **Delay-and-Sum Calibration**: Measures Time Difference of Arrival (TDOA) between mic capsules.
+- **Steering Vector**: Directs an acoustic reception cone toward the user's angular direction ($\pm 30^\circ$).
+- **Null Placement**: Steers deep acoustic nulls toward laptop cooling fan exhausts and internal chassis noise sources.
+
+
