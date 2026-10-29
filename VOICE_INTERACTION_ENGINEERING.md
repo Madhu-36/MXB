@@ -295,3 +295,24 @@ Standard Windows shared audio streams traverse the Windows Audio Engine mixer, a
 - **Under-run Prevention**: Circular lockless FIFO buffers hold 2 emergency fallback periods (96 samples) to absorb CPU thread scheduling jitter.
 
 
+## 23. Lockless Circular Audio FIFO Buffers
+Audio capture callback threads must never block on mutex locks, allocations, or garbage collector pauses.
+
+### Single-Producer Single-Consumer (SPSC) Ring Buffer
+```c
+struct SPSCQueue {
+    int16_t buffer[65536];
+    std::atomic<size_t> head{0};
+    std::atomic<size_t> tail{0};
+};
+
+void push_audio_frame(SPSCQueue* q, const int16_t* frame, size_t count) {
+    size_t current_tail = q->tail.load(std::memory_order_relaxed);
+    for (size_t i = 0; i < count; ++i) {
+        q->buffer[(current_tail + i) & 65535] = frame[i];
+    }
+    q->tail.store(current_tail + count, std::memory_order_release);
+}
+```
+
+
