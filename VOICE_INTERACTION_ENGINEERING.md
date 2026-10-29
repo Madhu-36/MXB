@@ -96,3 +96,25 @@ Users speak at varying volumes—from quiet whispers late at night to loud speec
 - **Fast Attack, Slow Decay**: 10ms attack time prevents clipping, while 500ms release avoids volume pumping during short vocal pauses.
 
 
+## 7. Silero VAD Neural Probability & Dynamic Hysteresis
+Simple energy-based volume gates cause false wake-ups on coughs or door slams. MXB standardizes on Silero VAD v4 running on ONNX Runtime.
+
+### Dynamic Hysteresis Algorithm
+```python
+class VoiceActivityDetector:
+    def __init__(self, speech_threshold=0.55, exit_threshold=0.35):
+        self.speech_threshold = speech_threshold
+        self.exit_threshold = exit_threshold
+        self.is_speaking = False
+
+    def process_frame(self, frame_prob: float) -> bool:
+        if not self.is_speaking and frame_prob >= self.speech_threshold:
+            self.is_speaking = True
+        elif self.is_speaking and frame_prob < self.exit_threshold:
+            self.is_speaking = False
+        return self.is_speaking
+```
+
+Hysteresis boundaries eliminate rapid flickering at speech onset and offset boundaries.
+
+
