@@ -118,3 +118,12 @@ class VoiceActivityDetector:
 Hysteresis boundaries eliminate rapid flickering at speech onset and offset boundaries.
 
 
+## 8. Speech Boundary Detection & Adaptive Hangover Timers
+Humans pause naturally between sentences to breathe or gather their thoughts. Prematurely cutting speech yields fractured, ungrammatical transcripts.
+
+### Adaptive Hangover Heuristic
+- **Default Hangover**: 850 milliseconds of trailing silence required before declaring end-of-turn.
+- **Syntactic Continuation Extension**: If transcribed speech ends on a conjunction or preposition (e.g. *"and"*, *"because"*, *"to"*), hangover extends automatically to **1,400 milliseconds**.
+- **Sentence Completion Acceleration**: If an imperative sentence matches complete command intent (e.g. *"mute sound"*), hangover contracts to **350 milliseconds** for rapid execution.
+
+
