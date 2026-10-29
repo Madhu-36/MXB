@@ -258,3 +258,12 @@ Monotone robotic voices cause listening fatigue. MXB parses lightweight SSML tag
 Tags are parsed in a pre-synthesis AST pass, converting XML nodes into Piper phoneme length and pitch multipliers.
 
 
+## 19. Phoneme Duration Modeling & HUD Waveform Lip-Sync
+The floating PySide6 HUD renders dynamic audio waveform particles and facial avatar animations synchronized with synthesized syllables.
+
+### Viseme Mapping
+- Piper outputs per-phoneme duration markers (`/m/`, `/a/`, `/k/`, `/s/`).
+- Phonemes are mapped to standard Preston Blair visemes: `MBP`, `AI`, `O`, `ETC`.
+- The GUI renderer interpolates viseme transition curves at 60 FPS, ensuring visuals match audio playback down to the millisecond.
+
+
