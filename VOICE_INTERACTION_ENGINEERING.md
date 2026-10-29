@@ -148,3 +148,23 @@ Waiting for complete utterance termination before beginning transcription introd
 - **Timestamp Tracking**: Word-level timestamps identify exact word boundaries, updating the PySide6 subtitle strip in real-time.
 
 
+## 11. Hallucination Filtering on Silence & Background Noise
+When exposed to low-level acoustic noise or silence, standard Whisper models can hallucinate repetitive phrases (e.g. *"Thank you for watching"*, *"Please subscribe"*).
+
+### Multi-Stage Hallucination Filter
+```python
+def is_hallucination(transcription_result) -> bool:
+    # 1. Reject if no-speech probability is high
+    if transcription_result.no_speech_prob > 0.65:
+        return True
+    # 2. Reject if compression ratio exceeds gzip entropy threshold
+    if transcription_result.compression_ratio > 2.4:
+        return True
+    # 3. Reject known silence hallucination strings
+    text = transcription_result.text.strip().lower()
+    if text in BLACKLISTED_HALLUCINATIONS:
+        return True
+    return False
+```
+
+
