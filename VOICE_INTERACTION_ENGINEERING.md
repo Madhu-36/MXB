@@ -192,3 +192,11 @@ In shared office environments or family living rooms, MXB must distinguish the p
 If similarity $< 0.72$, the turn is flagged as secondary speaker and ignored.
 
 
+## 14. Voice Biometric Authentication for Privileged Actions
+Commands that modify system security (e.g. deleting files, displaying stored credentials, executing PowerShell scripts) require biometric voice authentication.
+
+### Two-Tier Verification
+1. **Passphrase Liveness Check**: User must speak a dynamic, time-sensitive phrase displayed on screen (prevents recorded voice playback attacks).
+2. **High-Confidence Threshold**: Enforces a strict cosine threshold $\ge 0.88$ on ECAPA-TDNN voice embeddings before privilege authorization.
+
+
