@@ -200,3 +200,12 @@ Commands that modify system security (e.g. deleting files, displaying stored cre
 2. **High-Confidence Threshold**: Enforces a strict cosine threshold $\ge 0.88$ on ECAPA-TDNN voice embeddings before privilege authorization.
 
 
+## 15. Turn-Taking Prediction & Hesitation Resilience
+Users frequently say *"um"*, *"uh"*, or pause mid-sentence while searching for words. Premature assistant interruption frustrates users.
+
+### Acoustic & Syntactic Prosody Modeling
+- **Pitch Contour Analysis**: Detects rising intonation patterns indicating incomplete sentence clauses.
+- **Filler Word Detection**: Transcribed fillers (*"um"*, *"like"*, *"wait"*) automatically reset the silence hangover timer by +1.5 seconds.
+- **Visual Eye Contact Fusion**: (Optional) Multi-modal webcam glance detection confirms if the user is still looking at the screen while speaking.
+
+
