@@ -132,3 +132,14 @@ Routing each task to its optimal accelerator minimizes latency and maximizes bat
 | MobileNet OCR | NPU | INT8 | DirectML / QNN | Parallel visual grounding |
 
 
+## 8. Continuous Low-Power Listening Architecture
+Traditional desktop voice assistants consume 15W to 35W while idling because the discrete GPU remains in high-performance D0 power states.
+
+### Idle Power Optimization Profile
+1. The discrete GPU transitions to deep D3Cold sleep mode.
+2. The primary CPU cores park, reducing core frequency to 400 MHz.
+3. Microphones stream directly to an in-memory ring buffer processed by the NPU.
+4. Total system power consumption remains **below 1.5 Watts**.
+5. Detection of valid voice wake-up triggers a hardware interrupt, restoring dGPU power in under 120ms.
+
+
