@@ -218,3 +218,12 @@ def on_power_source_changed(is_battery: bool, battery_percent: int):
 ```
 
 
+## 15. NPU Quantization Profiles (INT4 & INT8)
+NPUs are designed specifically for integer dot products (DP4A / INT8 tensor operations), lacking full-rate FP32 matrix engines.
+
+### Supported NPU Quantization Schemes
+- **Symmetric INT8 Per-Channel**: Preserves zero-point at 0; optimal for convolution and cross-attention weights.
+- **Asymmetric INT4 Per-Group**: Group size of 32 or 128; fits compact 3B/7B language models into NPU dedicated SRAM caches.
+- **Quantization-Aware Training (QAT)**: Calibrated with KL-divergence over domain-specific speech and command prompts.
+
+
