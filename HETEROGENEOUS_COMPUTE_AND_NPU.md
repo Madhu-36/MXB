@@ -348,3 +348,22 @@ Continuous testing measures compute efficiency across devices using Windows Ener
 The NPU delivers **7.5x higher energy efficiency** per generated token.
 
 
+## 26. Multi-Accelerator Unit & Stress Testing with Pytest
+MXB verifies heterogeneous accelerator dispatching via automated test fixtures.
+
+```python
+import pytest
+
+def test_accelerator_fallback_on_device_lost(monkeypatch):
+    from engine.compute import AcceleratorManager, DeviceTarget
+    manager = AcceleratorManager()
+    
+    # Simulate GPU fault
+    manager.simulate_hardware_fault(DeviceTarget.DGPU)
+    fallback = manager.get_active_target()
+    
+    assert fallback in (DeviceTarget.NPU, DeviceTarget.CPU)
+    assert manager.is_operational is True
+```
+
+
