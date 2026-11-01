@@ -87,3 +87,26 @@ On ARM64 Windows Copilot+ devices powered by Snapdragon X Elite and X Plus proce
 - **Latency Budget**: Silero VAD evaluation completes in **0.4 milliseconds** per 30ms audio frame with negligible CPU utilization.
 
 
+## 5. Intel Core Ultra NPU Acceleration via OpenVINO
+For Intel Meteor Lake, Lunar Lake, and Arrow Lake mobile architectures, MXB binds to the integrated Intel NPU via the OpenVINO NPU runtime plugin.
+
+### OpenVINO NPU Pipeline Configuration
+```python
+from openvino.runtime import Core
+
+def init_intel_npu_pipeline(model_xml: str):
+    core = Core()
+    # Check if Intel NPU device is available
+    if "NPU" in core.available_devices:
+        model = core.read_model(model_xml)
+        compiled = core.compile_model(model, "NPU", {
+            "PERFORMANCE_HINT": "LATENCY",
+            "NPU_COMPILER_TYPE": "DRIVER"
+        })
+        return compiled
+    return None
+```
+
+Offloading background OCR and audio preprocessing to the Intel NPU frees integrated graphics for UI glassmorphism rendering.
+
+
