@@ -191,3 +191,13 @@ device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_SHARED_CROSS_AD
 Enables direct GPU-to-GPU texture sampling with zero host RAM staging.
 
 
+## 13. Unified Memory Architecture (UMA) Allocations
+On unified memory architectures (Snapdragon X Elite, Intel Lunar Lake, Apple Silicon), CPU, GPU, and NPU share a single high-bandwidth memory pool (up to 136 GB/s LPDDR5x).
+
+### Zero-Copy Memory Pointers
+Rather than duplicating model weights across separate VRAM and RAM buffers:
+- Weights are mapped once into physical memory via `VirtualAlloc`.
+- The DirectML or QNN tensor descriptor wraps the existing virtual address pointer.
+- Eliminates 4.5 GB of redundant memory duplication on Copilot+ PCs.
+
+
