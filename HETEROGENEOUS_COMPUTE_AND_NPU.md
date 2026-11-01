@@ -293,3 +293,18 @@ MXB separates rendering commands from machine learning compute using dedicated D
 - **Fences**: Asynchronous D3D12 fences coordinate completion without blocking CPU execution threads.
 
 
+## 22. Thermal Throttling & Cross-Die Heat Mitigation
+Sustained inference on compact laptops can heat the GPU die above 85°C, triggering aggressive hardware clock down-throttling.
+
+### Cross-Die Thermal Load Balancing
+```python
+def balance_thermal_load(gpu_temp: float, npu_temp: float):
+    if gpu_temp > 82.0 and npu_temp < 65.0:
+        log.warning("GPU thermal ceiling approached. Migrating embedding layers to NPU.")
+        return DeviceAllocation.MIGRATE_TO_NPU
+    return DeviceAllocation.DEFAULT
+```
+
+Distributing workloads across physically separate silicon dies prevents hotspot throttling.
+
+
