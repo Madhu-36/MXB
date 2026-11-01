@@ -367,3 +367,12 @@ def test_accelerator_fallback_on_device_lost(monkeypatch):
 ```
 
 
+## 27. CI Hardware Emulation via Software Adapters
+Headless GitHub Actions runners lack physical NPUs or discrete graphics cards. MXB leverages Microsoft Basic Render Driver and WARP (Windows Advanced Rasterization Platform).
+
+### Virtual Emulation Framework
+- **WARP Software Rasterizer**: Emulates DirectX 12 compute shaders entirely in software.
+- **Mock NPU Plugin**: Stubs QNN and OpenVINO interfaces to validate tensor layout conversion without physical silicon.
+- **Assertion**: Verifies that 100% of mathematical transformation code executes cleanly in CI.
+
+
