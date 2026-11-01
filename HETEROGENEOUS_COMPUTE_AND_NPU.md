@@ -143,3 +143,12 @@ Traditional desktop voice assistants consume 15W to 35W while idling because the
 5. Detection of valid voice wake-up triggers a hardware interrupt, restoring dGPU power in under 120ms.
 
 
+## 9. Whisper STT Offload to Integrated Graphics (iGPU)
+Offloading speech recognition to the integrated GPU leaves the discrete GPU exclusively dedicated to Large Language Model token generation.
+
+### Integrated GPU DirectML Pipeline
+- **Memory Footprint**: 350 MB shared system RAM.
+- **Compute Stream**: Independent DirectX 12 compute queue preventing frame drops in games or 3D applications.
+- **Execution Speed**: 220ms transcription latency on Intel Iris Xe / AMD Radeon 780M graphics.
+
+
