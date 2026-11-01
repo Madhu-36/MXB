@@ -201,3 +201,20 @@ Rather than duplicating model weights across separate VRAM and RAM buffers:
 - Eliminates 4.5 GB of redundant memory duplication on Copilot+ PCs.
 
 
+## 14. Battery-Aware Dynamic Power Arbitration
+When the host laptop transitions from AC mains power to DC battery, MXB dynamically recalibrates compute thresholds.
+
+### Power Management States
+```python
+def on_power_source_changed(is_battery: bool, battery_percent: int):
+    if is_battery and battery_percent < 30:
+        log.warning("Critical battery state. Shifting to Low-Power NPU Profile.")
+        engine.set_inference_target(DeviceTarget.NPU_ONLY)
+        engine.set_quantization_tier(QuantTier.INT4)
+        engine.disable_speculative_decoding()
+    elif not is_battery:
+        log.info("AC power restored. Engaging Full Performance Multi-GPU Profile.")
+        engine.set_inference_target(DeviceTarget.HETEROGENEOUS)
+```
+
+
