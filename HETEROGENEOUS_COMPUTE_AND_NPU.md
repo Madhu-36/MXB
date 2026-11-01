@@ -284,3 +284,12 @@ LLM token generation speed is fundamentally bound by DRAM memory bandwidth. On s
 - **Bandwidth Throttling**: Limits memory bandwidth consumption to 80% of peak during background tasks, preserving headroom for 60 FPS display refresh.
 
 
+## 21. Asynchronous Compute Queues & Overlapped Execution
+MXB separates rendering commands from machine learning compute using dedicated DirectX 12 command queues.
+
+### Command Queue Separation
+- **Queue 1 (DIRECT Queue)**: Handles PySide6 HUD rendering, translucency composition, and GUI updates.
+- **Queue 2 (COMPUTE Queue)**: Executes asynchronous DirectML tensor graphs.
+- **Fences**: Asynchronous D3D12 fences coordinate completion without blocking CPU execution threads.
+
+
