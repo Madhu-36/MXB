@@ -259,3 +259,20 @@ Intense 3D gaming or 4K rendering can cause the Windows GPU driver to reset via 
 4. Background thread re-initializes DirectX 12 adapter handles and hot-reloads GPU tensors when the driver recovers.
 
 
+## 19. Hybrid CPU Architecture Thread Affinity
+Intel 12th/13th/14th Gen and Core Ultra processors feature heterogeneous P-cores (Golden Cove / Lion Cove) and E-cores (Gracemont / Skymont).
+
+### Affinity Mask Assignment
+```c
+// Pin real-time audio thread to Performance Cores (Cores 0-3)
+DWORD_PTR pCoreMask = 0x0000000F;
+SetThreadAffinityMask(audioThreadHandle, pCoreMask);
+
+// Pin background file indexing and document parsing to Efficiency Cores (Cores 8-15)
+DWORD_PTR eCoreMask = 0x0000FF00;
+SetThreadAffinityMask(indexingThreadHandle, eCoreMask);
+```
+
+Prevents background disk tasks from preempting time-critical audio capture loops.
+
+
