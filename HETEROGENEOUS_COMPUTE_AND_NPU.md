@@ -152,3 +152,14 @@ Offloading speech recognition to the integrated GPU leaves the discrete GPU excl
 - **Execution Speed**: 220ms transcription latency on Intel Iris Xe / AMD Radeon 780M graphics.
 
 
+## 10. Large Language Model dGPU Allocation
+The reasoning engine (Llama-3.1 8B Instruct) demands high memory bandwidth (>300 GB/s) provided by dedicated GDDR6/GDDR6X VRAM on discrete graphics cards.
+
+```bash
+# Force binding LLM backend exclusively to discrete GPU Adapter 1
+mxb-engine.exe --model llama-3.1-8b-q4_k_m.gguf --gpu-layers 33 --device-id 1 --flash-attn
+```
+
+By isolating LLM matrix multiplications on the discrete GPU, speech recognition and UI rendering never compete for tensor core cycles.
+
+
