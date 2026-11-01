@@ -317,3 +317,20 @@ Loading 5GB+ GGUF weights into GPU memory over standard Win32 file I/O can take 
 - **Cold-Start Time**: Cuts model weight cold-loading time from 3.8 seconds down to **0.75 seconds**.
 
 
+## 24. Cross-Vendor NPU Driver Compatibility Matrix
+Different Windows hardware configurations feature different driver revisions and NPU capabilities.
+
+### Fallback Hierarchy
+```
+[ Level 1: Dedicated Hardware NPU ] (Qualcomm QNN / Intel NPU / AMD XDNA)
+                   |
+                   v (If NPU unavailable or driver outdated)
+[ Level 2: Integrated / Discrete GPU ] (DirectML / CUDA)
+                   |
+                   v (If GPU under-run or driver crash)
+[ Level 3: Multicore CPU Reference ] (AVX-512 / AVX2 / NEON SIMD)
+```
+
+Guarantees 100% operational availability regardless of host hardware configuration.
+
+
