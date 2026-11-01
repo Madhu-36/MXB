@@ -308,3 +308,12 @@ def balance_thermal_load(gpu_temp: float, npu_temp: float):
 Distributing workloads across physically separate silicon dies prevents hotspot throttling.
 
 
+## 23. DirectStorage Model Weight Streaming
+Loading 5GB+ GGUF weights into GPU memory over standard Win32 file I/O can take several seconds.
+
+### DirectStorage Fast Loading
+- **GPU Decompression**: Bypasses CPU decompression by decompressing model chunks directly on GPU hardware via GDeflate.
+- **Direct NVMe Access**: DirectStorage issues asynchronous NVMe read requests directly to PCIe storage controller.
+- **Cold-Start Time**: Cuts model weight cold-loading time from 3.8 seconds down to **0.75 seconds**.
+
+
