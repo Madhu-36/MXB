@@ -110,3 +110,12 @@ def init_intel_npu_pipeline(model_xml: str):
 Offloading background OCR and audio preprocessing to the Intel NPU frees integrated graphics for UI glassmorphism rendering.
 
 
+## 6. AMD XDNA 2 Ryzen AI NPU Acceleration
+AMD Strix Point and Hawk Point mobile processors feature XDNA and XDNA 2 architecture NPUs delivering up to 50 TOPS of INT8 tensor processing.
+
+### Hardware Binding
+- **Driver**: AMD IPU (Intelligent Processing Unit) Windows WDDM driver.
+- **Execution Provider**: `VitisAIExecutionProvider` inside ONNX Runtime.
+- **Execution Target**: Background semantic embedding generation (`all-MiniLM-L6-v2`) executing in under **3.2 milliseconds** per document chunk.
+
+
