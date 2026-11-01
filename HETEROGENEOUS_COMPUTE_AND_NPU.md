@@ -227,3 +227,11 @@ NPUs are designed specifically for integer dot products (DP4A / INT8 tensor oper
 - **Quantization-Aware Training (QAT)**: Calibrated with KL-divergence over domain-specific speech and command prompts.
 
 
+## 16. DirectML FlashAttention & Paged KV-Cache
+DirectML includes hardware-optimized metacommands that accelerate transformer multi-head attention.
+
+### Metacommand Optimization
+- **Fused FlashAttention**: DirectML fuses query, key, value matrix multiplication and softmax into a single compute pass.
+- **Paged KV-Cache**: Replaces contiguous tensor buffers with non-contiguous 16-token memory pages, eliminating VRAM fragmentation during multi-turn voice sessions.
+
+
