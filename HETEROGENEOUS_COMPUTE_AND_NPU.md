@@ -119,3 +119,16 @@ AMD Strix Point and Hawk Point mobile processors feature XDNA and XDNA 2 archite
 - **Execution Target**: Background semantic embedding generation (`all-MiniLM-L6-v2`) executing in under **3.2 milliseconds** per document chunk.
 
 
+## 7. Workload Partitioning & Device Assignment Matrix
+Routing each task to its optimal accelerator minimizes latency and maximizes battery endurance.
+
+### Workload Assignment Matrix
+| Task / Model | Target Device | Precision | Execution Provider | Justification |
+|--------------|---------------|-----------|--------------------|---------------|
+| Silero VAD | NPU | INT8 | QNN / OpenVINO / DML | 24/7 background listening (<1.5W) |
+| Whisper STT | iGPU / NPU | INT8 / FP16 | DirectML / OpenVINO | Fast streaming audio chunks (<200ms) |
+| Llama-3.1 8B LLM | dGPU | Q4_K_M | CUDA / DirectML | High memory bandwidth (>50 tok/s) |
+| Piper Neural TTS | CPU (E-Cores) | FP32 / INT8 | OneDNN / AVX2 | Low latency, zero GPU contention |
+| MobileNet OCR | NPU | INT8 | DirectML / QNN | Parallel visual grounding |
+
+
