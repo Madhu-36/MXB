@@ -235,3 +235,17 @@ DirectML includes hardware-optimized metacommands that accelerate transformer mu
 - **Paged KV-Cache**: Replaces contiguous tensor buffers with non-contiguous 16-token memory pages, eliminating VRAM fragmentation during multi-turn voice sessions.
 
 
+## 17. Multi-Device Pipeline Parallelism
+During complex tasks (e.g. user asks a voice question while sharing a video stream), multiple accelerators execute in parallel pipelines.
+
+```
+Time --->
+NPU:    [ VAD Slice 1 ] [ VAD Slice 2 ] [ Screen OCR ]
+iGPU:                   [ Whisper STT ]               [ Viseme Lip-Sync ]
+dGPU:                                   [ Llama-3.1 ]
+CPU:                                                  [ Piper Neural TTS ]
+```
+
+Overlapping pipeline stages ensures no single compute bottleneck stalls user feedback.
+
+
