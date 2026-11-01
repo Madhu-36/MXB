@@ -172,3 +172,22 @@ Synthesizing neural audio on the GPU introduces synchronization fences between C
 - **Performance**: Real-time factor (RTF) of 0.08x (12x faster than real time) consuming less than 4% total CPU capacity.
 
 
+## 12. Direct3D 12 Shared Cross-Adapter Surfaces
+Passing desktop screen captures from the integrated GPU (where DWM composition occurs) to a discrete GPU for AI visual reasoning typically incurs PCIe copying overhead.
+
+### Cross-Adapter Shared Heap Architecture
+```c
+// Create cross-adapter shared texture resource
+D3D12_RESOURCE_DESC desc = {};
+desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+ID3D12Resource* sharedTexture;
+device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER, 
+    &desc, D3D12_RESOURCE_STATE_COMMON, NULL, IID_PPV_ARGS(&sharedTexture));
+```
+
+Enables direct GPU-to-GPU texture sampling with zero host RAM staging.
+
+
