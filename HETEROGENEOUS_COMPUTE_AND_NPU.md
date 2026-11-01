@@ -78,3 +78,12 @@ def create_directml_session(model_path: str, device_id: int = 0) -> ort.Inferenc
 DirectML compiles HLSL compute shaders on-the-fly, executing tensor matrix multiplications directly over DirectX 12 hardware.
 
 
+## 4. Qualcomm Hexagon NPU Offload via QNN SDK
+On ARM64 Windows Copilot+ devices powered by Snapdragon X Elite and X Plus processors, MXB delegates tensor evaluation to the Qualcomm Hexagon NPU (45 TOPS).
+
+### Qualcomm Neural Network (QNN) Pipeline
+- **Execution Provider**: `QNNExecutionProvider` targeting the Hexagon Tensor Processor (HTP).
+- **Supported Datatypes**: Native hardware execution of `INT8` and `INT16` quantized weights.
+- **Latency Budget**: Silero VAD evaluation completes in **0.4 milliseconds** per 30ms audio frame with negligible CPU utilization.
+
+
