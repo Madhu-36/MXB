@@ -276,3 +276,11 @@ SetThreadAffinityMask(indexingThreadHandle, eCoreMask);
 Prevents background disk tasks from preempting time-critical audio capture loops.
 
 
+## 20. Memory Bandwidth Optimization & Tensor Tiling
+LLM token generation speed is fundamentally bound by DRAM memory bandwidth. On shared memory systems, high GPU bandwidth can starve CPU audio streams.
+
+### Bandwidth Mitigation Techniques
+- **Cache-Conscious Tiling**: Matrix multiplication blocks are sized to fit strictly inside the processor's L2/L3 cache (typically 24MB to 36MB).
+- **Bandwidth Throttling**: Limits memory bandwidth consumption to 80% of peak during background tasks, preserving headroom for 60 FPS display refresh.
+
+
