@@ -54,3 +54,27 @@ def enumerate_compute_hardware():
 In addition, the native DXGI (DirectX Graphics Infrastructure) COM interface queries adapter dedicated video memory, shared system memory, and compute tier compatibility flags.
 
 
+## 3. DirectML Execution Provider Architecture
+To support hardware acceleration across AMD Radeon, Intel Arc, and NVIDIA GeForce adapters without vendor lock-in, MXB integrates Microsoft's **DirectML** execution provider in ONNX Runtime.
+
+### DirectML Session Configuration
+```python
+import onnxruntime as ort
+
+def create_directml_session(model_path: str, device_id: int = 0) -> ort.InferenceSession:
+    providers = [
+        ("DmlExecutionProvider", {
+            "device_id": device_id,
+            "enable_metacommands": True,
+            "performance_preference": "high_performance"
+        }),
+        "CPUExecutionProvider"
+    ]
+    opts = ort.SessionOptions()
+    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    return ort.InferenceSession(model_path, sess_options=opts, providers=providers)
+```
+
+DirectML compiles HLSL compute shaders on-the-fly, executing tensor matrix multiplications directly over DirectX 12 hardware.
+
+
