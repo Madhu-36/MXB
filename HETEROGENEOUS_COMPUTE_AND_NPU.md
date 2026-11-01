@@ -249,3 +249,13 @@ CPU:                                                  [ Piper Neural TTS ]
 Overlapping pipeline stages ensures no single compute bottleneck stalls user feedback.
 
 
+## 18. GPU Timeout Detection & Recovery (TDR) Resilience
+Intense 3D gaming or 4K rendering can cause the Windows GPU driver to reset via Timeout Detection and Recovery (TDR `0x00000117`).
+
+### Graceful Fallback Sequence
+1. Direct3D 12 device returns `DXGI_ERROR_DEVICE_RESET`.
+2. MXB catches the reset event without crashing the process.
+3. Active generation immediately falls back to the CPU/NPU execution engine.
+4. Background thread re-initializes DirectX 12 adapter handles and hot-reloads GPU tensors when the driver recovers.
+
+
