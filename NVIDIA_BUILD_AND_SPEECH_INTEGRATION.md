@@ -183,3 +183,14 @@ To eliminate acoustic self-listening loops where laptop speakers trigger false s
 3. **Acoustic Grace Window**: When TTS completes, `finished_speaking` triggers a **350ms dissipation timer** (`tts_finish_time`). Room reverberation and speaker decay are drained before listening resumes.
 
 
+## 9. Multi-Host API Driver Resolution (WASAPI / MME / DirectSound)
+Windows audio subsystems feature disparate driver backends that exhibit inconsistent streaming behavior across hardware configurations.
+
+### Resolution Hierarchy
+- **Auto-Detect Strategy**:
+  1. Priority 10: Bluetooth Hands-Free Headset (WASAPI / WDM-KS endpoints).
+  2. Priority 8: Windows Default Sound Endpoint.
+  3. Priority 6: Realtek High Definition Audio Internal Mic Array.
+- **Active Buffer Verification**: Probes candidate endpoints with a 200ms non-blocking test stream. If a driver returns zero-length buffers, MXB gracefully switches to the next available host API.
+
+
