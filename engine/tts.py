@@ -1,51 +1,115 @@
-import pyttsx3
-import pythoncom
-from PySide6.QtCore import QThread, Signal
+import queue
 import time
+import pythoncom
+from PySide6.QtCore import QObject, QThread, Signal
 
-class TTSWorker(QThread):
+class TTSThread(QThread):
+    started_speaking = Signal()
     finished_speaking = Signal()
 
-    def __init__(self, text):
+    def __init__(self):
         super().__init__()
-        self.text = text
+        self.text_queue = queue.Queue()
+        self.is_running = True
+        self._is_speaking = False
+
+    def enqueue(self, text: str):
+        if text and text.strip():
+            self.text_queue.put(text.strip())
+
+    def stop(self):
+        self.is_running = False
+        self.text_queue.put(None)
+        self.wait(1000)
 
     def run(self):
+        pythoncom.CoInitialize()
+        speaker = None
         try:
-            pythoncom.CoInitialize()
-            engine = pyttsx3.init()
-            voices = engine.getProperty('voices')
-            for voice in voices:
-                if "Zira" in voice.name or "Hazel" in voice.name or "Female" in voice.name:
-                    engine.setProperty('voice', voice.id)
+            import win32com.client
+            speaker = win32com.client.Dispatch("SAPI.SpVoice")
+            # Select Zira or Hazel or female voice if available
+            for v in speaker.GetVoices():
+                desc = v.GetDescription()
+                if "Zira" in desc or "Hazel" in desc or "Female" in desc:
+                    speaker.Voice = v
                     break
-            engine.setProperty('rate', 175)
-            engine.say(self.text)
-            engine.runAndWait()
+            speaker.Rate = 1 # Clear, natural pacing
         except Exception as e:
-            print(f"[TTS Error] {e}")
-        finally:
-            pythoncom.CoUninitialize()
-            self.finished_speaking.emit()
+            print(f"[TTS SAPI Init Error] {e}")
 
-class VoiceSynthesizer:
+        while self.is_running:
+            try:
+                text = self.text_queue.get(timeout=0.2)
+                if text is None:
+                    break
+                    
+                self._is_speaking = True
+                self.started_speaking.emit()
+                print(f"[MXB Voice] {text}")
+                
+                if speaker:
+                    try:
+                        # 0 = SVSFDefault (synchronous speaking so we know exactly when it finishes)
+                        speaker.Speak(text, 0)
+                    except Exception as spk_err:
+                        print(f"[TTS Speak Error] {spk_err}")
+                else:
+                    # Fallback to pyttsx3 if SAPI COM dispatch failed
+                    try:
+                        import pyttsx3
+                        engine = pyttsx3.init()
+                        engine.setProperty('rate', 175)
+                        engine.say(text)
+                        engine.runAndWait()
+                    except Exception as pyttsx_err:
+                        print(f"[TTS Fallback Error] {pyttsx_err}")
+
+                # If no more items are queued, signal that speaking has finished
+                if self.text_queue.empty():
+                    self._is_speaking = False
+                    self.finished_speaking.emit()
+                    
+            except queue.Empty:
+                if self._is_speaking and self.text_queue.empty():
+                    self._is_speaking = False
+                    self.finished_speaking.emit()
+            except Exception as loop_err:
+                print(f"[TTS Loop Error] {loop_err}")
+                self._is_speaking = False
+                self.finished_speaking.emit()
+                
+        pythoncom.CoUninitialize()
+
+class VoiceSynthesizer(QObject):
+    started_speaking = Signal()
+    finished_speaking = Signal()
+
     def __init__(self):
-        self.worker = None
+        super().__init__()
+        self._thread = TTSThread()
+        self._thread.started_speaking.connect(self.started_speaking.emit)
+        self._thread.finished_speaking.connect(self.finished_speaking.emit)
+        self._thread.start()
+
+    @property
+    def is_speaking(self) -> bool:
+        return self._thread._is_speaking
 
     def speak(self, text: str, wait=False):
         """
-        Asynchronously speaks the text using native Windows SAPI5 in a QThread.
+        Asynchronously enqueues text to be spoken via native Windows SAPI.
+        Emits started_speaking and finished_speaking signals cleanly.
         """
-        print(f"[MXB Voice] {text}")
-        if not text or text.strip() == "":
+        if not text or not text.strip():
             return
             
-        # Stop previous if still speaking (pyttsx3 doesn't easily stop, but we re-init)
-        if self.worker and self.worker.isRunning():
-            self.worker.wait(100)
-            
-        self.worker = TTSWorker(text)
-        self.worker.start()
+        self._thread.enqueue(text)
         
         if wait:
-            self.worker.wait()
+            # Wait until queue drains and speech completes
+            while self._thread._is_speaking or not self._thread.text_queue.empty():
+                time.sleep(0.05)
+
+    def stop(self):
+        self._thread.stop()
