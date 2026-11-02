@@ -149,3 +149,28 @@ MXB guarantees uninterrupted functionality regardless of internet health via a t
 - No user-visible error dialog or crash is ever triggered.
 
 
+## 7. NVIDIA Cloud LLM Speech Understanding & JSON Enforcement
+For freeform conversational requests, system queries, and complex intents that fall through Layer 1, MXB queries NVIDIA NIM's hosted LLM service (`https://integrate.api.nvidia.com/v1/chat/completions`).
+
+### Prompt & Schema Structure
+```json
+{
+  "model": "meta/llama-3.1-8b-instruct",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are MXB. You MUST respond with ONLY valid JSON containing EXACTLY three keys: 'action', 'target', and 'reply'."
+    },
+    {
+      "role": "user",
+      "content": "User Command: 'check how much battery I have left'"
+    }
+  ],
+  "temperature": 0.2,
+  "max_tokens": 150,
+  "response_format": {"type": "json_object"}
+}
+```
+NVIDIA NIM enforces deterministic JSON schema conformance at the token decoding layer, eliminating invalid output syntax.
+
+
