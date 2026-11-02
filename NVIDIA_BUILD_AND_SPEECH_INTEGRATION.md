@@ -105,3 +105,21 @@ NVIDIA Build exposes its cloud-hosted transcription microservices through standa
   ```
 
 
+## 5. Dynamic Automatic Gain Control (AGC) & Soft Limiter
+Microphones embedded in laptop bezels or Bluetooth headsets frequently produce low-amplitude raw signals (RMS: 0.0005–0.002). MXB features a dynamic digital gain stage that boosts signal energy without introducing clipping distortion.
+
+### AGC Algorithm
+```python
+max_amp = float(np.max(np.abs(audio_data)))
+if max_amp > 0.0001:
+    # Scale peak to line-level target 0.85, clamped by max_gain (40.0x / +32dB)
+    gain = min(0.85 / max_amp, 40.0)
+    audio_data = audio_data * gain
+    
+    # Soft-limit signal using hyperbolic tangent if threshold exceeds 0.92
+    if np.any(np.abs(audio_data) > 0.92):
+        audio_data = np.tanh(audio_data)
+```
+This guarantees that whisper-quiet speech is delivered to ASR engines at optimal dynamic range.
+
+
