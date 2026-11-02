@@ -50,3 +50,13 @@ MXB V2.0 introduces a state-of-the-art **Hybrid Speech Intelligence Engine** lev
 - **Fail-Safe Offline Autonomy**: If internet connectivity is interrupted, MXB seamlessly switches to local Whisper and deterministic routing without a restart.
 
 
+## 2. NVIDIA Parakeet FastConformer ASR Architecture
+The primary cloud automatic speech recognition (ASR) engine uses NVIDIA's **Parakeet** neural architecture built with the NeMo framework.
+
+### Architecture Specifications
+- **Backbone**: FastConformer encoder utilizing depthwise separable convolutions and multi-head self-attention.
+- **Decoding Mechanism**: Token-and-Duration Transducer (TDT) and Connectionist Temporal Classification (CTC).
+- **Acoustic Subsampling**: 8x subsampling rate minimizes compute footprint while preserving precise word boundary timestamps.
+- **Vocabulary**: 1,024 SentencePiece byte-pair tokens trained over 65,000+ hours of multi-accented speech.
+
+
