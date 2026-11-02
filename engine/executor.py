@@ -54,6 +54,9 @@ class OSExecutionManager:
         elif action == "manage_window":
             return self.manage_window(target)
             
+        elif action == "capture_screen":
+            return self.capture_screen()
+            
         elif action == "notify":
             from utils.notifications import Notifier
             Notifier.show_notification("MXB", target)
