@@ -123,3 +123,29 @@ if max_amp > 0.0001:
 This guarantees that whisper-quiet speech is delivered to ASR engines at optimal dynamic range.
 
 
+## 6. Cloud-to-Edge Resilience & Dual-Engine Failover
+MXB guarantees uninterrupted functionality regardless of internet health via a transparent dual-engine failover state machine.
+
+```
+       [ Audio Buffer Captured ]
+                   |
+                   v
+     [ Check Credentials & Link ]
+       /                      \
+     Valid                   Invalid / Offline
+      /                         \
+     v                           v
+[ Query NVIDIA NIM Cloud ]   [ Fallback: Faster-Whisper Local ]
+     |                           |
+     +--- Timeout (>8s) ---------> (CPU Int8 Local Fallback)
+     |
+     v
+[ Emit Final Transcript ]
+```
+
+### SLA Guarantees
+- Cloud timeout is bounded to **8.0 seconds**.
+- If a socket timeout or HTTP 5xx occurs, the local `WhisperModel(device="cpu", compute_type="int8")` immediately parses the buffer.
+- No user-visible error dialog or crash is ever triggered.
+
+
