@@ -84,3 +84,24 @@ def audio_to_wav_bytes(audio_data: np.ndarray, sample_rate: int = 16000) -> byte
 The resulting byte array is transmitted directly via HTTP multipart/form-data with `Content-Type: audio/wav`.
 
 
+## 4. NVIDIA NIM REST API Integration Protocol
+NVIDIA Build exposes its cloud-hosted transcription microservices through standard OpenAI-compatible REST schemas at `https://integrate.api.nvidia.com/v1/audio/transcriptions`.
+
+### Endpoint Contract
+- **Method**: `POST`
+- **Headers**:
+  - `Authorization`: `Bearer nvapi-****************`
+  - `Accept`: `application/json`
+- **Multipart Form Payload**:
+  - `file`: In-memory WAV binary payload (`speech.wav`)
+  - `model`: `nvidia/parakeet-tdt-0.6b` (or `nvidia/parakeet-ctc-1.1b-asr`, `openai/whisper-large-v3`)
+  - `language`: `en-US`
+  - `response_format`: `json`
+- **Output Schema**:
+  ```json
+  {
+    "text": "Check system status and volume up."
+  }
+  ```
+
+
