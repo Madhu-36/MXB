@@ -60,3 +60,27 @@ The primary cloud automatic speech recognition (ASR) engine uses NVIDIA's **Para
 - **Vocabulary**: 1,024 SentencePiece byte-pair tokens trained over 65,000+ hours of multi-accented speech.
 
 
+## 3. In-Memory Audio Encoding & Streaming Serialization
+To avoid disk I/O bottlenecks and temporary file clutter, MXB encodes captured PCM audio tensors directly into in-memory standard RIFF/WAV streams.
+
+### Stream Serialization Protocol
+```python
+import io
+import wave
+import numpy as np
+
+def audio_to_wav_bytes(audio_data: np.ndarray, sample_rate: int = 16000) -> bytes:
+    # Quantize normalized float32 [-1.0, 1.0] to 16-bit signed PCM integers
+    int16_data = (audio_data * 32767).clip(-32768, 32767).astype(np.int16)
+    wav_io = io.BytesIO()
+    with wave.open(wav_io, 'wb') as wav_file:
+        wav_file.setnchannels(1)       # Mono channel
+        wav_file.setsampwidth(2)      # 16-bit audio depth
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(int16_data.tobytes())
+    wav_io.seek(0)
+    return wav_io.read()
+```
+The resulting byte array is transmitted directly via HTTP multipart/form-data with `Content-Type: audio/wav`.
+
+
