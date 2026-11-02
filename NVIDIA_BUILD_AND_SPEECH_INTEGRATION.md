@@ -174,3 +174,12 @@ For freeform conversational requests, system queries, and complex intents that f
 NVIDIA NIM enforces deterministic JSON schema conformance at the token decoding layer, eliminating invalid output syntax.
 
 
+## 8. Acoustic Echo Cancellation & TTS Playback Suppression
+To eliminate acoustic self-listening loops where laptop speakers trigger false speech detections, MXB couples the audio capture loop directly to the text-to-speech lifecycle.
+
+### Synchronization Mechanism
+1. **TTS Worker Start**: Emits `started_speaking` signal. The audio pipeline sets `is_tts_speaking = True` and purges the input queue.
+2. **Microphone Suppression**: While `is_tts_speaking` is active, all incoming microphone frames are immediately dropped.
+3. **Acoustic Grace Window**: When TTS completes, `finished_speaking` triggers a **350ms dissipation timer** (`tts_finish_time`). Room reverberation and speaker decay are drained before listening resumes.
+
+
