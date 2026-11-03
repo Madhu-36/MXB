@@ -211,3 +211,15 @@ During the `initialize` exchange, both client and server negotiate supported pro
 - `logging`: Allows server to emit standardized diagnostic log events to the host console.
 
 
+## 10. Fine-Grained Permission Security & User Authorization
+Executing arbitrary OS-level tools poses substantial security risks. MXB categorizes all MCP tool definitions into three permission tiers:
+
+| Security Tier | Description | Execution Policy | Example Tools |
+| :--- | :--- | :--- | :--- |
+| **Tier 1: Read-Only** | Inspects context without modifying state. | Automatic execution | `resources/read`, `get_active_window` |
+| **Tier 2: Safe Action** | Non-destructive system mutations. | Automatic execution with log | `volume_up`, `open_app`, `notify` |
+| **Tier 3: Destructive** | File modifications, deletions, shell commands. | **Explicit Human-in-the-Loop Dialog** | `delete_file`, `kill_process`, `run_bash` |
+
+When a Tier 3 action is invoked, MXB halts execution and presents an interactive PySide6 confirmation prompt.
+
+
