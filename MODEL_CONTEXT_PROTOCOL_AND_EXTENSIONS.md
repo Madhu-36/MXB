@@ -148,3 +148,14 @@ Each tool exposes its parameter definitions formatted as a strict **JSON Schema 
 ```
 
 
+## 6. Resource Access Protocol & URI Routing
+While tools represent executable actions with side-effects, **Resources** represent contextual data feeds that the LLM can inspect without mutating system state.
+
+### URI Scheme Convention
+MXB routes resource requests through standardized URI prefixes:
+- `file:///path/to/local/file`: Local documents, workspace source code, or configuration files.
+- `desktop://window/active`: Real-time metadata describing the currently focused desktop application.
+- `system://telemetry/hardware`: Live CPU, RAM, GPU, and battery sensor data.
+- `memory://facts/recent`: Semantic memory bank records retrieved from persistent storage.
+
+
