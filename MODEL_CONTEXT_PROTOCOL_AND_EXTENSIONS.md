@@ -286,3 +286,15 @@ BLOCKED_COMMANDS = {
 Any command not in the explicit allowlist triggers an immediate Tier 3 confirmation modal.
 
 
+## 17. Multi-Server Client Aggregator & Unified Namespace
+MXB maintains a unified central tool registry that aggregates tools from all connected MCP servers.
+
+### Namespace Resolution
+To prevent naming collisions between different servers exposing identical function names (e.g. `search`), MXB qualifies tools using server prefixes:
+- `filesystem__read_file`
+- `sqlite__query_database`
+- `os_control__manage_window`
+- `browser__navigate`
+The LLM selects tools using the fully qualified identifier, which the aggregator routes to the appropriate child transport.
+
+
