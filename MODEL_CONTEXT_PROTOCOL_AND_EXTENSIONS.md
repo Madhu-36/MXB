@@ -68,3 +68,46 @@ All communications across MXB's MCP client and connected servers strictly adhere
 ```
 
 
+## 3. Stdio Transport Architecture
+The standard input/output (`stdio`) transport is the default communication mechanism for local tools. MXB spawns MCP server executables as child subprocesses, establishing bi-directional communication through standard anonymous pipes (`stdin` and `stdout`).
+
+```
+[ MXB Host Process ]                                   [ MCP Child Process ]
+  |                                                      |
+  |--- write(JSON-RPC\n) ---> [ Child STDIN Pipe ] ------> Read & Process
+  |                                                      |
+  |<-- read(JSON-RPC\n) <---- [ Child STDOUT Pipe ] <---- Emit Response
+  |                                                      |
+  |<-- stderr logging <------ [ Child STDERR Pipe ] <---- Diagnostic Logs
+```
+
+### Pipe Management Implementation
+```python
+import subprocess
+import json
+
+class StdioTransport:
+    def __init__(self, command: list[str], env: dict = None):
+        self.process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # Line-buffered
+            env=env
+        )
+
+    def send_message(self, message: dict):
+        payload = json.dumps(message) + "\n"
+        self.process.stdin.write(payload)
+        self.process.stdin.flush()
+
+    def read_message(self) -> dict:
+        line = self.process.stdout.readline()
+        if not line:
+            raise EOFError("MCP Server closed stdout pipe.")
+        return json.loads(line)
+```
+
+
