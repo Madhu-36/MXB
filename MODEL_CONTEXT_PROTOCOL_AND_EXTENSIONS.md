@@ -201,3 +201,13 @@ Client (MXB)                                    Server (Child Process)
 MXB issues an idempotent `ping` request every 30 seconds. If a server fails to reply within 5.0 seconds, the child process is flagged as hung, force-terminated, and restarted.
 
 
+## 9. Capability Negotiation & Version Handshake
+During the `initialize` exchange, both client and server negotiate supported protocol features through structured capability flags.
+
+### Supported Capability Flags
+- `tools`: `{"listChanged": true}` indicates server will emit `notifications/tools/list_changed` when new tools are added dynamically.
+- `resources`: `{"subscribe": true}` allows MXB to subscribe to live file or sensor updates.
+- `prompts`: Indicates prompt template support.
+- `logging`: Allows server to emit standardized diagnostic log events to the host console.
+
+
