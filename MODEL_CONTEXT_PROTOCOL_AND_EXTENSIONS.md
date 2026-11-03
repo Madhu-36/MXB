@@ -361,3 +361,11 @@ If an external MCP server crashes or terminates unexpectedly, MXB's client super
 4. **Transparent Re-attachment**: Re-initializes capabilities and restores active tool status upon successful reconnection.
 
 
+## 22. Tool Schema Caching & Result Memoization
+To minimize token consumption and IPC overhead, MXB employs high-performance memory caching for MCP operations.
+
+### Caching Layers
+- **Schema Cache**: Tool definitions are cached in memory for the duration of the server session, refreshing only when the server emits `notifications/tools/list_changed`.
+- **Query Memoization**: Read-only idempotent requests (e.g. `system://telemetry/hardware`) are cached with short TTLs (500ms) to prevent duplicate queries within the same reasoning turn.
+
+
