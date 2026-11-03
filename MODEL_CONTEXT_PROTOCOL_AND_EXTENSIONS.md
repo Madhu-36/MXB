@@ -298,3 +298,32 @@ To prevent naming collisions between different servers exposing identical functi
 The LLM selects tools using the fully qualified identifier, which the aggregator routes to the appropriate child transport.
 
 
+## 18. Asynchronous Tool Worker Pool & Cancellation Tokens
+All MCP tool calls execute asynchronously on a background QThreadPool to keep the PySide6 UI and audio listening loop completely responsive.
+
+### Cancellation Token Architecture
+```python
+from PySide6.QtCore import QRunnable, QThreadPool
+
+class MCPToolTask(QRunnable):
+    def __init__(self, transport, request_id, tool_name, args, callback):
+        super().__init__()
+        self.transport = transport
+        self.request_id = request_id
+        self.tool_name = tool_name
+        self.args = args
+        self.callback = callback
+        self.is_cancelled = False
+
+    def cancel(self):
+        self.is_cancelled = True
+
+    def run(self):
+        if self.is_cancelled:
+            return
+        result = self.transport.call_tool(self.tool_name, self.args)
+        if not self.is_cancelled:
+            self.callback(result)
+```
+
+
