@@ -259,3 +259,13 @@ For complex research, web page summarization, and form interactions, MXB interfa
 - `capture_page_screenshot(url)`: Captures full-page visual screenshots for vision model ingestion.
 
 
+## 15. Git & GitHub Repository MCP Integration
+MXB integrates local Git automation tools to allow developer interaction directly through natural speech.
+
+### Registered Git Actions
+- `git_status`: Returns staged, unstaged, and untracked files.
+- `git_diff`: Summarizes recent code modifications formatted as unified diffs.
+- `git_log`: Retrieves recent commit history, author attributions, and branch statuses.
+- `git_create_commit`: Stages files and drafts atomic commit messages based on staged changes.
+
+
