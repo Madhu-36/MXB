@@ -179,3 +179,25 @@ Servers declare dynamic prompts via `prompts/list`. When a user requests a pre-c
 The server returns formatted message arrays with bound arguments, avoiding client-side prompt maintenance.
 
 
+## 8. Server Lifecycle Management & Connection Handshake
+MCP defines a rigorous initialization and teardown sequence to guarantee version compatibility and clean subprocess teardown.
+
+```
+Client (MXB)                                    Server (Child Process)
+     |                                                    |
+     |---- initialize (Client Capabilities) ------------->|
+     |<--- initialize response (Server Capabilities) -----|
+     |---- notifications/initialized -------------------->|
+     |                                                    |
+     |                    [ Steady State ]                |
+     |---- ping ----------------------------------------->|
+     |<--- pong ------------------------------------------|
+     |                                                    |
+     |---- shutdown ------------------------------------->|
+     |---- exit ----------------------------------------->|
+```
+
+### Heartbeat & Deadlock Prevention
+MXB issues an idempotent `ping` request every 30 seconds. If a server fails to reply within 5.0 seconds, the child process is flagged as hung, force-terminated, and restarted.
+
+
