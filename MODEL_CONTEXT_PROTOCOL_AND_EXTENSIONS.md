@@ -232,3 +232,12 @@ To prevent runaway tool scripts from crashing MXB or consuming excessive RAM, al
 - **Kill on Job Close**: Guarantees that terminating the primary MXB daemon automatically terminates all associated child processes and open handles.
 
 
+## 12. Local Filesystem MCP Server Integration
+The Filesystem MCP server provides MXB with safe, sandboxed inspection of local repositories, documentation trees, and workspace configuration files.
+
+### Security Boundary Guarantees
+- **Root Directory Lock**: Server strictly confines operations to pre-authorized directories (e.g., `C:\Users\Asus\OneDrive\Desktop\PROJECTS\MXB`).
+- **Path Traversal Protection**: Rejects all path queries attempting relative traversal (`../`) outside authorized boundaries.
+- **Binary Guard**: Prohibits reading non-text executable binaries directly into LLM context windows.
+
+
