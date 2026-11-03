@@ -223,3 +223,12 @@ Executing arbitrary OS-level tools poses substantial security risks. MXB categor
 When a Tier 3 action is invoked, MXB halts execution and presents an interactive PySide6 confirmation prompt.
 
 
+## 11. Subprocess Isolation & Windows Job Object Sandboxing
+To prevent runaway tool scripts from crashing MXB or consuming excessive RAM, all child MCP servers run within Windows **Job Objects**.
+
+### Sandboxing Controls
+- **Memory Ceiling**: Job object enforces a hard limit of **512 MB** per server process.
+- **CPU Rate Limiting**: Throttles child processes to maximum 25% CPU core allocation.
+- **Kill on Job Close**: Guarantees that terminating the primary MXB daemon automatically terminates all associated child processes and open handles.
+
+
