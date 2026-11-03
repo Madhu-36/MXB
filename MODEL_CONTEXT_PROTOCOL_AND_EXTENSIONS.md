@@ -29,3 +29,42 @@ As MXB transitions into an autonomous Operating System Second Brain, direct hard
 - **Dynamic Context Injection**: Exposes real-time local resources (files, active application states, database rows) as first-class context primitives.
 
 
+## 2. JSON-RPC 2.0 Protocol Specifications
+All communications across MXB's MCP client and connected servers strictly adhere to the **JSON-RPC 2.0** specification over UTF-8 encoded text streams.
+
+### Core Message Primitives
+- **Requests**: Messages requiring an explicit response from the recipient, containing a unique integer or string `id`.
+- **Responses**: Messages returning either a `result` payload or an `error` object corresponding to a previous request `id`.
+- **Notifications**: One-way telemetry and state signals that do not contain an `id` and expect no acknowledgement.
+
+```json
+// Sample Tool Call Request
+{
+  "jsonrpc": "2.0",
+  "id": 1042,
+  "method": "tools/call",
+  "params": {
+    "name": "read_desktop_window",
+    "arguments": {
+      "filter_active": true
+    }
+  }
+}
+
+// Sample Tool Call Success Response
+{
+  "jsonrpc": "2.0",
+  "id": 1042,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Active Window: 'Visual Studio Code - mxb_app'"
+      }
+    ],
+    "isError": false
+  }
+}
+```
+
+
