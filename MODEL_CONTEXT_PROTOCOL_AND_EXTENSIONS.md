@@ -250,3 +250,12 @@ For structured querying of local logs, user memory entries, and time-series tele
 - **Result Truncation**: Automatically caps tabular query results to 50 rows to preserve LLM token budgets.
 
 
+## 14. Web Browser Automation MCP Server
+For complex research, web page summarization, and form interactions, MXB interfaces with a local headless Chromium instance powered by **Playwright**.
+
+### Capabilities
+- `navigate(url)`: Loads web pages with full JavaScript execution and cookie handling.
+- `extract_article_text(url)`: Strips advertisements and navigation chrome, returning clean markdown copy.
+- `capture_page_screenshot(url)`: Captures full-page visual screenshots for vision model ingestion.
+
+
