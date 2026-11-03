@@ -327,3 +327,12 @@ class MCPToolTask(QRunnable):
 ```
 
 
+## 19. Telemetry, Tracing & Observability
+Every MCP request, response, and error is instrumented with OpenTelemetry distributed trace context to provide deep observability into tool performance.
+
+### Captured Trace Spans
+- `mcp.connect`: Measures handshake and capability negotiation duration.
+- `mcp.tools.list`: Measures schema transmission latency and payload size.
+- `mcp.tools.call`: Records total execution time, return code, error messages, and memory delta.
+
+
