@@ -159,3 +159,23 @@ MXB routes resource requests through standardized URI prefixes:
 - `memory://facts/recent`: Semantic memory bank records retrieved from persistent storage.
 
 
+## 7. Prompt Templating Protocol & Specialized Workflows
+The MCP Prompt specification allows servers to expose parameterized conversational workflows, system prompt augmentations, and diagnostic routines directly to the client.
+
+### Prompt Request & Parameter Binding
+Servers declare dynamic prompts via `prompts/list`. When a user requests a pre-configured workflow (e.g. *"Debug my clipboard code"*), MXB calls `prompts/get`:
+```json
+{
+  "method": "prompts/get",
+  "params": {
+    "name": "analyze_code_snippet",
+    "arguments": {
+      "language": "python",
+      "optimization_goal": "memory"
+    }
+  }
+}
+```
+The server returns formatted message arrays with bound arguments, avoiding client-side prompt maintenance.
+
+
