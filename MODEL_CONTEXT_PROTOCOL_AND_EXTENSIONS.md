@@ -111,3 +111,12 @@ class StdioTransport:
 ```
 
 
+## 4. Server-Sent Events (SSE) & Remote HTTP Transport
+For distributed tools, cloud-hosted microservices, and sandboxed Docker containers, MXB implements an asynchronous **Server-Sent Events (SSE)** transport layer over HTTP/HTTPS.
+
+### SSE Message Lifecycle
+1. **Handshake & Session Initiation**: Client issues an HTTP `GET /sse` request. The server holds the connection open, returning `Content-Type: text/event-stream` and emitting an `endpoint` event containing a unique session POST URI.
+2. **Client-to-Server Requests**: All JSON-RPC client messages are posted to `/message?sessionId=<id>` using standard HTTP `POST` requests.
+3. **Server-to-Client Streaming**: Responses, server-initiated notifications, and log streams flow down the open SSE connection.
+
+
