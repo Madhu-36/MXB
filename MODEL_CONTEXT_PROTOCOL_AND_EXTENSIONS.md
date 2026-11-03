@@ -351,3 +351,13 @@ When a user command involves complex, multi-stage workflows (e.g., *"Research to
 Sub-agents communicate via isolated MCP message channels without polluting the primary conversational memory.
 
 
+## 21. Failure Recovery & Exponential Backoff Reconnection
+If an external MCP server crashes or terminates unexpectedly, MXB's client supervisor automatically manages reconnection.
+
+### Recovery State Machine
+1. **Crash Detected**: Child process exit code captured.
+2. **Backoff Schedule**: Initiates exponential backoff retries (1s, 2s, 4s, 8s, up to max 30s).
+3. **Registry Update**: Marks the server's tools as temporarily unavailable in the tool aggregator.
+4. **Transparent Re-attachment**: Re-initializes capabilities and restores active tool status upon successful reconnection.
+
+
