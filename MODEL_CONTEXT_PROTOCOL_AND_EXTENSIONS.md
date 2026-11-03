@@ -241,3 +241,12 @@ The Filesystem MCP server provides MXB with safe, sandboxed inspection of local 
 - **Binary Guard**: Prohibits reading non-text executable binaries directly into LLM context windows.
 
 
+## 13. SQLite Database MCP Server Integration
+For structured querying of local logs, user memory entries, and time-series telemetry, MXB integrates a local **SQLite MCP Server**.
+
+### Features
+- **Schema Reflection**: Discovers database tables, column types, and foreign key relationships via `PRAGMA table_info`.
+- **Read-Only Enforced Mode**: Runs analytical queries within transactions marked `PRAGMA query_only = ON` to prevent accidental mutations.
+- **Result Truncation**: Automatically caps tabular query results to 50 rows to preserve LLM token budgets.
+
+
