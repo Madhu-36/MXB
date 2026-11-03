@@ -336,3 +336,18 @@ Every MCP request, response, and error is instrumented with OpenTelemetry distri
 - `mcp.tools.call`: Records total execution time, return code, error messages, and memory delta.
 
 
+## 20. Multi-Agent Delegation Protocol & Hierarchical Sub-Agents
+When a user command involves complex, multi-stage workflows (e.g., *"Research today's GPU news, write a summary in a markdown file, and notify me"*), MXB partitions the goal across specialized sub-agents.
+
+```
+[ Primary Voice Agent ]
+         |
+         |---> [ Research Sub-Agent (Browser MCP + Web Search) ]
+         |
+         |---> [ Writer Sub-Agent (Filesystem MCP + Markdown Engine) ]
+         |
+         |---> [ Executive Sub-Agent (Notification MCP + Toast Dialog) ]
+```
+Sub-agents communicate via isolated MCP message channels without polluting the primary conversational memory.
+
+
