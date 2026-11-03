@@ -120,3 +120,31 @@ For distributed tools, cloud-hosted microservices, and sandboxed Docker containe
 3. **Server-to-Client Streaming**: Responses, server-initiated notifications, and log streams flow down the open SSE connection.
 
 
+## 5. Dynamic Tool Discovery & JSON Schema Validation
+At startup or upon server attachment, MXB queries the server's registered tools via the `tools/list` protocol method.
+
+### Tool Definition Schema
+Each tool exposes its parameter definitions formatted as a strict **JSON Schema Draft 7** object, allowing MXB to inject valid tool definitions into both local Ollama models and cloud LLMs.
+
+```json
+{
+  "name": "adjust_system_volume",
+  "description": "Adjusts hardware master audio volume or toggles mute status.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "level_delta": {
+        "type": "integer",
+        "description": "Percentage change in volume, e.g. +5 or -10."
+      },
+      "mute": {
+        "type": "boolean",
+        "description": "Set to true to toggle master audio mute."
+      }
+    },
+    "required": []
+  }
+}
+```
+
+
