@@ -269,3 +269,20 @@ MXB integrates local Git automation tools to allow developer interaction directl
 - `git_create_commit`: Stages files and drafts atomic commit messages based on staged changes.
 
 
+## 16. Terminal Command Execution MCP Server
+For command-line power users, MXB provides a terminal execution MCP server that executes shell commands with strict security allowlists.
+
+### Command Classification
+```python
+ALLOWED_COMMANDS = {
+    "dir", "echo", "ping", "ipconfig", "systeminfo", 
+    "python", "pip list", "git status", "git log"
+}
+
+BLOCKED_COMMANDS = {
+    "format", "del /s", "rmdir /s", "reg delete", "shutdown", "powershell -enc"
+}
+```
+Any command not in the explicit allowlist triggers an immediate Tier 3 confirmation modal.
+
+
