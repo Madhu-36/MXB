@@ -383,3 +383,29 @@ Microbenchmarks were measured on Windows 11 host hardware to validate that the o
 Conclusion: IPC overhead of the JSON-RPC Stdio transport is under **1 millisecond**, fully satisfying MXB's real-time voice latency budget.
 
 
+## 24. Automated Testing Harness & Mock MCP Server Fixtures
+To guarantee robust continuous integration without requiring live desktop interactions, MXB includes an automated pytest suite with mock MCP server fixtures.
+
+### Mock Server Test Suite
+```python
+import pytest
+from utils.mcp_client import MCPClient
+
+@pytest.fixture
+def mock_server():
+    server = MockMCPServer()
+    server.register_tool("mock_echo", lambda msg: f"Echo: {msg}")
+    server.start()
+    yield server
+    server.stop()
+
+def test_mcp_client_tool_call(mock_server):
+    client = MCPClient(mock_server.endpoint)
+    client.connect()
+    tools = client.list_tools()
+    assert "mock_echo" in [t.name for t in tools]
+    result = client.call_tool("mock_echo", {"msg": "hello"})
+    assert result == "Echo: hello"
+```
+
+
