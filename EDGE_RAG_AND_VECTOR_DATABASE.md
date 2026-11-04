@@ -374,3 +374,12 @@ When MXB performs online web searches via DuckDuckGo, retrieved articles and doc
 - **Offline Querying**: When internet connectivity drops, queries are automatically routed to the offline web cache, enabling answers without active network access.
 
 
+## 22. Cognitive Memory Consolidation & Forgetting Curves
+Human memory consolidates daily experiences into higher-level abstractions while pruning trivial noise. MXB implements a **Nightly Memory Consolidation Daemon**.
+
+### Consolidation Workflow
+1. **Cluster Detection**: Identifies related memory bank facts and daily clipboard snippets using DBSCAN vector clustering.
+2. **Recursive Summarization**: Synthesizes clusters into concise generalized summaries (e.g. 10 notes about meeting agendas become 1 unified weekly summary).
+3. **Ebbinghaus Forgetting Decay**: Decrements importance scores of unreferenced transient facts, archiving dead entries after 90 days.
+
+
