@@ -294,3 +294,16 @@ MXB maintains an ephemeral vector index of recent clipboard text entries, enabli
 3. **Conversational Recall**: When user says: *"What was that API URL I copied earlier?"*, MXB performs vector similarity over recent clipboard entries and speaks the answer.
 
 
+## 16. Temporal Recency Decay & Desktop Context Binding
+Retrieval relevance is heavily influenced by the user's immediate workflow. A document opened in the active window right now is significantly more relevant than a document modified three months ago.
+
+### Time-Decay Scoring Multiplier
+$$\text{DecayFactor}(t) = \exp\left(-\lambda \cdot \Delta t\right)$$
+Where:
+- $\Delta t$: Elapsed time in days since last document access.
+- $\lambda$: Half-life decay constant ($\lambda = 0.05$).
+
+### Active Window Boosting
+Passages originating from the file or application currently focused in `pygetwindow` receive an automatic **+25% relevance boost**, prioritizing immediate context.
+
+
