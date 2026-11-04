@@ -16,6 +16,9 @@
   },
   "engine": {
     "whisper_model": "base.en",
-    "microphone_sensitivity": "high"
+    "microphone_sensitivity": "high",
+    "vad_speech_prob_threshold": 0.35,
+    "agc_target_level": 0.85,
+    "max_gain": 60.0
   }
 }
