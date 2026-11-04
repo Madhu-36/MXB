@@ -102,3 +102,21 @@ MXB standardizes on normalized vector metrics to accelerate similarity calculati
 By pre-normalizing all chunk vectors upon insertion, MXB evaluates nearest neighbors using vectorized AVX2/AVX-512 SIMD dot-product instructions in under 12 nanoseconds per comparison.
 
 
+## 5. Hierarchical Navigable Small World (HNSW) Indexing
+For collections exceeding 10,000 document chunks, brute-force linear scans ($O(N)$) degrade real-time performance. MXB utilizes an in-process **HNSW graph** indexing structure.
+
+```
+Layer 2 (Express):  [Node A] -----------------------------------------> [Node Z]
+                         |                                                    |
+Layer 1 (Regional): [Node A] -------------> [Node M] -----------------> [Node Z]
+                         |                       |                            |
+Layer 0 (Dense):    [Node A] -> [Node C] -> [Node M] -> [Node Q] -----> [Node Z]
+```
+
+### Index Hyperparameters
+- **`M` (Max Links per Node)**: Set to `16`. Controls memory overhead and graph connectivity.
+- **`efConstruction`**: Set to `64`. Governs index build quality and edge pruning thoroughness.
+- **`efSearch`**: Set to `32`. Governs the size of the dynamic priority queue during nearest-neighbor queries.
+- **Search Complexity**: Drops from linear $O(N)$ to logarithmic $O(\log N)$, sustaining <2ms lookups across 100,000 vectors.
+
+
