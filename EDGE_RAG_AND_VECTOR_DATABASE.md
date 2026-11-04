@@ -226,3 +226,17 @@ def reciprocal_rank_fusion(dense_ranks: list[int], sparse_ranks: list[int], k: i
 ```
 
 
+## 11. Cross-Encoder Re-Ranking Pipeline (`bge-reranker-base`)
+While bi-encoders produce vectors independently for query and document, a **Cross-Encoder** jointly processes the query and passage through self-attention layers, computing precise relevance scores.
+
+### Two-Stage Retrieval Pipeline
+1. **Stage 1 (High Recall Retrieval)**: Hybrid Search retrieves top-25 candidate passages in ~12ms.
+2. **Stage 2 (High Precision Cross-Encoder)**: `bge-reranker-base` scores all 25 candidates, re-ordering them and filtering out irrelevant passages below a relevance threshold of $0.45$.
+
+```python
+# Cross-encoder joint evaluation: [CLS] Query [SEP] Passage [SEP]
+relevance_score = cross_encoder.predict([(query, passage_content)])
+```
+Stage 2 selects the top-3 to top-5 most relevant passages for LLM prompt injection.
+
+
