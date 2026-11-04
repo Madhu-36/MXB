@@ -120,3 +120,24 @@ Layer 0 (Dense):    [Node A] -> [Node C] -> [Node M] -> [Node Q] -----> [Node Z]
 - **Search Complexity**: Drops from linear $O(N)$ to logarithmic $O(\log N)$, sustaining <2ms lookups across 100,000 vectors.
 
 
+## 6. Semantic Document Chunking & Token Windowing
+Naive character-length splitting destroys syntactic cohesion and splits code blocks across chunks. MXB employs a **Hierarchical Recursive Chunking** pipeline.
+
+### Chunking Protocol
+```python
+def chunk_document(text: str, max_tokens: int = 512, overlap_tokens: int = 64) -> list[str]:
+    # 1. Split hierarchically on major markdown boundaries
+    separators = ["\n## ", "\n### ", "\n\n", "\n", " "]
+    chunks = []
+    
+    # Recursive boundary splitting preserves header context
+    # Overlap buffer retains context across neighboring windows
+    return chunks
+```
+
+### Semantic Header Injection
+When a chunk is generated from a nested section, MXB automatically prepends document breadcrumbs:
+`[Document: architecture.md > Section: Vector Database > Subsection: HNSW Indexing]`
+This contextual prefix ensures that isolated chunks retain semantic anchors during vector embedding.
+
+
