@@ -262,3 +262,26 @@ MXB dynamically partitions its prompt context budget based on the active LLM bac
 If retrieved chunks exceed the designated budget, lowest-scoring passages from Stage 2 re-ranking are systematically dropped.
 
 
+## 14. Real-Time Incremental Indexing via File Watchers
+To ensure MXB's second brain reflects the user's latest work, an asynchronous background file watcher tracks modifications across registered document directories.
+
+### Watcher Implementation
+```python
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+class DocumentWatcher(FileSystemEventHandler):
+    def __init__(self, indexer):
+        self.indexer = indexer
+
+    def on_modified(self, event):
+        if not event.is_directory and event.src_path.endswith((".md", ".txt", ".py")):
+            self.indexer.queue_reindex(event.src_path)
+
+    def on_deleted(self, event):
+        if not event.is_directory:
+            self.indexer.delete_document(event.src_path)
+```
+Changes are debounced by 2.0 seconds to prevent thrashing during active editing sessions.
+
+
