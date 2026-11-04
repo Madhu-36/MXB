@@ -1,131 +1,248 @@
 import re
 import json
+import time
 import requests
 import traceback
+from pathlib import Path
 from collections import deque
+from rapidfuzz import fuzz
 from engine.executor import OSExecutionManager
 from engine.tts import VoiceSynthesizer
-from engine.memory import MemoryBank
+from engine.memory import memory_bank
 from utils.credentials import CredentialsManager
+from utils.environment import EnvironmentContext
+from utils.logger import log
 
 class IntentRouter:
-    def __init__(self):
+    """
+    Two-Tier Intent Routing Engine for MXB.
+    Tier 1: High-Speed Sub-Millisecond Deterministic Fast-Path with fuzzy matching.
+    Tier 2: Deep LLM Multi-Step Action Planning and Conversational Reasoning.
+    """
+
+    def __init__(self, config_path: str = None):
         self.executor = OSExecutionManager()
         self.tts = VoiceSynthesizer()
-        self.memory = MemoryBank()
-        # Keep track of the last 5 conversation turns
-        self.history = deque(maxlen=5)
+        self.memory = memory_bank
+        self.history = deque(maxlen=6)
+
+        # Load config
+        self.config_path = Path(config_path) if config_path else Path(__file__).parent.parent / "config.json"
+        self.config = self._load_config()
+
+    def _load_config(self) -> dict:
+        try:
+            if self.config_path.exists():
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception as e:
+            log.warning(f"Router: Could not read config.json: {e}")
+        return {}
 
     def route(self, transcription: str) -> str:
         text = transcription.lower().strip()
         if not text:
             return "Ignored empty transcription."
 
-        # Remove trailing punctuation from transcription
         clean_text = re.sub(r'[\.,!\?]+$', '', text).strip()
-        print(f"[Router] Parsing intent: '{clean_text}'")
+        log.info(f"IntentRouter: Routing intent for '{clean_text}'")
 
         # =========================================================================
-        # Layer 1: High-Speed Deterministic Fast-Path Routing (Sub-millisecond)
+        # TIER 1: HIGH-SPEED DETERMINISTIC FAST-PATH (Sub-Millisecond)
         # =========================================================================
 
-        # 1. System Telemetry / Hardware Check
+        # 1. System Health / Telemetry
         if any(p in clean_text for p in [
-            "check system", "system status", "how is my pc", "how is my computer",
-            "pc metrics", "cpu usage", "ram usage", "battery percentage", "battery status",
-            "check hardware", "pc status"
+            "check system", "system status", "pc status", "how is my pc", "how is my computer",
+            "cpu usage", "ram usage", "battery percentage", "battery status", "pc metrics"
         ]):
             reply = "Checking your hardware status now."
             self.tts.speak(reply)
-            metrics = self.executor.execute_action("check_system", "none")
+            metrics = self.executor.execute_action("check_system")
             self.tts.speak(metrics)
             self.history.append({"user": clean_text, "mxb": metrics})
             return f"MXB: {reply}\n{metrics}"
 
-        # 2. Window Management (Must be checked before open/close apps)
-        if any(p in clean_text for p in ["minimize this window", "minimize window", "minimize this", "minimize screen"]):
+        # 2. Vision: OCR Screen Reading
+        if any(p in clean_text for p in ["read screen", "read my screen", "what is on my screen", "what's on my screen", "read the screen"]):
+            reply = "Reading what is visible on your screen."
+            self.tts.speak(reply)
+            screen_content = self.executor.execute_action("read_screen")
+            self.history.append({"user": clean_text, "mxb": screen_content})
+            return f"MXB: {reply}\n{screen_content}"
+
+        # 3. Vision: Click text / button on screen
+        click_text_match = re.search(r'^(?:please\s+)?(?:can you\s+)?click\s+(?:on\s+)?(?:the\s+)?(?:button\s+)?(["\']?)(.+?)\1$', clean_text)
+        if click_text_match and not any(k in clean_text for k in ["right", "double", "here", "middle"]):
+            target_element = click_text_match.group(2).strip()
+            if target_element not in ["mouse", "it", "this"]:
+                reply = f"Clicking {target_element}."
+                self.tts.speak(reply)
+                res = self.executor.execute_action("click_text", target_element)
+                self.history.append({"user": clean_text, "mxb": reply})
+                return f"MXB: {reply}\nAction: {res}"
+
+        # 4. Mouse Controls
+        if clean_text in ["click", "left click", "click mouse", "click here"]:
+            res = self.executor.execute_action("left_click")
+            return f"Action: {res}"
+
+        if clean_text in ["right click", "context menu"]:
+            res = self.executor.execute_action("right_click")
+            return f"Action: {res}"
+
+        if clean_text in ["double click"]:
+            res = self.executor.execute_action("double_click")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["scroll down", "page down", "scroll downward"]):
+            res = self.executor.execute_action("scroll_down")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["scroll up", "page up", "scroll upward"]):
+            res = self.executor.execute_action("scroll_up")
+            return f"Action: {res}"
+
+        # 5. Window Management & Desktop
+        if any(p in clean_text for p in ["show desktop", "minimize all", "go to desktop"]):
+            reply = "Showing your desktop."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("show_desktop")
+            return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["minimize window", "minimize this window", "minimize this"]):
             reply = "Minimizing current window."
             self.tts.speak(reply)
             res = self.executor.execute_action("manage_window", "minimize")
-            self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}\nAction: {res}"
 
-        if any(p in clean_text for p in ["maximize this window", "maximize window", "maximize this", "maximize screen"]):
+        if any(p in clean_text for p in ["maximize window", "maximize this window", "maximize screen"]):
             reply = "Maximizing current window."
             self.tts.speak(reply)
             res = self.executor.execute_action("manage_window", "maximize")
-            self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["snap left", "window left"]):
+            res = self.executor.execute_action("manage_window", "left")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["snap right", "window right"]):
+            res = self.executor.execute_action("manage_window", "right")
+            return f"Action: {res}"
 
         if clean_text in ["close window", "close this window", "close active window"]:
             reply = "Closing active window."
             self.tts.speak(reply)
             res = self.executor.execute_action("manage_window", "close")
-            self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}\nAction: {res}"
 
-        # 3. Media Controls
-        if any(p in clean_text for p in ["volume up", "turn up volume", "turn up the volume", "louder", "increase volume"]):
+        # 6. Common Keyboard Shortcuts
+        if clean_text in ["copy", "copy this", "copy that", "copy selection"]:
+            res = self.executor.execute_action("copy_text")
+            return f"Action: {res}"
+
+        if clean_text in ["paste", "paste here", "paste text"]:
+            res = self.executor.execute_action("paste_text")
+            return f"Action: {res}"
+
+        if clean_text in ["select all", "select everything"]:
+            res = self.executor.execute_action("select_all")
+            return f"Action: {res}"
+
+        if clean_text in ["undo", "undo that"]:
+            res = self.executor.execute_action("undo")
+            return f"Action: {res}"
+
+        if clean_text in ["save", "save file", "save document", "save this"]:
+            res = self.executor.execute_action("save_file")
+            return f"Action: {res}"
+
+        if clean_text in ["press enter", "hit enter"]:
+            res = self.executor.execute_action("press_key", "enter")
+            return f"Action: {res}"
+
+        if clean_text in ["press escape", "hit escape"]:
+            res = self.executor.execute_action("press_key", "escape")
+            return f"Action: {res}"
+
+        # 7. Media & Volume Controls
+        if any(p in clean_text for p in ["volume up", "turn up volume", "louder", "increase volume"]):
             reply = "Turning volume up."
             self.tts.speak(reply)
             res = self.executor.execute_action("media_control", "volume_up")
             return f"MXB: {reply}\nAction: {res}"
 
-        if any(p in clean_text for p in ["volume down", "turn down volume", "turn down the volume", "quieter", "lower volume"]):
+        if any(p in clean_text for p in ["volume down", "turn down volume", "quieter", "lower volume"]):
             reply = "Turning volume down."
             self.tts.speak(reply)
             res = self.executor.execute_action("media_control", "volume_down")
             return f"MXB: {reply}\nAction: {res}"
 
-        if any(p in clean_text for p in ["mute audio", "mute sound", "mute volume", "mute", "unmute audio", "unmute sound", "unmute"]):
+        if any(p in clean_text for p in ["mute audio", "mute sound", "mute volume", "mute", "unmute"]):
             reply = "Toggling mute."
             self.tts.speak(reply)
             res = self.executor.execute_action("media_control", "mute")
             return f"MXB: {reply}\nAction: {res}"
 
-        if any(p in clean_text for p in ["play music", "pause music", "pause playback", "resume music", "play song"]):
+        if any(p in clean_text for p in ["play music", "pause music", "pause playback", "play song"]):
             reply = "Toggling media playback."
             self.tts.speak(reply)
             res = self.executor.execute_action("media_control", "play")
             return f"MXB: {reply}\nAction: {res}"
 
-        # 4. App Launching
+        # 8. Screenshot Capture
+        if any(p in clean_text for p in ["screenshot", "take a screenshot", "capture screen", "print screen"]):
+            reply = "Capturing screen."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("capture_screen")
+            self.history.append({"user": clean_text, "mxb": reply})
+            return f"MXB: {reply}\nAction: {res}"
+
+        # 9. App Launching
         launch_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:open|launch|start)\s+(?:up\s+)?([a-zA-Z0-9\s]+)$', clean_text)
         if launch_match:
             app_name = launch_match.group(1).strip()
-            app_name = re.sub(r'\s+please$', '', app_name).strip()
-            if app_name and app_name not in ["the door", "a tab"]:
+            if app_name and app_name not in ["the door", "a tab", "window", "folder"]:
                 reply = f"Opening {app_name} for you."
                 self.tts.speak(reply)
                 self.history.append({"user": clean_text, "mxb": reply})
                 return f"MXB: {reply}\n" + self.executor.execute_action("open_app", app_name)
 
-        # 5. App Closing / Killing
+        # 10. App Closing
         close_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:close|kill|quit|terminate|exit)\s+([a-zA-Z0-9\s]+)$', clean_text)
         if close_match:
             target_app = close_match.group(1).strip()
-            if target_app and target_app not in ["window", "this window", "the window", "active window"]:
+            if target_app and target_app not in ["window", "this window", "active window"]:
                 reply = f"Closing {target_app}."
                 self.tts.speak(reply)
                 self.history.append({"user": clean_text, "mxb": reply})
                 return f"MXB: {reply}\n" + self.executor.execute_action("close_app", target_app)
 
-        # 6. Screen Capture
-        if re.search(r'\b(screenshot|capture screen|print screen|take a screenshot)\b', clean_text):
-            reply = "Capturing your screen."
-            self.tts.speak(reply)
-            self.history.append({"user": clean_text, "mxb": reply})
-            return f"MXB: {reply}\n" + self.executor.execute_action("capture_screen", "")
-
-        # 7. Direct Keystroke Typing
+        # 11. Direct Text Typing
         if clean_text.startswith("type "):
-            extracted_text = clean_text.split("type ", 1)[1]
+            extracted = clean_text.split("type ", 1)[1]
             reply = "Typing that now."
             self.tts.speak(reply)
             self.history.append({"user": clean_text, "mxb": reply})
-            return f"MXB: {reply}\n" + self.executor.execute_action("type_text", extracted_text)
+            return f"MXB: {reply}\n" + self.executor.execute_action("type_text", extracted)
 
-        # 8. Web Search
+        # 12. File System Operations
+        if clean_text.startswith("create folder ") or clean_text.startswith("make folder "):
+            fname = re.sub(r'^(?:create|make)\s+folder\s+', '', clean_text).strip()
+            reply = f"Creating folder {fname}."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("create_folder", fname)
+            return f"MXB: {reply}\nAction: {res}"
+
+        if clean_text.startswith("list files") or clean_text.startswith("show files"):
+            folder = clean_text.replace("list files in", "").replace("list files", "").strip() or "desktop"
+            reply = f"Listing files in {folder}."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("list_files", folder)
+            self.tts.speak(res)
+            return f"MXB: {reply}\n{res}"
+
+        # 13. Web Search
         search_match = re.search(r'^(?:search the web for|search for|search|google|look up)\s+(.+)$', clean_text)
         if search_match:
             query = search_match.group(1).strip()
@@ -136,64 +253,89 @@ class IntentRouter:
             self.history.append({"user": clean_text, "mxb": summary})
             return f"MXB: {reply}\n{summary}"
 
-        # 9. Clipboard Intelligence
-        if any(p in clean_text for p in ["summarize clipboard", "analyze clipboard", "read clipboard", "explain clipboard", "what did i copy", "what i just copied"]):
+        # 14. Clipboard Analysis
+        if any(p in clean_text for p in ["summarize clipboard", "read clipboard", "explain clipboard", "what did i copy"]):
             reply = "Reading your clipboard now."
             self.tts.speak(reply)
-            analysis = self.executor.execute_action("analyze_clipboard", "summarize clearly in 1 or 2 sentences")
-            self.tts.speak("Here is the analysis of your clipboard.")
+            analysis = self.executor.execute_action("analyze_clipboard", "summarize clearly in 1 or 2 spoken sentences")
+            self.tts.speak(analysis)
             self.history.append({"user": clean_text, "mxb": analysis})
             return f"MXB: {reply}\n{analysis}"
 
-        # 10. Memory Saving
+        # 15. Long-term Memory
         if clean_text.startswith("remember that ") or clean_text.startswith("remember "):
             fact = re.sub(r'^remember(?:\s+that)?\s+', '', clean_text).strip()
             if fact:
                 self.memory.remember(fact)
-                reply = f"I've saved that to my long-term memory."
+                reply = "I've saved that to my long-term memory."
                 self.tts.speak(reply)
                 self.history.append({"user": clean_text, "mxb": reply})
                 return f"MXB: {reply}\nSaved: {fact}"
 
         # =========================================================================
-        # Layer 2: Conversational "Second Brain" Speech Understanding
+        # TIER 2: LLM MULTI-STEP ACTION PLANNER & SECOND BRAIN REASONING
         # =========================================================================
-        print("[Router] No direct fast-path match. Sending to LLM Speech Understanding...")
+        log.info("IntentRouter: No direct match in Tier 1. Delegating to LLM Multi-Step Planner...")
         return self._route_to_llm(transcription)
 
     def _query_nvidia_llm(self, prompt: str, api_key: str) -> dict | None:
-        """High-speed speech understanding via NVIDIA Build Cloud LLM (0.3s latency)."""
-        url = "https://integrate.api.nvidia.com/v1/chat/completions"
+        cfg_llm = self.config.get("llm", {})
+        url = cfg_llm.get("api_url", "https://integrate.api.nvidia.com/v1/chat/completions")
+        model_name = cfg_llm.get("model", "meta/llama-3.1-8b-instruct")
+
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         system_prompt = (
-            "You are MXB (Machine eXecutive Brain), a high-speed AI executive brain for the user.\n"
-            "You MUST respond with ONLY valid JSON containing EXACTLY three keys: \"action\", \"target\", and \"reply\".\n\n"
+            "You are MXB (Machine eXecutive Brain), an ultra-fast AI desktop assistant capable of full computer operation.\n"
+            "You MUST respond ONLY with valid JSON.\n\n"
+            "JSON Format:\n"
+            "{\n"
+            '  "reply": "Concise spoken confirmation or answer",\n'
+            '  "plan": [\n'
+            '    {"action": "<action_name>", "target": "<target_value>", "duration": 0.0}\n'
+            '  ]\n'
+            "}\n\n"
             "Available Actions:\n"
-            "- \"open_app\": Open application (target: exact app name)\n"
-            "- \"close_app\": Close application (target: exact app name)\n"
-            "- \"type_text\": Type dictated text on keyboard (target: text to type)\n"
-            "- \"search_web\": Search online (target: search query)\n"
-            "- \"media_control\": Volume/playback (target: volume_up, volume_down, mute, play, pause)\n"
-            "- \"manage_window\": Window control (target: minimize, maximize, close)\n"
-            "- \"notify\": Windows desktop toast (target: message)\n"
-            "- \"check_system\": Hardware metrics (target: none)\n"
-            "- \"remember_fact\": Save to long-term memory (target: fact to save)\n"
-            "- \"analyze_clipboard\": Analyze clipboard (target: instruction)\n"
-            "- \"conversation\": Answer general questions, trivia, coding help directly (target: none)\n"
+            '- "open_app": (target: app name)\n'
+            '- "close_app": (target: app name)\n'
+            '- "click_text": (target: button/text label to click on screen)\n'
+            '- "left_click": (target: "x,y" or "")\n'
+            '- "right_click": (target: "x,y" or "")\n'
+            '- "double_click": (target: "x,y" or "")\n'
+            '- "scroll": (target: "down" or "up")\n'
+            '- "type_text": (target: text to type)\n'
+            '- "press_key": (target: enter, esc, tab, backspace, space, etc.)\n'
+            '- "shortcut": (target: ctrl+c, ctrl+v, ctrl+t, ctrl+l, alt+tab, win+d, etc.)\n'
+            '- "manage_window": (target: minimize, maximize, close, left, right)\n'
+            '- "show_desktop": (target: "")\n'
+            '- "open_url": (target: website url)\n'
+            '- "search_web": (target: search query)\n'
+            '- "create_folder": (target: folder name or path)\n'
+            '- "create_file": (target: "filename.txt :: file contents")\n'
+            '- "list_files": (target: folder name)\n'
+            '- "check_system": (target: "")\n'
+            '- "capture_screen": (target: "")\n'
+            '- "read_screen": (target: "")\n'
+            '- "remember_fact": (target: fact to store)\n'
+            '- "analyze_clipboard": (target: instruction)\n'
+            '- "wait": (target: duration in seconds, e.g. "1.5")\n'
+            '- "conversation": (target: none - just provide the answer in the reply field)\n\n'
+            "For compound instructions (e.g. 'open notepad and type hello', 'open chrome and search X'), break them down into ordered plan steps!"
         )
+
         payload = {
-            "model": "meta/llama-3.1-8b-instruct",
+            "model": model_name,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.2,
-            "max_tokens": 150,
+            "max_tokens": 250,
             "response_format": {"type": "json_object"}
         }
+
         resp = requests.post(url, headers=headers, json=payload, timeout=8)
         if resp.status_code == 200:
             content = resp.json()["choices"][0]["message"]["content"].strip()
@@ -205,62 +347,54 @@ class IntentRouter:
                 content = content[:-3]
             return json.loads(content.strip())
         else:
-            print(f"[NVIDIA Build LLM] Response {resp.status_code}: {resp.text}")
+            log.warning(f"NVIDIA Build LLM returned {resp.status_code}: {resp.text}")
             return None
 
     def _route_to_llm(self, text: str) -> str:
         try:
-            # 1. Fetch relevant User Memories
-            saved_memories = self.memory.get_memories(query=text, limit=5)
+            # 1. Fetch relevant user memories
+            saved_memories = self.memory.get_memories(query=text, limit=4)
             memory_context = ""
             if saved_memories:
                 memory_context = "User's Saved Memories:\n" + "\n".join([f"- {m}" for m in saved_memories]) + "\n\n"
-                
-            # 2. Add Recent Conversation Context
-            history_context = "Recent Conversation Context:\n"
-            if not self.history:
-                history_context += "No previous context.\n\n"
-            else:
+
+            # 2. Conversation history context
+            history_context = ""
+            if self.history:
+                history_context = "Recent Conversation Context:\n"
                 for turn in self.history:
                     history_context += f"User: {turn['user']}\nMXB: {turn['mxb']}\n"
                 history_context += "\n"
 
-            # 3. Add Current System Time
-            from datetime import datetime
-            current_time = datetime.now().strftime("%A, %B %d, %Y - %I:%M %p")
-            time_context = f"Current System Time: {current_time}\n\n"
-
-            # 4. Add Active Window Context
+            # 3. Current active window context
             active_window_context = ""
             try:
-                import pygetwindow as gw
-                active_window = gw.getActiveWindow()
-                if active_window and active_window.title:
-                    active_window_context = f"User's Current Active Window: '{active_window.title}'\n\n"
+                active = gw.getActiveWindow()
+                if active and active.title:
+                    active_window_context = f"Active Window: '{active.title}'\n\n"
             except Exception:
                 pass
 
-            # 5. Add Environment Context (Weather/Location)
-            from utils.environment import EnvironmentContext
-            env_context = f"User's Physical Environment: {EnvironmentContext.get_weather_and_location()}\n\n"
+            # 4. Environmental context (cached)
+            env_context = f"{EnvironmentContext.get_weather_and_location()}\n\n"
 
-            augmented_prompt = f"{memory_context}{history_context}{time_context}{active_window_context}{env_context}User Command: '{text}'"
+            augmented_prompt = f"{memory_context}{history_context}{active_window_context}{env_context}User Command: '{text}'"
 
-            action_data = None
+            plan_data = None
 
-            # Path A: Try NVIDIA Build Cloud LLM (Ultra-fast cloud inference ~0.3s)
+            # Path A: NVIDIA Build Cloud LLM
             nv_key = CredentialsManager.get_nvidia_api_key()
             if nv_key:
                 try:
-                    print("[Router] Querying NVIDIA Build Cloud LLM for speech understanding...")
-                    action_data = self._query_nvidia_llm(augmented_prompt, nv_key)
+                    log.info("Router: Planning with NVIDIA Cloud LLM...")
+                    plan_data = self._query_nvidia_llm(augmented_prompt, nv_key)
                 except Exception as e:
-                    print(f"[Router] NVIDIA Build LLM exception: {e}. Falling back to local Ollama...")
-                    action_data = None
+                    log.warning(f"NVIDIA Cloud LLM exception: {e}. Falling back to Ollama...")
+                    plan_data = None
 
-            # Path B: Local Ollama CPU Fallback
-            if not action_data:
-                print("[Router] Using local Ollama engine fallback...")
+            # Path B: Local Ollama Fallback
+            if not plan_data:
+                log.info("Router: Planning with Local Ollama fallback...")
                 payload = {
                     "model": "mxb-brain",
                     "prompt": augmented_prompt,
@@ -268,52 +402,46 @@ class IntentRouter:
                     "format": "json",
                     "keep_alive": "1h",
                     "options": {
-                        "num_predict": 100, 
-                        "num_ctx": 1024, 
-                        "temperature": 0.2,
-                        "num_thread": 4
+                        "num_predict": 150,
+                        "num_ctx": 2048,
+                        "temperature": 0.2
                     }
                 }
-                
-                response = requests.post("http://localhost:11434/api/generate", json=payload, timeout=45)
-                if response.status_code == 404:
-                    error = "I cannot reach my AI brain. Please verify Ollama is running."
-                    self.tts.speak(error)
-                    return error
-                    
-                response.raise_for_status()
-                data = response.json()
-                raw_response = data.get("response", "{}").strip()
-                if raw_response.startswith("```json"):
-                    raw_response = raw_response[7:]
-                if raw_response.startswith("```"):
-                    raw_response = raw_response[3:]
-                if raw_response.endswith("```"):
-                    raw_response = raw_response[:-3]
-                action_data = json.loads(raw_response.strip())
+                resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=35)
+                if resp.status_code == 200:
+                    raw_resp = resp.json().get("response", "{}").strip()
+                    if raw_resp.startswith("```json"):
+                        raw_resp = raw_resp[7:]
+                    if raw_resp.startswith("```"):
+                        raw_resp = raw_resp[3:]
+                    if raw_resp.endswith("```"):
+                        raw_resp = raw_resp[:-3]
+                    plan_data = json.loads(raw_resp.strip())
 
-            action = action_data.get("action", "unknown")
-            target = action_data.get("target", "none")
-            reply = action_data.get("reply", "")
-            
+            if not plan_data:
+                fallback_msg = "I understood your request but could not reach my reasoning engine."
+                self.tts.speak(fallback_msg)
+                return fallback_msg
+
+            reply = plan_data.get("reply", "")
+            steps = plan_data.get("plan", [])
+
+            # Handle older single-action format if returned
+            if not steps and "action" in plan_data and plan_data["action"] not in ["unknown", "conversation", "none"]:
+                steps = [{"action": plan_data["action"], "target": plan_data.get("target", "")}]
+
             if reply:
                 self.tts.speak(reply)
                 self.history.append({"user": text, "mxb": reply})
-            
-            if action not in ["unknown", "conversation", "none"]:
-                exec_result = self.executor.execute_action(action, target)
-                return f"MXB: {reply}\nAction: {exec_result}"
-            
+
+            if steps:
+                results = self.executor.planner.execute_plan(steps)
+                summary_actions = "; ".join(results)
+                return f"MXB: {reply}\nActions: {summary_actions}"
+
             return f"MXB: {reply}"
-            
-        except requests.exceptions.ReadTimeout:
-            timeout_msg = "My deep-reasoning model is taking a while on this CPU. Let me know if you want me to perform a specific OS action."
-            self.tts.speak(timeout_msg)
-            return f"MXB: {timeout_msg}"
-        except requests.exceptions.ConnectionError:
-            error = "Ollama is not running. Please start the Ollama server."
-            self.tts.speak(error)
-            return error
+
         except Exception as e:
             traceback.print_exc()
-            return f"Speech Understanding failed: {str(e)}"
+            log.error(f"Router LLM Error: {e}")
+            return f"Speech Understanding Error: {e}"
