@@ -415,3 +415,14 @@ Empirical performance benchmarks measured on host hardware (`Intel Core i3-1005G
 Conclusion: Sub-25ms retrieval latency leaves ample budget for speech synthesis and LLM token generation.
 
 
+## 25. Retrieval Quality Evaluation Metrics (MRR & HitRate@K)
+To prevent retrieval degradation across code updates, MXB incorporates an automated evaluation harness measuring information retrieval metrics.
+
+### Key Metrics
+- **Mean Reciprocal Rank (MRR)**:
+  $$\text{MRR} = \frac{1}{|Q|} \sum_{i=1}^{|Q|} \frac{1}{\text{rank}_i}$$
+  Measures how close the first relevant passage is to the top of the ranked list. Target: **MRR > 0.85**.
+- **HitRate@5**:
+  Percentage of test queries where the ground-truth document appears within the top-5 retrieved results. Target: **HitRate@5 > 94%**.
+
+
