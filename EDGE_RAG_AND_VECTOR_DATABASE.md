@@ -285,3 +285,12 @@ class DocumentWatcher(FileSystemEventHandler):
 Changes are debounced by 2.0 seconds to prevent thrashing during active editing sessions.
 
 
+## 15. Semantic Clipboard History Vectorization
+MXB maintains an ephemeral vector index of recent clipboard text entries, enabling conversational queries over recently copied information.
+
+### Workflow
+1. **Clipboard Hook**: `pyperclip` periodically polls clipboard text changes with SHA-256 deduplication.
+2. **Instant Vectorization**: Captured text is embedded into a dedicated SQLite table `clipboard_vectors` (retained for 48 hours).
+3. **Conversational Recall**: When user says: *"What was that API URL I copied earlier?"*, MXB performs vector similarity over recent clipboard entries and speaks the answer.
+
+
