@@ -249,3 +249,16 @@ Injecting raw 512-token chunks often floods the LLM context window with irreleva
 3. **Token Conservation**: Reduces prompt injection size by **45–60%**, preserving LLM generation speed on CPU.
 
 
+## 13. Dynamic Context Budget Management
+MXB dynamically partitions its prompt context budget based on the active LLM backend and available hardware memory.
+
+### Context Budget Allocation Matrix
+| Model Backend | Total Context | System Prompt | User History | RAG Retrieval Budget | Generation Reserve |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Local Ollama (CPU)** | 2,048 tokens | 300 tokens | 250 tokens | **1,100 tokens (~3 chunks)**| 398 tokens |
+| **Local Ollama (dGPU)**| 4,096 tokens | 450 tokens | 600 tokens | **2,400 tokens (~6 chunks)**| 646 tokens |
+| **NVIDIA Cloud NIM**   | 8,192 tokens | 500 tokens | 1,200 tokens| **5,000 tokens (~12 chunks)**| 1,492 tokens |
+
+If retrieved chunks exceed the designated budget, lowest-scoring passages from Stage 2 re-ranking are systematically dropped.
+
+
