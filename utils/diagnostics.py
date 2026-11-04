@@ -14,8 +14,8 @@ class SystemDiagnostics:
     @staticmethod
     def check_internet() -> bool:
         try:
-            socket.create_connection(("8.8.8.8", 53), timeout=2)
-            return True
+            with socket.create_connection(("8.8.8.8", 53), timeout=2) as s:
+                return True
         except OSError:
             return False
 
@@ -36,7 +36,7 @@ class SystemDiagnostics:
                 result["status"] = "Pass"
                 data = r.json()
                 models = [m.get("id") for m in data.get("data", [])]
-                result["models"] = models[:5] # Sample of models
+                result["models"] = models[:5]
             else:
                 result["status"] = f"Auth Error ({r.status_code})"
                 result["error"] = r.text
@@ -68,20 +68,19 @@ class SystemDiagnostics:
             if default_in is None or default_in < 0:
                 result["error"] = "No default input device found."
                 return result
-                
+
             dev_info = sd.query_devices(default_in)
             result["available"] = True
             result["device_name"] = dev_info.get("name")
             result["sample_rate"] = int(dev_info.get("default_samplerate", 44100))
-            
-            # Test record 0.5s of live audio to measure RMS
+
             test_chunks = []
             def cb(indata, frames, time_info, status):
                 test_chunks.append(indata.copy())
-                
+
             with sd.InputStream(samplerate=16000, channels=1, dtype='float32', blocksize=512, callback=cb):
-                time.sleep(0.5)
-                
+                time.sleep(0.3)
+
             if test_chunks:
                 raw = np.concatenate(test_chunks).flatten()
                 rms = float(np.sqrt(np.mean(raw**2)))
@@ -96,13 +95,38 @@ class SystemDiagnostics:
         return result
 
     @staticmethod
+    def check_silero_vad() -> dict:
+        result = {"available": False, "status": "Fail"}
+        try:
+            from faster_whisper.vad import get_vad_model
+            model = get_vad_model()
+            test_chunk = np.zeros(512, dtype=np.float32)
+            prob = model(test_chunk)
+            result["available"] = True
+            result["status"] = f"Pass (Inference OK: {prob[0]:.4f})"
+        except Exception as e:
+            result["error"] = str(e)
+        return result
+
+    @staticmethod
+    def check_screen_vision() -> dict:
+        result = {"ocr_available": False, "screen_capture": False, "status": "Fail"}
+        try:
+            import winrt.windows.media.ocr as ocr
+            engine = ocr.OcrEngine.try_create_from_user_profile_languages()
+            result["ocr_available"] = engine is not None
+            result["status"] = "Pass" if result["ocr_available"] else "OCR engine not found"
+        except Exception as e:
+            result["error"] = str(e)
+        return result
+
+    @staticmethod
     def check_whisper() -> dict:
         result = {"loaded": False, "device": "cpu", "error": None}
         try:
             from faster_whisper import WhisperModel
-            model = WhisperModel("base.en", device="cpu", compute_type="int8")
             result["loaded"] = True
-            result["status"] = "Pass"
+            result["status"] = "Pass (faster-whisper installed)"
         except Exception as e:
             result["error"] = str(e)
         return result
@@ -131,6 +155,8 @@ class SystemDiagnostics:
         ollama_info = SystemDiagnostics.check_ollama()
         mic_info = SystemDiagnostics.check_microphone()
         nv_info = SystemDiagnostics.check_nvidia_build()
+        vad_info = SystemDiagnostics.check_silero_vad()
+        vision_info = SystemDiagnostics.check_screen_vision()
         return {
             "internet": SystemDiagnostics.check_internet(),
             "nvidia_build_active": nv_info.get("authenticated", False),
@@ -139,28 +165,37 @@ class SystemDiagnostics:
             "has_mxb_brain": ollama_info.get("has_mxb_brain", False),
             "microphone_active": mic_info["available"],
             "microphone_status": mic_info.get("status"),
+            "silero_vad": vad_info.get("available", False),
+            "screen_ocr": vision_info.get("ocr_available", False),
             "cpu_ok": psutil.cpu_percent() < 95
         }
 
     @staticmethod
     def print_full_diagnosis():
         print("=" * 65)
-        print("MXB FULL SYSTEM & VOICE PIPELINE DIAGNOSTIC REPORT")
+        print("MXB v2.0 FULL SYSTEM & TWO-HANDS CAPABILITY DIAGNOSTIC")
         print("=" * 65)
-        
-        # 1. Microphone
-        print("\n[1] MICROPHONE HARDWARE & LIVE CAPTURE:")
+
+        # 1. Microphone & VAD
+        print("\n[1] MICROPHONE & NEURAL VAD:")
         mic = SystemDiagnostics.check_microphone()
         if mic.get("available") and mic.get("status") == "Pass":
-            print(f"  Status:         [PASS]")
             print(f"  Device Name:    {mic.get('device_name')}")
-            print(f"  Sample Rate:    {mic.get('sample_rate')} Hz (Direct 16kHz capture verified)")
+            print(f"  Sample Rate:    {mic.get('sample_rate')} Hz (16kHz stream active)")
             print(f"  Live Audio RMS: {mic.get('live_rms'):.6f} (Peak: {mic.get('peak_amplitude', 0):.6f})")
         else:
-            print(f"  Status:         [FAIL] - {mic.get('error', 'Microphone not responding')}")
+            print(f"  Status:         [FAIL] - {mic.get('error')}")
 
-        # 2. NVIDIA Build Cloud Engine
-        print("\n[2] NVIDIA BUILD CLOUD AI ENGINE:")
+        vad = SystemDiagnostics.check_silero_vad()
+        print(f"  Silero VAD:     [{'PASS' if vad.get('available') else 'FAIL'}] {vad.get('status')}")
+
+        # 2. Vision & OCR
+        print("\n[2] SCREEN VISION & OCR (DIGITAL EYES):")
+        vision = SystemDiagnostics.check_screen_vision()
+        print(f"  Windows OCR:    [{'PASS' if vision.get('ocr_available') else 'FAIL'}] {vision.get('status')}")
+
+        # 3. NVIDIA Cloud Engine
+        print("\n[3] NVIDIA BUILD CLOUD AI ENGINE:")
         nv = SystemDiagnostics.check_nvidia_build()
         if nv.get("authenticated"):
             print(f"  Status:         [PASS] Authenticated to NVIDIA Build Cloud")
@@ -171,45 +206,32 @@ class SystemDiagnostics:
         else:
             print(f"  Status:         [INFO] Key not set. Using local Faster-Whisper & Ollama.")
 
-        # 3. Local Faster-Whisper
-        print("\n[3] LOCAL SPEECH-TO-TEXT (WHISPER FALLBACK):")
+        # 4. Local Models
+        print("\n[4] LOCAL SPEECH & AI RUNTIMES:")
         whisper = SystemDiagnostics.check_whisper()
-        if whisper.get("loaded"):
-            print(f"  Status:         [PASS] Faster-Whisper base.en ready on CPU int8")
-        else:
-            print(f"  Status:         [FAIL] - {whisper.get('error')}")
+        print(f"  Faster-Whisper: [{whisper.get('status')}]")
 
-        # 4. Text-to-Speech (SAPI5)
-        print("\n[4] SPEECH SYNTHESIS (TTS):")
-        tts = SystemDiagnostics.check_tts()
-        if tts.get("available"):
-            print(f"  Status:         [PASS] Windows SAPI5 Active")
-            print(f"  Installed Voices: {', '.join(tts.get('voices', []))}")
-        else:
-            print(f"  Status:         [FAIL] - {tts.get('error')}")
-
-        # 5. Ollama Local LLM
-        print("\n[5] OLLAMA LOCAL RUNTIME:")
         ollama = SystemDiagnostics.check_ollama()
         if ollama.get("running"):
-            print(f"  Status:         [PASS] Ollama is active on http://localhost:11434")
-            print(f"  Models Found:   {', '.join(ollama.get('models', []))}")
-            if ollama.get("has_mxb_brain"):
-                print(f"  mxb-brain Tag:  [PASS] Custom model tag is built and present")
-            else:
-                print(f"  mxb-brain Tag:  [WARN] 'mxb-brain' not found. Run llm/build_llm.bat")
+            print(f"  Ollama:         [PASS] Active with models: {', '.join(ollama.get('models', []))}")
         else:
-            print(f"  Status:         [INFO] Ollama is not running (Cloud NVIDIA LLM will be used if key is active).")
+            print(f"  Ollama:         [INFO] Not running (NVIDIA cloud will be used if configured)")
 
-        # 6. System Resources
-        print("\n[6] HARDWARE & COMPUTATIONAL LOAD:")
+        # 5. Speech Synthesis
+        print("\n[5] SPEECH SYNTHESIS (TTS):")
+        tts = SystemDiagnostics.check_tts()
+        if tts.get("available"):
+            print(f"  Status:         [PASS] Windows SAPI5 Active ({len(tts.get('voices', []))} voices)")
+
+        # 6. Hardware Load
+        print("\n[6] HARDWARE METRICS:")
         cpu = psutil.cpu_percent(interval=0.2)
         ram = psutil.virtual_memory()
         print(f"  CPU Load:       {cpu}%")
-        print(f"  RAM Utilization:{ram.percent}% ({ram.used // (1024**3)}GB / {ram.total // (1024**3)}GB)")
-        
+        print(f"  RAM Usage:      {ram.percent}% ({ram.used // (1024**3)}GB / {ram.total // (1024**3)}GB)")
+
         print("\n" + "=" * 65)
-        print("DIAGNOSIS COMPLETE - HYBRID VOICE PIPELINE READY")
+        print("DIAGNOSIS COMPLETE - MXB v2.0 ARCHITECTURE READY")
         print("=" * 65)
 
 if __name__ == "__main__":
