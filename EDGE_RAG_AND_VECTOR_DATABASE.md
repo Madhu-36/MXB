@@ -179,3 +179,27 @@ CREATE INDEX idx_docs_modified ON document_nodes(modified_timestamp);
 ```
 
 
+## 9. Hybrid Search: Dense Vector & Sparse BM25 Fusion
+Dense vector retrieval excels at conceptual semantic similarity but frequently struggles with exact alphanumeric identifiers (e.g., error codes `0x80070005`, function names `calculate_rms`, or ticket IDs `MXB-104`). MXB fuses dense semantic vectors with **SQLite FTS5** sparse BM25 text search.
+
+```
+User Query: "find error 0x80070005 in audio pipeline"
+       |
+       +---> [ Dense Vector Search (sqlite-vec) ] ------> Rank List A (Conceptual matches)
+       |
+       +---> [ Sparse BM25 Search (SQLite FTS5) ] ------> Rank List B (Exact keyword matches)
+       |
+       v
+  [ Reciprocal Rank Fusion (RRF) ] --------------------> Final Ranked Top-K Documents
+```
+
+### SQLite FTS5 Full-Text Table
+```sql
+CREATE VIRTUAL TABLE fts_documents USING fts5(
+  content,
+  header_path,
+  tokenize='porter unicode61'
+);
+```
+
+
