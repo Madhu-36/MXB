@@ -355,3 +355,13 @@ User Question: "When is Project Alpha releasing and who leads it?"
 ```
 
 
+## 20. Hallucination Mitigation & Attribution Verifier
+To prevent LLM confabulation, MXB implements a post-generation **Attribution Verifier**.
+
+### Verification Algorithm
+1. **Entity Extraction**: Extracts proper nouns, numerical quantities, and dates from the LLM reply.
+2. **Passage Cross-Check**: Confirms that every extracted entity exists verbatim within the retrieved context passages.
+3. **Confidence Scoring**: If an entity in the reply is unsupported by the context, MXB prefixes the speech output with:
+   *"Based on your notes, [answer], but please verify since this was not explicitly confirmed."*
+
+
