@@ -365,3 +365,12 @@ To prevent LLM confabulation, MXB implements a post-generation **Attribution Ver
    *"Based on your notes, [answer], but please verify since this was not explicitly confirmed."*
 
 
+## 21. Offline Web Knowledge Caching & Semantic Search
+When MXB performs online web searches via DuckDuckGo, retrieved articles and documentation pages are automatically ingested into an offline semantic cache.
+
+### Offline Knowledge Vault
+- **Cache Format**: Clean markdown extracts stored in `~/.mxb/web_cache/`.
+- **Automatic TTL**: Retains cached documentation for 30 days.
+- **Offline Querying**: When internet connectivity drops, queries are automatically routed to the offline web cache, enabling answers without active network access.
+
+
