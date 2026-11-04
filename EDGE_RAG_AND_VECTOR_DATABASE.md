@@ -307,3 +307,21 @@ Where:
 Passages originating from the file or application currently focused in `pygetwindow` receive an automatic **+25% relevance boost**, prioritizing immediate context.
 
 
+## 17. Security & Encryption at Rest via SQLCipher
+Personal knowledge bases contain sensitive notes, proprietary code, and personal communications. MXB secures its local database using **SQLCipher AES-256**.
+
+### Encryption Architecture
+```python
+import sqlite3
+
+def open_secure_database(db_path: str, master_key: str):
+    conn = sqlite3.connect(db_path)
+    conn.execute(f"PRAGMA key = '{master_key}';")
+    conn.execute("PRAGMA cipher_compatibility = 4;")
+    conn.execute("PRAGMA kdf_iter = 64000;")
+    return conn
+```
+- **Key Derivation**: PBKDF2 with 64,000 SHA-512 iterations.
+- **Page Encryption**: Every 4096-byte SQLite database page is individually encrypted with CBC mode AES-256 and HMAC verification.
+
+
