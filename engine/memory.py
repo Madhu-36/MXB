@@ -1,63 +1,91 @@
 import json
 import os
+import threading
 from pathlib import Path
+from thefuzz import fuzz
+from utils.logger import log
 
 class MemoryBank:
     """
-    MXB's Long-Term Memory Storage.
-    Stores and retrieves facts about the user in a persistent JSON database.
+    MXB Long-Term Memory Storage.
+    Thread-safe persistent knowledge bank for personal facts, preferences,
+    and user reminders with fuzzy semantic keyword scoring.
     """
+
     def __init__(self):
-        self.filepath = Path(__file__).parent.parent / 'memory_bank.json'
+        self.filepath = Path(__file__).parent.parent / "memory_bank.json"
+        self._lock = threading.Lock()
         self._ensure_db()
 
     def _ensure_db(self):
-        try:
-            if not os.path.exists(self.filepath) or os.path.getsize(self.filepath) == 0:
-                with open(self.filepath, 'w') as f:
+        with self._lock:
+            try:
+                if not self.filepath.exists() or self.filepath.stat().st_size == 0:
+                    with open(self.filepath, "w", encoding="utf-8") as f:
+                        json.dump([], f)
+                else:
+                    with open(self.filepath, "r", encoding="utf-8") as f:
+                        json.load(f)
+            except Exception:
+                log.warning("Memory: Database corrupted or unreadable. Initializing fresh memory array.")
+                with open(self.filepath, "w", encoding="utf-8") as f:
                     json.dump([], f)
-            else:
-                with open(self.filepath, 'r') as f:
-                    json.load(f)
-        except json.JSONDecodeError:
-            print("[Memory] Database corrupted or invalid JSON. Recreating...")
-            with open(self.filepath, 'w') as f:
-                json.dump([], f)
 
     def remember(self, fact: str):
-        print(f"[Memory] Saving new fact: {fact}")
-        with open(self.filepath, 'r') as f:
-            memories = json.load(f)
-            
-        memories.append(fact)
-        
-        # Keep the last 50 memories to avoid blowing up the LLM context window
-        if len(memories) > 50:
-            memories = memories[-50:]
-            
-        with open(self.filepath, 'w') as f:
-            json.dump(memories, f, indent=2)
+        fact = fact.strip()
+        if not fact:
+            return
 
-    def get_memories(self, query=None, limit=10):
+        with self._lock:
+            try:
+                with open(self.filepath, "r", encoding="utf-8") as f:
+                    memories = json.load(f)
+
+                # Avoid duplicate entries
+                if any(fuzz.ratio(fact.lower(), m.lower()) > 92 for m in memories):
+                    log.info(f"Memory: Fact already exists in memory: '{fact}'")
+                    return
+
+                memories.append(fact)
+                # Keep up to 100 recent facts
+                if len(memories) > 100:
+                    memories = memories[-100:]
+
+                with open(self.filepath, "w", encoding="utf-8") as f:
+                    json.dump(memories, f, indent=2)
+
+                log.info(f"Memory: Successfully saved fact: '{fact}'")
+            except Exception as e:
+                log.error(f"Memory: Failed to save fact: {e}")
+
+    def get_memories(self, query: str = None, limit: int = 5) -> list[str]:
         self._ensure_db()
-        with open(self.filepath, 'r') as f:
-            memories = json.load(f)
-            
+        with self._lock:
+            try:
+                with open(self.filepath, "r", encoding="utf-8") as f:
+                    memories = json.load(f)
+            except Exception:
+                return []
+
         if not memories:
             return []
-            
-        if not query:
+
+        if not query or not query.strip():
             return memories[-limit:]
-            
-        # Basic keyword scoring retrieval
-        import re
-        query_words = set(re.findall(r'\w+', query.lower()))
-        scored_memories = []
+
+        query_clean = query.lower().strip()
+        scored = []
         for mem in memories:
-            mem_words = set(re.findall(r'\w+', mem.lower()))
-            score = len(query_words.intersection(mem_words))
-            scored_memories.append((score, mem))
-            
-        # Sort by score descending, return top 'limit'
-        scored_memories.sort(key=lambda x: x[0], reverse=True)
-        return [m[1] for m in scored_memories[:limit]]
+            ratio = fuzz.partial_ratio(query_clean, mem.lower())
+            if ratio > 50:
+                scored.append((ratio, mem))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        results = [m[1] for m in scored[:limit]]
+        if not results:
+            # Return last few as general context if query didn't match specifics
+            return memories[-min(3, len(memories)):]
+        return results
+
+# Shared singleton instance
+memory_bank = MemoryBank()
