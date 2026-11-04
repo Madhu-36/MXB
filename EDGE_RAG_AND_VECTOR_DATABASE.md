@@ -141,3 +141,13 @@ When a chunk is generated from a nested section, MXB automatically prepends docu
 This contextual prefix ensures that isolated chunks retain semantic anchors during vector embedding.
 
 
+## 7. Multi-Format Document Ingestion Pipelines
+MXB includes dedicated, format-aware extraction adapters designed for desktop data sources.
+
+### Ingestion Adapters
+- **Markdown / Obsidian**: Preserves frontmatter YAML metadata, resolves `[[wikilinks]]`, strips raw HTML tags, and maintains code fence blocks intact.
+- **PDF Documents**: Employs `pypdf` with native layout analysis, extracting running headers, body text, tables, and footnote references.
+- **Source Code Repositories**: Uses AST parsing (Abstract Syntax Tree) to extract complete function definitions, class structures, and docstrings rather than arbitrary line breaks.
+- **Plain Text & Transcripts**: Segments timestamped audio transcripts into 60-second conversational turns.
+
+
