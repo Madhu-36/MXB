@@ -325,3 +325,12 @@ def open_secure_database(db_path: str, master_key: str):
 - **Page Encryption**: Every 4096-byte SQLite database page is individually encrypted with CBC mode AES-256 and HMAC verification.
 
 
+## 18. Zero-Copy Embedding Batching via DirectML
+To avoid saturating the host CPU during bulk document ingestion, MXB offloads ONNX embedding extraction to the integrated GPU (Intel UHD Graphics) via DirectML.
+
+### DirectML Tensor Pipeline
+- **Execution Provider**: `DmlExecutionProvider` in ONNX Runtime.
+- **Dynamic Batching**: Groups pending document chunks into batches of 16 vectors.
+- **Compute Offload**: Leaves CPU P-cores free for voice pipeline VAD and responsive PySide6 UI rendering.
+
+
