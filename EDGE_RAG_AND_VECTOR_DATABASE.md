@@ -57,3 +57,32 @@ Selecting the optimal embedding model requires balancing semantic clustering qua
 MXB adopts `nomic-embed-text-v1.5` with Matryoshka Representation Learning (MRL), allowing 768-dimensional embeddings to be truncated to **256 dimensions** with less than 1.5% loss in retrieval accuracy, reducing memory footprint and cosine vector calculation time by 66%.
 
 
+## 3. SQLite-Vec In-Process Vector Extension Integration
+Rather than maintaining a separate vector database process, MXB integrates **`sqlite-vec`**, a modern, lightweight C-extension for SQLite written specifically for fast vector math and zero external dependencies.
+
+### Virtual Table Schema Definition
+```sql
+-- Load vector search extension dynamically
+SELECT load_extension('sqlite_vec');
+
+-- Create persistent vector virtual table
+CREATE VIRTUAL TABLE vec_documents USING vec0(
+  chunk_id INTEGER PRIMARY KEY,
+  embedding float[256] distance_metric=cosine
+);
+
+-- Metadata correlation table
+CREATE TABLE document_metadata (
+  chunk_id INTEGER PRIMARY KEY,
+  file_path TEXT NOT NULL,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  checksum TEXT NOT NULL
+);
+```
+
+### High-Speed Vector Insertion
+Vector arrays are encoded as continuous 32-bit float buffers and inserted directly through standard parameterized SQLite `INSERT` statements, enabling atomic transactions across metadata and embeddings.
+
+
