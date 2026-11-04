@@ -151,3 +151,31 @@ MXB includes dedicated, format-aware extraction adapters designed for desktop da
 - **Plain Text & Transcripts**: Segments timestamped audio transcripts into 60-second conversational turns.
 
 
+## 8. Metadata Schema & Document Lineage Tracking
+To support filtered retrieval (e.g. *"Only search files modified this week in my Obsidian vault"*), vector chunks are linked to structured metadata.
+
+### SQLite Relational Schema
+```sql
+CREATE TABLE document_nodes (
+    id TEXT PRIMARY KEY,
+    source_uri TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    file_size_bytes INTEGER,
+    modified_timestamp INTEGER,
+    sha256_hash TEXT NOT NULL
+);
+
+CREATE TABLE chunk_nodes (
+    chunk_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doc_id TEXT REFERENCES document_nodes(id) ON DELETE CASCADE,
+    chunk_index INTEGER,
+    token_count INTEGER,
+    content TEXT NOT NULL,
+    header_path TEXT
+);
+
+CREATE INDEX idx_chunks_doc_id ON chunk_nodes(doc_id);
+CREATE INDEX idx_docs_modified ON document_nodes(modified_timestamp);
+```
+
+
