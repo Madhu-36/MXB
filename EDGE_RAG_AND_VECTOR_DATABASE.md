@@ -43,3 +43,17 @@ MXB V2.0 elevates desktop intelligence by transforming disparate local files, pe
 - **Embedded In-Process Engine**: Zero external database daemons or Docker dependencies; uses native SQLite C-extension bindings.
 
 
+## 2. Local Embedding Models & Quantization Strategy
+Selecting the optimal embedding model requires balancing semantic clustering quality (MTEB benchmark scores) with CPU and integrated GPU execution budgets.
+
+### Model Evaluation Matrix
+| Model Identifier | Embedding Dim | Context Window | MTEB Score | Quantized Size | Inference Latency (CPU) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`nomic-embed-text-v1.5`** | 768 / 256 (Matryoshka)| 8,192 tokens | 62.28 | 138 MB (Q8_0) | 18ms / chunk |
+| **`bge-small-en-v1.5`** | 384 | 512 tokens | 62.11 | 67 MB (Q8_0) | 9ms / chunk |
+| **`all-MiniLM-L6-v2`** | 384 | 256 tokens | 56.26 | 45 MB (INT8) | 6ms / chunk |
+
+### Matryoshka Dimensionality Reduction
+MXB adopts `nomic-embed-text-v1.5` with Matryoshka Representation Learning (MRL), allowing 768-dimensional embeddings to be truncated to **256 dimensions** with less than 1.5% loss in retrieval accuracy, reducing memory footprint and cosine vector calculation time by 66%.
+
+
