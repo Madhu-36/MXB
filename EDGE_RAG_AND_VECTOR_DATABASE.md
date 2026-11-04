@@ -203,3 +203,26 @@ CREATE VIRTUAL TABLE fts_documents USING fts5(
 ```
 
 
+## 10. Reciprocal Rank Fusion (RRF) Re-ranking Algorithm
+To combine disparate scoring spaces (cosine distance in $[0, 2]$ vs BM25 unbounded positive scores), MXB utilizes parameter-free **Reciprocal Rank Fusion (RRF)**.
+
+### Mathematical Formulation
+$$\text{RRF\_Score}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}$$
+Where:
+- $M$: Set of ranking systems ($\{\text{Dense Vector}, \text{Sparse BM25}\}$).
+- $r_m(d)$: Rank position of document $d$ in system $m$ (1-indexed).
+- $k$: Smoothing constant, set to $60$ (standardized to prevent top ranks from dominating).
+
+### Implementation
+```python
+def reciprocal_rank_fusion(dense_ranks: list[int], sparse_ranks: list[int], k: int = 60) -> list[tuple[int, float]]:
+    scores = {}
+    for rank, doc_id in enumerate(dense_ranks, start=1):
+        scores[doc_id] = scores.get(doc_id, 0.0) + (1.0 / (k + rank))
+    for rank, doc_id in enumerate(sparse_ranks, start=1):
+        scores[doc_id] = scores.get(doc_id, 0.0) + (1.0 / (k + rank))
+        
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+```
+
+
