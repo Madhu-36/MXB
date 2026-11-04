@@ -240,3 +240,12 @@ relevance_score = cross_encoder.predict([(query, passage_content)])
 Stage 2 selects the top-3 to top-5 most relevant passages for LLM prompt injection.
 
 
+## 12. Contextual Compression & Redundant Token Pruning
+Injecting raw 512-token chunks often floods the LLM context window with irrelevant boilerplate text. MXB applies **Contextual Sentence Extraction**.
+
+### Compression Strategy
+1. **Sentence Boundary Parsing**: Splits candidate chunk into individual sentences.
+2. **Relevance Filtering**: Retains only sentences whose semantic similarity or keyword overlap with the user query exceeds threshold $\theta = 0.55$.
+3. **Token Conservation**: Reduces prompt injection size by **45–60%**, preserving LLM generation speed on CPU.
+
+
