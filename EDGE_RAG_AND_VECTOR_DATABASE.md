@@ -426,3 +426,25 @@ To prevent retrieval degradation across code updates, MXB incorporates an automa
   Percentage of test queries where the ground-truth document appears within the top-5 retrieved results. Target: **HitRate@5 > 94%**.
 
 
+## 26. Continuous Integration & Mock Vector Test Fixtures
+MXB includes pytest test fixtures that execute against in-memory SQLite instances to validate retrieval accuracy in headless CI runners.
+
+### Pytest Fixture
+```python
+import pytest
+import sqlite3
+
+@pytest.fixture
+def test_vector_db():
+    conn = sqlite3.connect(":memory:")
+    # Initialize schema and mock embeddings
+    yield conn
+    conn.close()
+
+def test_hybrid_search_precision(test_vector_db):
+    results = execute_hybrid_query(test_vector_db, query="voice audio vad threshold", top_k=3)
+    assert len(results) > 0
+    assert "audio.py" in results[0]["source_uri"]
+```
+
+
