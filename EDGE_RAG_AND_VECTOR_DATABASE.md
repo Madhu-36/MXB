@@ -383,3 +383,22 @@ Human memory consolidates daily experiences into higher-level abstractions while
 3. **Ebbinghaus Forgetting Decay**: Decrements importance scores of unreferenced transient facts, archiving dead entries after 90 days.
 
 
+## 23. Garbage Collection & Storage Compaction
+Document revisions and file deletions leave orphaned chunks in the vector index. MXB executes scheduled vacuum operations.
+
+### Storage Maintenance Routine
+```python
+def compact_vector_store(db_conn):
+    # 1. Identify orphaned chunk records
+    db_conn.execute("""
+        DELETE FROM chunk_nodes 
+        WHERE doc_id NOT IN (SELECT id FROM document_nodes)
+    """)
+    
+    # 2. Reclaim free space and re-balance B-trees
+    db_conn.execute("VACUUM;")
+    db_conn.execute("PRAGMA optimize;")
+```
+Executes automatically during system idle states when CPU utilization is below 15%.
+
+
