@@ -334,3 +334,24 @@ To avoid saturating the host CPU during bulk document ingestion, MXB offloads ON
 - **Compute Offload**: Leaves CPU P-cores free for voice pipeline VAD and responsive PySide6 UI rendering.
 
 
+## 19. Prompt Synthesis & Citation Grounding Templates
+Retrieved context is injected into the LLM system prompt using structured, citation-grounded formatting.
+
+### Grounding Prompt Structure
+```
+You are MXB, acting as the user's Second Brain.
+Answer the user's question using ONLY the provided verified context passages below.
+For every factual statement you make, cite the corresponding source in brackets (e.g. [Doc 1]).
+
+--- VERIFIED LOCAL CONTEXT ---
+[Doc 1] Source: "C:/Vault/ProjectAlpha.md" (Modified: Yesterday)
+Content: Project Alpha release milestone is scheduled for December 15, 2026.
+
+[Doc 2] Source: "C:/Vault/TeamNotes.md" (Modified: 3 days ago)
+Content: Lead architect for Project Alpha is Sarah Connor.
+------------------------------
+
+User Question: "When is Project Alpha releasing and who leads it?"
+```
+
+
