@@ -12,46 +12,58 @@ class TTSThread(QThread):
         self.text_queue = queue.Queue()
         self.is_running = True
         self._is_speaking = False
+        self.speaker = None
 
     def enqueue(self, text: str):
-        if text and text.strip():
+        if text and text.strip() and self.is_running:
             self.text_queue.put(text.strip())
 
     def stop(self):
         self.is_running = False
+        # Drain any pending queued text
+        while not self.text_queue.empty():
+            try:
+                self.text_queue.get_nowait()
+            except queue.Empty:
+                break
+        # Halt any ongoing speech immediately via SVSFPurgeBeforeSpeak
+        if self.speaker:
+            try:
+                self.speaker.Speak("", 2)
+            except Exception:
+                pass
         self.text_queue.put(None)
-        self.wait(1000)
+        self.wait(1500)
 
     def run(self):
         pythoncom.CoInitialize()
-        speaker = None
         try:
             import win32com.client
-            speaker = win32com.client.Dispatch("SAPI.SpVoice")
+            self.speaker = win32com.client.Dispatch("SAPI.SpVoice")
             # Select Zira or Hazel or female voice if available
-            for v in speaker.GetVoices():
+            for v in self.speaker.GetVoices():
                 desc = v.GetDescription()
                 if "Zira" in desc or "Hazel" in desc or "Female" in desc:
-                    speaker.Voice = v
+                    self.speaker.Voice = v
                     break
-            speaker.Rate = 1 # Clear, natural pacing
+            self.speaker.Rate = 1 # Clear, natural pacing
         except Exception as e:
             print(f"[TTS SAPI Init Error] {e}")
 
         while self.is_running:
             try:
-                text = self.text_queue.get(timeout=0.2)
-                if text is None:
+                text = self.text_queue.get(timeout=0.1)
+                if text is None or not self.is_running:
                     break
                     
                 self._is_speaking = True
                 self.started_speaking.emit()
                 print(f"[MXB Voice] {text}")
                 
-                if speaker:
+                if self.speaker:
                     try:
                         # 0 = SVSFDefault (synchronous speaking so we know exactly when it finishes)
-                        speaker.Speak(text, 0)
+                        self.speaker.Speak(text, 0)
                     except Exception as spk_err:
                         print(f"[TTS Speak Error] {spk_err}")
                 else:
@@ -79,6 +91,13 @@ class TTSThread(QThread):
                 self._is_speaking = False
                 self.finished_speaking.emit()
                 
+        self._is_speaking = False
+        if self.speaker:
+            try:
+                self.speaker.Speak("", 2)
+            except Exception:
+                pass
+            self.speaker = None
         pythoncom.CoUninitialize()
 
 class VoiceSynthesizer(QObject):
