@@ -12,7 +12,8 @@
   "llm": {
     "provider": "nvidia",
     "model": "meta/llama-3.1-8b-instruct",
-    "api_url": "https://integrate.api.nvidia.com/v1/chat/completions"
+    "api_url": "https://integrate.api.nvidia.com/v1/chat/completions",
+    "local_model": "llama3.2:1b"
   },
   "engine": {
     "whisper_model": "base.en",
