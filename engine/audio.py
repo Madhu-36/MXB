@@ -290,18 +290,36 @@ class VoicePipeline(QThread):
                     beam_size=5,
                     vad_filter=True,
                     vad_parameters=dict(
-                        threshold=0.25,
-                        min_speech_duration_ms=80,
+                        threshold=0.35,
+                        min_speech_duration_ms=100,
                         min_silence_duration_ms=300,
-                        speech_pad_ms=250
+                        speech_pad_ms=200
                     ),
                     condition_on_previous_text=False,
-                    initial_prompt="Open application, close window, check system, search the web, volume up, volume down, click button, scroll down, type text, save file.",
-                    no_speech_threshold=0.50
+                    initial_prompt="Desktop commands: open app, close window, check system, click, scroll down, type text.",
+                    no_speech_threshold=0.60
                 )
-                text = " ".join([segment.text for segment in segments]).strip()
+                filtered_segments = []
+                for s in segments:
+                    if getattr(s, "no_speech_prob", 0.0) > 0.65:
+                        continue
+                    if getattr(s, "avg_logprob", 0.0) < -1.4:
+                        continue
+                    clean_seg = s.text.strip()
+                    if clean_seg:
+                        filtered_segments.append(clean_seg)
+                text = " ".join(filtered_segments).strip()
             except Exception as e:
                 log.error(f"Local Faster-Whisper error: {e}")
+
+        # Post-transcription noise & hallucination filter
+        if text:
+            words = text.lower().replace(",", " ").replace("!", " ").replace(".", " ").split()
+            if len(words) >= 4 and len(set(words)) <= 2:
+                log.info(f"Pipeline: Filtered hallucinated repetition: '{text}'")
+                return None
+            if len(text) < 2:
+                return None
 
         return text
 
