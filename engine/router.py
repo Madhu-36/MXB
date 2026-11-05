@@ -72,6 +72,16 @@ class IntentRouter:
             self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}"
 
+        # 0.2. Command History Recall (<1ms)
+        if any(p in clean_text for p in ["last command", "what did i say", "command history", "previous command"]):
+            if self.history:
+                last_turn = self.history[-1]
+                reply = f"Your last command was: '{last_turn['user']}'."
+            else:
+                reply = "No previous command history recorded yet."
+            self.tts.speak(reply)
+            return f"MXB: {reply}"
+
         # 1. System Health / Telemetry
         if any(p in clean_text for p in [
             "check system", "system status", "pc status", "how is my pc", "how is my computer",
