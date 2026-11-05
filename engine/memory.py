@@ -87,5 +87,33 @@ class MemoryBank:
             return memories[-min(3, len(memories)):]
         return results
 
+    def export_json(self, export_path: str = None) -> str:
+        """Exports all memories to an external JSON file."""
+        out_p = Path(export_path) if export_path else self.memory_file.with_suffix(".export.json")
+        with self._lock:
+            data = {"version": "2.1", "count": len(self.memories), "memories": self.memories}
+            with open(out_p, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            log.info(f"Memory: Exported {len(self.memories)} facts to '{out_p}'")
+            return str(out_p)
+
+    def import_json(self, import_path: str, merge: bool = True) -> int:
+        """Imports memories from a JSON file. Returns count of newly imported facts."""
+        in_p = Path(import_path)
+        if not in_p.exists():
+            return 0
+        imported_count = 0
+        try:
+            with open(in_p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            facts = data.get("memories", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+            for fact in facts:
+                if isinstance(fact, str) and self.remember(fact):
+                    imported_count += 1
+            log.info(f"Memory: Successfully imported {imported_count} new facts from '{in_p}'")
+        except Exception as e:
+            log.error(f"Memory: Failed importing from '{in_p}': {e}")
+        return imported_count
+
 # Shared singleton instance
 memory_bank = MemoryBank()
