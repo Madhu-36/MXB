@@ -26,6 +26,14 @@ class TestMXBArchitecture(unittest.TestCase):
         from PySide6.QtWidgets import QApplication
         cls._app = QApplication.instance() or QApplication(sys.argv)
 
+    @classmethod
+    def tearDownClass(cls):
+        import gc
+        if hasattr(cls, '_app') and cls._app:
+            cls._app.quit()
+            del cls._app
+        gc.collect()
+
     def test_01_silero_vad_neural_inference(self):
         """Verify Silero Neural VAD loads and executes on 512-sample chunks."""
         vad = get_vad_model()
@@ -92,6 +100,10 @@ class TestMXBArchitecture(unittest.TestCase):
         executor = OSExecutionManager()
         planner = ActionPlanner(executor)
 
+        # Test drag and drop execution
+        res_drag = executor.execute_action("drag_and_drop", "100, 200, 150, 250")
+        self.assertIn("Dragged", res_drag)
+
         # Standard execution
         plan = [
             {"action": "wait", "target": "0.1"},
@@ -136,6 +148,12 @@ class TestMXBArchitecture(unittest.TestCase):
         res_desk = router.route("show desktop")
         self.assertIn("Action:", res_desk)
 
+        # Press enter
+        res_enter = router.route("press enter")
+        self.assertIn("Action:", res_enter)
+
+        router.tts.stop()
+
     def test_09_system_diagnostics(self):
         """Verify system diagnostics runs and returns valid health dict."""
         health = SystemDiagnostics.get_health_report()
@@ -154,6 +172,7 @@ class TestMXBArchitecture(unittest.TestCase):
         self.assertEqual(vp.raw_audio_queue.qsize(), 0)
         self.assertEqual(vp.utterance_queue.qsize(), 0)
         vp.router.tts.stop()
+        del vp
 
 if __name__ == "__main__":
     unittest.main()
