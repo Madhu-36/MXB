@@ -228,5 +228,31 @@ class KeyboardExtended:
     def snap_window_right(self):
         self.shortcut("win", "right")
 
+    def execute_macro(self, steps: list[dict]) -> int:
+        """
+        Executes a sequence of keyboard macro steps:
+        [{"type": "tap", "key": "enter"}, {"type": "type", "text": "foo"}, {"type": "shortcut", "keys": ["ctrl", "s"]}, {"type": "wait", "delay": 0.2}]
+        Returns the number of successfully executed macro steps.
+        """
+        executed = 0
+        for step in steps:
+            stype = step.get("type", "").lower()
+            if stype == "tap":
+                self.tap_key(step.get("key", ""))
+                executed += 1
+            elif stype == "type":
+                self.type_text(step.get("text", ""))
+                executed += 1
+            elif stype in ["shortcut", "hotkey"]:
+                keys = step.get("keys", [])
+                if keys:
+                    self.shortcut(*keys)
+                    executed += 1
+            elif stype == "wait":
+                time.sleep(max(0.01, min(float(step.get("delay", 0.1)), 5.0)))
+                executed += 1
+            time.sleep(0.02)
+        return executed
+
     def snap_window_up(self):
         self.shortcut("win", "up")
