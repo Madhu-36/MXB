@@ -1,5 +1,6 @@
 import time
 import ctypes
+from ctypes import wintypes
 import pyperclip
 from pynput.keyboard import Controller as PynputController, Key
 from utils.logger import log
@@ -57,6 +58,9 @@ class KeyboardExtended:
     def __init__(self):
         self.pynput_kb = PynputController()
         self.user32 = ctypes.windll.user32
+        # Explicit 64-bit API signature definition to prevent stack corruption (0xC0000409)
+        self.user32.keybd_event.argtypes = [wintypes.BYTE, wintypes.BYTE, wintypes.DWORD, ctypes.c_size_t]
+        self.user32.keybd_event.restype = None
 
     def _vk_from_name(self, name: str) -> int:
         name = name.lower().strip()

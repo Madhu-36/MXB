@@ -27,6 +27,15 @@ class MouseController:
     def __init__(self):
         self.user32 = ctypes.windll.user32
         self.user32.SetProcessDPIAware()
+        # Explicit 64-bit API signature definitions to prevent stack corruption (0xC0000409)
+        self.user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
+        self.user32.GetCursorPos.restype = wintypes.BOOL
+        self.user32.SetCursorPos.argtypes = [ctypes.c_int, ctypes.c_int]
+        self.user32.SetCursorPos.restype = wintypes.BOOL
+        self.user32.GetSystemMetrics.argtypes = [ctypes.c_int]
+        self.user32.GetSystemMetrics.restype = ctypes.c_int
+        self.user32.mouse_event.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.c_size_t]
+        self.user32.mouse_event.restype = None
 
     def get_position(self) -> tuple[int, int]:
         """Returns the current mouse cursor (x, y) coordinates on the primary virtual screen."""
