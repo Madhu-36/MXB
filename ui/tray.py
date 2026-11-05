@@ -34,6 +34,16 @@ class MXBTray(QSystemTrayIcon):
         self.settings_action.triggered.connect(self.open_settings)
         self.menu.addAction(self.settings_action)
 
+        # Health Diagnostics Action
+        self.diagnostics_action = QAction("Run Health Diagnostics")
+        self.diagnostics_action.triggered.connect(self.run_diagnostics)
+        self.menu.addAction(self.diagnostics_action)
+
+        # Clear History Action
+        self.clear_history_action = QAction("Clear History")
+        self.clear_history_action.triggered.connect(self.clear_history)
+        self.menu.addAction(self.clear_history_action)
+
         self.menu.addSeparator()
 
         # Exit Action
@@ -64,6 +74,17 @@ class MXBTray(QSystemTrayIcon):
             self.settings_window = SettingsDashboard()
         self.settings_window.show()
         self.settings_window.activateWindow()
+
+    def run_diagnostics(self):
+        from utils.diagnostics import SystemDiagnostics
+        health = SystemDiagnostics.get_health_report()
+        status_text = f"Mic: {'OK' if health.get('microphone_active') else 'NO'} | Internet: {'OK' if health.get('internet') else 'NO'} | Ollama: {'OK' if health.get('ollama_running') else 'NO'}"
+        self.hud.update_action(status_text)
+
+    def clear_history(self):
+        if hasattr(self.engine, 'router') and hasattr(self.engine.router, 'history'):
+            self.engine.router.history.clear()
+            self.hud.update_action("Command history cleared.")
 
     def exit_app(self):
         self.engine.stop()
