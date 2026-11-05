@@ -174,5 +174,34 @@ class TestMXBArchitecture(unittest.TestCase):
         vp.router.tts.stop()
         del vp
 
+    def test_11_resilient_json_cleaner_and_action_aliases(self):
+        """Verify resilient JSON repair, truncated JSON fallback, and action aliases."""
+        # 1. Truncated JSON recovery
+        raw_trunc = '{"reply": "Opening Notepad for you", "plan": [{"action": "open_app", "target": "notepad"}'
+        res_trunc = IntentRouter._clean_and_parse_json(raw_trunc)
+        self.assertIsNotNone(res_trunc)
+        self.assertEqual(res_trunc["reply"], "Opening Notepad for you")
+        self.assertEqual(len(res_trunc["plan"]), 1)
+        self.assertEqual(res_trunc["plan"][0]["action"], "open_app")
+
+        # 2. Markdown fenced JSON
+        raw_fenced = '```json\n{"reply": "Confirmed", "plan": []}\n```'
+        res_fenced = IntentRouter._clean_and_parse_json(raw_fenced)
+        self.assertIsNotNone(res_fenced)
+        self.assertEqual(res_fenced["reply"], "Confirmed")
+
+        # 3. Direct natural language reply fallback
+        raw_nl = "The capital of France is Paris."
+        res_nl = IntentRouter._clean_and_parse_json(raw_nl)
+        self.assertIsNotNone(res_nl)
+        self.assertEqual(res_nl["reply"], "The capital of France is Paris.")
+
+        # 4. Action aliases and space normalization in Executor
+        executor = OSExecutionManager()
+        res_alias = executor.execute_action("manage window", "left")
+        self.assertTrue("Snapped window left" in res_alias or "No active window" in res_alias)
+        res_stop = executor.execute_action("stop_action")
+        self.assertIn("Actions stopped", res_stop)
+
 if __name__ == "__main__":
     unittest.main()
