@@ -123,3 +123,35 @@ class FileOperationsManager:
         except Exception as e:
             log.error(f"FileOps: Failed to delete '{target}': {e}")
             return f"Failed to delete {target.name}: {e}"
+
+    def search_files(self, pattern: str, root_path: str = "desktop", max_results: int = 15) -> list[str]:
+        """Searches for files matching a glob pattern starting from root_path."""
+        base = self.resolve_path(root_path)
+        if not base.exists() or not base.is_dir():
+            return []
+        try:
+            matches = []
+            for p in base.rglob(pattern):
+                matches.append(str(p))
+                if len(matches) >= max_results:
+                    break
+            return matches
+        except Exception as e:
+            log.error(f"FileOps: Search failed: {e}")
+            return []
+
+    def get_file_hash(self, file_path: str, algorithm: str = "sha256") -> str | None:
+        """Computes the cryptographic hash (SHA-256 or MD5) of a target file."""
+        import hashlib
+        target = self.resolve_path(file_path)
+        if not target.exists() or not target.is_file():
+            return None
+        try:
+            hasher = hashlib.sha256() if algorithm.lower() == "sha256" else hashlib.md5()
+            with open(target, "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+        except Exception as e:
+            log.error(f"FileOps: Hash calculation failed: {e}")
+            return None
