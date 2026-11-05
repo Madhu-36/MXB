@@ -39,7 +39,7 @@ class IntentRouter:
             log.warning(f"Router: Could not read config.json: {e}")
         return {}
 
-    def route(self, transcription: str) -> str:
+    def route(self, transcription: str, feedback_callback=None) -> str:
         text = transcription.lower().strip()
         if not text:
             return "Ignored empty transcription."
@@ -297,7 +297,7 @@ class IntentRouter:
         # TIER 2: LLM MULTI-STEP ACTION PLANNER & SECOND BRAIN REASONING
         # =========================================================================
         log.info("IntentRouter: No direct match in Tier 1. Delegating to LLM Multi-Step Planner...")
-        return self._route_to_llm(transcription)
+        return self._route_to_llm(transcription, feedback_callback=feedback_callback)
 
     def _query_nvidia_llm(self, prompt: str, api_key: str) -> dict | None:
         cfg_llm = self.config.get("llm", {})
@@ -371,7 +371,7 @@ class IntentRouter:
             log.warning(f"NVIDIA Build LLM returned {resp.status_code}: {resp.text}")
             return None
 
-    def _route_to_llm(self, text: str) -> str:
+    def _route_to_llm(self, text: str, feedback_callback=None) -> str:
         try:
             # 1. Fetch relevant user memories
             saved_memories = self.memory.get_memories(query=text, limit=4)
@@ -466,7 +466,7 @@ class IntentRouter:
                 self.history.append({"user": text, "mxb": reply})
 
             if steps:
-                results = self.executor.planner.execute_plan(steps)
+                results = self.executor.planner.execute_plan(steps, feedback_callback=feedback_callback)
                 summary_actions = "; ".join(results)
                 return f"MXB: {reply}\nActions: {summary_actions}"
 

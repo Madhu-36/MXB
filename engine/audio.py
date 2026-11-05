@@ -213,7 +213,7 @@ class VoicePipeline(QThread):
 
             try:
                 self.action_feedback.emit("Reasoning & Planning...")
-                action_result = self.router.route(text_cmd)
+                action_result = self.router.route(text_cmd, feedback_callback=self.action_feedback.emit)
                 log.info(f"Pipeline [Parallel Action Result] -> {action_result}")
                 self.action_feedback.emit(action_result)
                 self.vad_status_changed.emit("Idle")
@@ -488,4 +488,6 @@ class VoicePipeline(QThread):
         self.is_running = False
         self.utterance_queue.put(None)
         self.action_task_queue.put(None)
+        if hasattr(self, 'router') and hasattr(self.router, 'tts'):
+            self.router.tts.stop()
         self.wait(1500)
