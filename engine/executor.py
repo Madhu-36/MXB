@@ -35,6 +35,10 @@ class OSExecutionManager:
         self.memory = memory_bank
         self.planner = ActionPlanner(self)
 
+    def abort_current_action(self):
+        log.warning("OSExecution: Aborting current action pipeline!")
+        self.planner.abort()
+
     def execute_action(self, action: str, target: str = "") -> str:
         action = action.lower().strip()
         log.info(f"OSExecution: Executing -> Action: '{action}', Target: '{target}'")
