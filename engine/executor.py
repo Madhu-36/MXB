@@ -250,6 +250,16 @@ class OSExecutionManager:
             elif action == "capture_screen":
                 return self.capture_screen()
 
+            elif action in ["list_apps", "running_apps", "open_windows"]:
+                apps = self.list_running_apps()
+                if apps:
+                    return "Running Apps: " + ", ".join(apps[:6])
+                return "No active visible applications found."
+
+            elif action in ["app_resources", "process_usage"]:
+                usage = self.get_app_resource_usage(str(target))
+                return f"{target} ({usage['instances']} inst): {usage['memory_mb']} MB RAM, {usage['cpu_percent']}% CPU"
+
             elif action == "notify":
                 from utils.notifications import Notifier
                 Notifier.show_notification("MXB Executive Brain", str(target))
@@ -410,3 +420,42 @@ class OSExecutionManager:
             return "Captured screenshot to clipboard."
         except Exception as e:
             return f"Screenshot error: {e}"
+
+    def list_running_apps(self, limit: int = 10) -> list[str]:
+        """Returns a list of currently open visible windows/applications."""
+        try:
+            titles = []
+            for w in gw.getAllWindows():
+                t = w.title.strip()
+                if t and t not in titles and not any(ign in t.lower() for ign in ["program manager", "setup", "nvidia"]):
+                    titles.append(t)
+                if len(titles) >= limit:
+                    break
+            return titles
+        except Exception as e:
+            log.error(f"OSExecution: Failed listing apps: {e}")
+            return []
+
+    def get_app_resource_usage(self, app_name: str) -> dict:
+        """Returns total memory (MB) and CPU% for processes matching app_name."""
+        app_clean = app_name.lower().replace(".exe", "").strip()
+        total_rss = 0
+        total_cpu = 0.0
+        match_count = 0
+        for p in psutil.process_iter(['name', 'memory_info', 'cpu_percent']):
+            try:
+                pname = p.info['name'].lower()
+                if app_clean in pname:
+                    mem = p.info['memory_info']
+                    if mem:
+                        total_rss += mem.rss
+                    total_cpu += p.info.get('cpu_percent', 0.0) or 0.0
+                    match_count += 1
+            except Exception:
+                continue
+        return {
+            "app": app_name,
+            "instances": match_count,
+            "memory_mb": round(total_rss / (1024 * 1024), 1),
+            "cpu_percent": round(total_cpu, 1)
+        }
