@@ -40,7 +40,19 @@ class OSExecutionManager:
         self.planner.abort()
 
     def execute_action(self, action: str, target: str = "") -> str:
-        action = action.lower().strip()
+        action = action.lower().strip().replace(" ", "_").replace("-", "_")
+
+        # Action normalization and aliases
+        if action in ["open_application", "start_app", "launch_app"]:
+            action = "open_app"
+        elif action in ["close_application", "terminate_app", "quit_app"]:
+            action = "close_app"
+        elif action in ["stop_action", "abort_action", "halt_action", "stop"]:
+            self.abort_current_action()
+            return "Actions stopped."
+        elif action in ["manage_windows"]:
+            action = "manage_window"
+
         log.info(f"OSExecution: Executing -> Action: '{action}', Target: '{target}'")
 
         try:
