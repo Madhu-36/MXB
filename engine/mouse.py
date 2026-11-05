@@ -50,11 +50,30 @@ class MouseController:
         h = self.user32.GetSystemMetrics(1)  # SM_CYSCREEN
         return w, h
 
+    def get_virtual_bounds(self) -> tuple[int, int, int, int]:
+        """
+        Returns full multi-monitor virtual screen bounds: (left, top, right, bottom).
+        Supports multi-monitor setups with secondary displays positioned in any direction.
+        """
+        left = self.user32.GetSystemMetrics(76)   # SM_XVIRTUALSCREEN
+        top = self.user32.GetSystemMetrics(77)    # SM_YVIRTUALSCREEN
+        width = self.user32.GetSystemMetrics(78)  # SM_CXVIRTUALSCREEN
+        height = self.user32.GetSystemMetrics(79) # SM_CYVIRTUALSCREEN
+
+        if width <= 0 or height <= 0:
+            left, top = 0, 0
+            width, height = self.get_screen_size()
+
+        return left, top, left + width - 1, top + height - 1
+
+    def clip_coordinates(self, x: int, y: int) -> tuple[int, int]:
+        """Clips (x, y) to stay safely within valid screen boundaries."""
+        min_x, min_y, max_x, max_y = self.get_virtual_bounds()
+        return max(min_x, min(max_x, int(x))), max(min_y, min(max_y, int(y)))
+
     def move_to(self, x: int, y: int, smooth: bool = False, steps: int = 15):
-        """Moves cursor to absolute coordinates (x, y)."""
-        screen_w, screen_h = self.get_screen_size()
-        x = max(0, min(screen_w - 1, int(x)))
-        y = max(0, min(screen_h - 1, int(y)))
+        """Moves cursor to absolute coordinates (x, y) with multi-monitor boundary clipping."""
+        x, y = self.clip_coordinates(x, y)
 
         if not smooth:
             self.user32.SetCursorPos(x, y)
