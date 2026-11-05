@@ -92,6 +92,14 @@ class OSExecutionManager:
                 self.mouse.scroll("up", 5)
                 return "Scrolled up"
 
+            elif action in ["drag", "drag_and_drop"]:
+                cleaned = str(target).replace("->", ",").replace("to", ",")
+                parts = [int(p.strip()) for p in cleaned.split(",") if p.strip().isdigit() or (p.strip().startswith('-') and p.strip()[1:].isdigit())]
+                if len(parts) >= 4:
+                    self.mouse.drag_and_drop(parts[0], parts[1], parts[2], parts[3])
+                    return f"Dragged from ({parts[0]}, {parts[1]}) to ({parts[2]}, {parts[3]})"
+                return "Invalid coordinates for drag and drop."
+
             # 2. Vision & Screen OCR Click
             elif action in ["click_text", "click_element", "click_button"]:
                 coords = self.screen.find_text_coordinates(str(target))
@@ -114,6 +122,18 @@ class OSExecutionManager:
             elif action in ["press_key", "tap_key"]:
                 self.keyboard.tap_key(str(target))
                 return f"Pressed key '{target}'"
+
+            elif action in ["press_enter", "enter"]:
+                self.keyboard.tap_key("enter")
+                return "Pressed Enter"
+
+            elif action in ["press_tab", "tab"]:
+                self.keyboard.tap_key("tab")
+                return "Pressed Tab"
+
+            elif action in ["press_escape", "escape", "press_esc"]:
+                self.keyboard.tap_key("escape")
+                return "Pressed Escape"
 
             elif action in ["shortcut", "hotkey"]:
                 # e.g. "ctrl+c" or "ctrl,shift,esc"
