@@ -264,13 +264,16 @@ class VoicePipeline(QThread):
         return None
 
     def _transcribe_audio(self, audio_data: np.ndarray, agc_target: float, max_gain: float) -> str | None:
-        # Dynamic AGC
+        # Zero-center waveform by removing DC bias
+        audio_data = audio_data - float(np.mean(audio_data))
+
+        # Dynamic Adaptive Gain Control (AGC) with soft compression
         max_amp = float(np.max(np.abs(audio_data)))
         if max_amp > 0.00005:
             gain = min(agc_target / max_amp, max_gain)
             audio_data = audio_data * gain
-            if np.any(np.abs(audio_data) > 0.90):
-                audio_data = np.tanh(audio_data * 1.1)
+            if np.any(np.abs(audio_data) > 0.85):
+                audio_data = np.tanh(audio_data * 1.05)
 
         text = None
 
