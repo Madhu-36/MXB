@@ -51,6 +51,27 @@ class IntentRouter:
         # TIER 1: HIGH-SPEED DETERMINISTIC FAST-PATH (Sub-Millisecond)
         # =========================================================================
 
+        # 0. Emergency Voice Interruption (<1ms)
+        if clean_text in ["stop", "cancel", "halt", "pause", "abort", "freeze", "stop executing", "cancel action", "shut up"]:
+            log.warning("Router: Emergency Voice Interruption Triggered!")
+            self.executor.abort_current_action()
+            reply = "Actions stopped."
+            self.tts.speak(reply)
+            return f"MXB: {reply}"
+
+        # 0.1. Greetings & Identity Fast-Path (<1ms)
+        if clean_text in ["hello", "hi", "hey", "hey mxb", "hello mxb", "welcome", "good morning", "good evening", "good afternoon"]:
+            reply = "Hello! MXB executive brain is online and ready for your commands."
+            self.tts.speak(reply)
+            self.history.append({"user": clean_text, "mxb": reply})
+            return f"MXB: {reply}"
+
+        if clean_text in ["who are you", "what are you", "what can you do"]:
+            reply = "I am MXB, your AI desktop executive assistant. I can control your mouse, keyboard, windows, apps, files, and read your screen by voice."
+            self.tts.speak(reply)
+            self.history.append({"user": clean_text, "mxb": reply})
+            return f"MXB: {reply}"
+
         # 1. System Health / Telemetry
         if any(p in clean_text for p in [
             "check system", "system status", "pc status", "how is my pc", "how is my computer",
@@ -392,24 +413,34 @@ class IntentRouter:
                     log.warning(f"NVIDIA Cloud LLM exception: {e}. Falling back to Ollama...")
                     plan_data = None
 
-            # Path B: Local Ollama Fallback
+            # Path B: Fast Local Ollama Fallback (llama3.2:1b or mxb-brain)
             if not plan_data:
-                log.info("Router: Planning with Local Ollama fallback...")
+                local_model = self.config.get("llm", {}).get("local_model", "llama3.2:1b")
+                log.info(f"Router: Planning with Local Ollama fallback ({local_model})...")
+                system_instruction = (
+                    "You are MXB, an AI desktop assistant. Respond ONLY with valid JSON.\n"
+                    "JSON Format: {\"reply\": \"Spoken answer\", \"plan\": [{\"action\": \"<action>\", \"target\": \"<target>\"}]}\n"
+                    "Available Actions: open_app, close_app, type_text, press_key, shortcut, scroll, click_text, manage_window, show_desktop, conversation."
+                )
                 payload = {
-                    "model": "mxb-brain",
-                    "prompt": augmented_prompt,
+                    "model": local_model,
+                    "messages": [
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": augmented_prompt}
+                    ],
                     "stream": False,
                     "format": "json",
-                    "keep_alive": "1h",
+                    "keep_alive": "2h",
                     "options": {
-                        "num_predict": 150,
-                        "num_ctx": 2048,
-                        "temperature": 0.2
+                        "num_predict": 100,
+                        "num_ctx": 1024,
+                        "num_thread": 4,
+                        "temperature": 0.1
                     }
                 }
-                resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=35)
+                resp = requests.post("http://localhost:11434/api/chat", json=payload, timeout=25)
                 if resp.status_code == 200:
-                    raw_resp = resp.json().get("response", "{}").strip()
+                    raw_resp = resp.json().get("message", {}).get("content", "{}").strip()
                     if raw_resp.startswith("```json"):
                         raw_resp = raw_resp[7:]
                     if raw_resp.startswith("```"):
