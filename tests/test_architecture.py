@@ -21,17 +21,20 @@ from utils.diagnostics import SystemDiagnostics
 
 class TestMXBArchitecture(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        from PySide6.QtWidgets import QApplication
+        cls._app = QApplication.instance() or QApplication(sys.argv)
+
     def test_01_silero_vad_neural_inference(self):
         """Verify Silero Neural VAD loads and executes on 512-sample chunks."""
         vad = get_vad_model()
         self.assertIsNotNone(vad)
-        # Test silence chunk
         silence_chunk = np.zeros(512, dtype=np.float32)
         prob = vad(silence_chunk)
         self.assertEqual(len(prob), 1)
-        self.assertLess(float(prob[0]), 0.15, "Silence should have low speech probability")
+        self.assertLess(float(prob[0]), 0.15)
 
-        # Test synthetic tone/speech-like chunk
         t = np.linspace(0, 0.032, 512, endpoint=False)
         speech_like = (0.5 * np.sin(2 * np.pi * 300 * t)).astype(np.float32)
         prob_tone = vad(speech_like)
@@ -43,7 +46,6 @@ class TestMXBArchitecture(unittest.TestCase):
         w, h = mouse.get_screen_size()
         self.assertGreater(w, 0)
         self.assertGreater(h, 0)
-        # Verify scroll doesn't throw
         try:
             mouse.scroll("down", 1)
         except Exception as e:
@@ -65,7 +67,6 @@ class TestMXBArchitecture(unittest.TestCase):
         desktop = fops.resolve_path("desktop")
         self.assertTrue(str(desktop).endswith("Desktop") or "Desktop" in str(desktop))
 
-        # Test safe file creation & deletion
         test_file = fops.resolve_path("desktop/_mxb_test_artifact.tmp")
         res_create = fops.create_file(str(test_file), "MXB Test Verification")
         self.assertTrue(test_file.exists())
@@ -78,21 +79,20 @@ class TestMXBArchitecture(unittest.TestCase):
         test_fact = "User's favorite test language is Python 3"
         memory_bank.remember(test_fact)
 
-        # Retrieve with query
         recalled = memory_bank.get_memories("favorite test language")
         self.assertTrue(any(test_fact in m for m in recalled))
 
-        # Test duplicate avoidance
         count_before = len(memory_bank.get_memories())
         memory_bank.remember(test_fact)
         count_after = len(memory_bank.get_memories())
-        self.assertEqual(count_before, count_after, "Duplicate fact should not be re-added")
+        self.assertEqual(count_before, count_after)
 
-    def test_06_action_planner(self):
-        """Verify multi-step planner sequence execution."""
+    def test_06_action_planner_and_abort(self):
+        """Verify multi-step planner sequence execution and instant abortability."""
         executor = OSExecutionManager()
         planner = ActionPlanner(executor)
 
+        # Standard execution
         plan = [
             {"action": "wait", "target": "0.1"},
             {"action": "type_text", "target": ""},
@@ -101,15 +101,29 @@ class TestMXBArchitecture(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertIn("Waited 0.1s", results[0])
 
+        # Test abort signal
+        long_plan = [
+            {"action": "wait", "target": "5.0"},
+            {"action": "type_text", "target": "should not execute"},
+        ]
+        import threading
+        timer = threading.Timer(0.1, planner.abort)
+        timer.start()
+        res_aborted = planner.execute_plan(long_plan)
+        self.assertTrue(any("aborted" in r.lower() for r in res_aborted))
+
     def test_07_screen_vision_engine(self):
         """Verify ScreenVision engine initializes and OCR is available."""
         vision = ScreenVision()
-        # Verify OCR engine or fallback initializes
         self.assertIsNotNone(vision)
 
     def test_08_intent_router_tier1_fast_path(self):
-        """Verify Tier 1 instant routing for common commands."""
+        """Verify Tier 1 instant routing for common commands and interruptions."""
         router = IntentRouter()
+        # Voice Interruption
+        res_stop = router.route("stop")
+        self.assertIn("Actions stopped", res_stop)
+
         # Mute
         res_mute = router.route("mute audio")
         self.assertIn("Action:", res_mute)
@@ -128,7 +142,18 @@ class TestMXBArchitecture(unittest.TestCase):
         self.assertIn("internet", health)
         self.assertIn("microphone_active", health)
         self.assertIn("silero_vad", health)
-        self.assertTrue(health["silero_vad"], "Silero VAD should be active in diagnostics")
+        self.assertTrue(health["silero_vad"])
+
+    def test_10_parallel_voice_pipeline_queues(self):
+        """Verify VoicePipeline initializes decoupled concurrent queues."""
+        from engine.audio import VoicePipeline
+        vp = VoicePipeline({})
+        self.assertIsNotNone(vp.raw_audio_queue)
+        self.assertIsNotNone(vp.utterance_queue)
+        self.assertIsNotNone(vp.action_task_queue)
+        self.assertEqual(vp.raw_audio_queue.qsize(), 0)
+        self.assertEqual(vp.utterance_queue.qsize(), 0)
+        vp.router.tts.stop()
 
 if __name__ == "__main__":
     unittest.main()
