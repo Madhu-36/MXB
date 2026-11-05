@@ -82,6 +82,36 @@ class ScreenVision:
             log.error(f"ScreenVision: PNG bytes capture failed: {e}")
             return None
 
+    def capture_roi(self, x: int, y: int, width: int, height: int) -> Image.Image | None:
+        """Captures a specific Region of Interest (ROI) from the screen as a PIL Image."""
+        full_img = self.capture_screen_image()
+        if not full_img:
+            return None
+        try:
+            w, h = full_img.size
+            crop_x1 = max(0, min(w - 1, int(x)))
+            crop_y1 = max(0, min(h - 1, int(y)))
+            crop_x2 = max(crop_x1 + 1, min(w, crop_x1 + int(width)))
+            crop_y2 = max(crop_y1 + 1, min(h, crop_y1 + int(height)))
+            return full_img.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+        except Exception as e:
+            log.error(f"ScreenVision: ROI capture failed: {e}")
+            return None
+
+    def read_roi_text(self, x: int, y: int, width: int, height: int) -> str:
+        """Extracts text via OCR strictly within a designated screen bounding box."""
+        roi_img = self.capture_roi(x, y, width, height)
+        if not roi_img:
+            return ""
+        try:
+            buf = io.BytesIO()
+            roi_img.save(buf, format="PNG")
+            words = self.ocr_screen_words(buf.getvalue())
+            return " ".join([w["text"] for w in words]).strip()
+        except Exception as e:
+            log.error(f"ScreenVision: ROI text recognition failed: {e}")
+            return ""
+
     async def _async_ocr(self, png_bytes: bytes) -> list[dict]:
         """Runs Windows Native OCR asynchronously on PNG bytes."""
         if not self._ocr_engine or not png_bytes:
