@@ -299,6 +299,57 @@ class IntentRouter:
         log.info("IntentRouter: No direct match in Tier 1. Delegating to LLM Multi-Step Planner...")
         return self._route_to_llm(transcription, feedback_callback=feedback_callback)
 
+    @staticmethod
+    def _clean_and_parse_json(raw: str) -> dict | None:
+        if not raw:
+            return None
+        text = raw.strip()
+        # Strip markdown fences
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+        # Try standard JSON parsing first
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+
+        # Try extracting between first { and last }
+        first_brace = text.find("{")
+        last_brace = text.rfind("}")
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            sub = text[first_brace:last_brace + 1]
+            try:
+                return json.loads(sub)
+            except Exception:
+                pass
+
+        # Resilient Regex fallback for truncated or malformed responses
+        reply = ""
+        reply_match = re.search(r'"reply"\s*:\s*"([^"]*)', text)
+        if reply_match:
+            reply = reply_match.group(1).strip()
+
+        plan = []
+        # Find all steps {"action": "...", "target": "..."}
+        step_matches = re.findall(r'\{\s*"action"\s*:\s*"([^"]+)"(?:\s*,\s*"target"\s*:\s*"([^"]*)")?\s*\}', text)
+        for sm in step_matches:
+            plan.append({"action": sm[0], "target": sm[1] if len(sm) > 1 else ""})
+
+        if reply or plan:
+            return {"reply": reply, "plan": plan}
+
+        # If model answered in plain natural language instead of JSON
+        if text and not text.startswith("{"):
+            return {"reply": text, "plan": []}
+
+        return None
+
     def _query_nvidia_llm(self, prompt: str, api_key: str) -> dict | None:
         cfg_llm = self.config.get("llm", {})
         url = cfg_llm.get("api_url", "https://integrate.api.nvidia.com/v1/chat/completions")
@@ -325,6 +376,7 @@ class IntentRouter:
             '- "left_click": (target: "x,y" or "")\n'
             '- "right_click": (target: "x,y" or "")\n'
             '- "double_click": (target: "x,y" or "")\n'
+            '- "drag_and_drop": (target: "x1, y1 -> x2, y2")\n'
             '- "scroll": (target: "down" or "up")\n'
             '- "type_text": (target: text to type)\n'
             '- "press_key": (target: enter, esc, tab, backspace, space, etc.)\n'
@@ -359,14 +411,8 @@ class IntentRouter:
 
         resp = requests.post(url, headers=headers, json=payload, timeout=8)
         if resp.status_code == 200:
-            content = resp.json()["choices"][0]["message"]["content"].strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
-            return json.loads(content.strip())
+            content = resp.json()["choices"][0]["message"]["content"]
+            return self._clean_and_parse_json(content)
         else:
             log.warning(f"NVIDIA Build LLM returned {resp.status_code}: {resp.text}")
             return None
@@ -432,7 +478,7 @@ class IntentRouter:
                     "format": "json",
                     "keep_alive": "2h",
                     "options": {
-                        "num_predict": 100,
+                        "num_predict": 250,
                         "num_ctx": 1024,
                         "num_thread": 4,
                         "temperature": 0.1
@@ -441,13 +487,7 @@ class IntentRouter:
                 resp = requests.post("http://localhost:11434/api/chat", json=payload, timeout=25)
                 if resp.status_code == 200:
                     raw_resp = resp.json().get("message", {}).get("content", "{}").strip()
-                    if raw_resp.startswith("```json"):
-                        raw_resp = raw_resp[7:]
-                    if raw_resp.startswith("```"):
-                        raw_resp = raw_resp[3:]
-                    if raw_resp.endswith("```"):
-                        raw_resp = raw_resp[:-3]
-                    plan_data = json.loads(raw_resp.strip())
+                    plan_data = self._clean_and_parse_json(raw_resp)
 
             if not plan_data:
                 fallback_msg = "I understood your request but could not reach my reasoning engine."
@@ -462,6 +502,7 @@ class IntentRouter:
                 steps = [{"action": plan_data["action"], "target": plan_data.get("target", "")}]
 
             if reply:
+                reply = re.sub(r'^(?:mxb\s*:\s*)+', '', reply, flags=re.IGNORECASE).strip()
                 self.tts.speak(reply)
                 self.history.append({"user": text, "mxb": reply})
 
