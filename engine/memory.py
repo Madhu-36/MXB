@@ -31,10 +31,10 @@ class MemoryBank:
                 with open(self.filepath, "w", encoding="utf-8") as f:
                     json.dump([], f)
 
-    def remember(self, fact: str):
+    def remember(self, fact: str) -> bool:
         fact = fact.strip()
         if not fact:
-            return
+            return False
 
         with self._lock:
             try:
@@ -44,7 +44,7 @@ class MemoryBank:
                 # Avoid duplicate entries
                 if any(fuzz.ratio(fact.lower(), m.lower()) > 92 for m in memories):
                     log.info(f"Memory: Fact already exists in memory: '{fact}'")
-                    return
+                    return False
 
                 memories.append(fact)
                 # Keep up to 100 recent facts
@@ -55,8 +55,10 @@ class MemoryBank:
                     json.dump(memories, f, indent=2)
 
                 log.info(f"Memory: Successfully saved fact: '{fact}'")
+                return True
             except Exception as e:
                 log.error(f"Memory: Failed to save fact: {e}")
+                return False
 
     def get_memories(self, query: str = None, limit: int = 5) -> list[str]:
         self._ensure_db()
@@ -89,12 +91,13 @@ class MemoryBank:
 
     def export_json(self, export_path: str = None) -> str:
         """Exports all memories to an external JSON file."""
-        out_p = Path(export_path) if export_path else self.memory_file.with_suffix(".export.json")
+        out_p = Path(export_path) if export_path else self.filepath.with_suffix(".export.json")
+        memories = self.get_memories(limit=100)
         with self._lock:
-            data = {"version": "2.1", "count": len(self.memories), "memories": self.memories}
+            data = {"version": "2.1", "count": len(memories), "memories": memories}
             with open(out_p, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            log.info(f"Memory: Exported {len(self.memories)} facts to '{out_p}'")
+            log.info(f"Memory: Exported {len(memories)} facts to '{out_p}'")
             return str(out_p)
 
     def import_json(self, import_path: str, merge: bool = True) -> int:
