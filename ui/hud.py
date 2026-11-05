@@ -79,6 +79,9 @@ class FloatingHUD(QWidget):
         shadow.setOffset(0, 6)
         self.setGraphicsEffect(shadow)
 
+        # Dynamic cyber glow color state
+        self._glow_color = QColor(0, 229, 255, 140)
+
         # Fade out animation
         self.fade_anim = QPropertyAnimation(self, b"windowOpacity")
         self.fade_anim.setDuration(500)
@@ -96,7 +99,7 @@ class FloatingHUD(QWidget):
         brush = QBrush(QColor(12, 14, 20, 235))
         painter.setBrush(brush)
 
-        pen = QPen(QColor(0, 229, 255, 140))
+        pen = QPen(self._glow_color)
         pen.setWidth(2)
         painter.setPen(pen)
 
@@ -118,14 +121,23 @@ class FloatingHUD(QWidget):
         self._wake_up()
         upper = status.upper()
         if "LISTENING" in upper or "ACTIVE" in upper:
+            self._glow_color = QColor(255, 42, 95, 200)
             self.status_label.setText("MXB // LISTENING")
             self.status_label.setStyleSheet("color: #FF2A5F; letter-spacing: 2px;")
-        elif "PROCESSING" in upper:
+        elif "PROCESSING" in upper or "REASONING" in upper or "PLANNING" in upper:
+            self._glow_color = QColor(255, 215, 0, 200)
             self.status_label.setText("MXB // REASONING...")
             self.status_label.setStyleSheet("color: #FFD700; letter-spacing: 2px;")
+        elif "ERROR" in upper:
+            self._glow_color = QColor(255, 0, 128, 220)
+            self.status_label.setText(f"MXB // {upper}")
+            self.status_label.setStyleSheet("color: #FF0080; letter-spacing: 2px;")
         else:
+            self._glow_color = QColor(0, 229, 255, 140)
             self.status_label.setText(f"MXB // {upper}")
             self.status_label.setStyleSheet("color: #00E5FF; letter-spacing: 2px;")
+
+        self.update()
 
         if status.lower() == "idle":
             self.hide_timer.start(5000)
