@@ -1,64 +1,112 @@
-# 🧠 MXB (Machine eXecutive Brain)
-> The Ultimate AI-Powered Second Brain & Executive Assistant for Windows
+# 🧠 MXB (Machine eXecutive Brain) v2.1
+> The Decoupled Parallel AI Desktop Executive Assistant & "Two Hands" Automation Engine for Windows
 
-![MXB Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)
-![AI](https://img.shields.io/badge/AI-Llama_3.1-orange.svg)
+[![MXB Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/Madhu-36/MXB)
+[![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)](https://github.com/Madhu-36/MXB)
+[![Tests](https://img.shields.io/badge/tests-31%20Passed%20%7C%20Green-brightgreen.svg)](https://github.com/Madhu-36/MXB)
+[![AI Architecture](https://img.shields.io/badge/architecture-5--Stage%20Parallel%20Pipelines-cyan.svg)](https://github.com/Madhu-36/MXB)
+[![LLM Planner](https://img.shields.io/badge/LLM-llama3.2:1b%20%7C%20NVIDIA%20Cloud-orange.svg)](https://github.com/Madhu-36/MXB)
 
-**MXB** is an ultra-fast, entirely local, voice-controlled AI assistant running invisibly on your Windows machine. It acts as your autonomous executive assistant, constantly listening, learning, and automating your OS without ever sending your private data to the cloud.
-
----
-
-## 🌟 Comprehensive Description & Vision
-
-MXB was built with a singular vision: to create an AI assistant that actually *understands* your physical computing environment. Unlike traditional chatbots that live inside a web browser window, MXB is deeply integrated directly into your Windows Operating System.
-
-### 🔒 100% Local & Private
-Privacy is the core foundation of MXB. Every single component—from the Voice Activity Detection (VAD), to the Whisper Speech-to-Text transcription, to the Llama-3.1 LLM Brain—runs entirely on your local hardware. There are no API keys required, no cloud subscriptions, and absolutely zero telemetry. Your data, your microphone audio, and your personal clipboard contents never leave your physical computer.
-
-### 🧠 True Context Awareness
-MXB doesn't just listen to your voice; it reads your environment. Before MXB formulates a response, it silently injects the exact time of day, your geographic location, the live local weather, and the title of the exact application window you are currently looking at into its context matrix. When you say *"Summarize what I am looking at"*, it truly knows what you are looking at.
-
-### ⚙️ Autonomous OS Control
-MXB acts as a bridge between natural language and the Windows API. It can minimize, maximize, and close your active windows. It can scan your Start Menu using fuzzy-matching algorithms to launch applications even if you mispronounce their names. It polls your hardware to warn you about RAM limits and battery life. 
+**MXB v2.1** is an autonomous desktop executive brain capable of listening continuously and operating your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen vision, and file operations) while you talk.
 
 ---
 
-## 🚀 Ultimate Upgrades (V2.0 Features)
+## ⚡ 5-Stage Decoupled Parallel Architecture
 
-- **Premium Glassmorphism HUD:** An ultra-premium translucent GUI with smooth fade animations and custom drop-shadows that gracefully appears only when speaking.
-- **Smart App Launcher:** Fuzzy-matching application discovery via the Windows Start Menu `.lnk` files.
-- **AI Web Search:** Autonomous duckduckgo-search crawling. MXB fetches search results, parses the HTML, and summarizes the internet for you on the fly.
-- **Context Injection:** Injects Real-time Date, Weather, IP-based Location, and Active Window titles directly into the LLM context buffer.
-- **Semantic Memory Engine:** Advanced TF-IDF Keyword-overlap semantic search for long-term facts, combined with a rolling 5-turn short-term conversational history buffer.
-- **Native Toast Notifications:** Seamless integration with the Windows 11 Action Center for background task alerts.
-- **Asynchronous TTS:** Non-blocking SAPI5 speech synthesis via isolated QThreads.
-- **System Diagnostics:** Live system health checks and hardware polling (CPU, RAM, Battery) via `psutil`.
+MXB eliminates the sequential blocking bottleneck through a fully decoupled, multi-threaded pipeline:
 
----
+```mermaid
+flowchart TD
+    subgraph S1 ["Stage 1: Continuous Audio Ingestion"]
+        MIC["Microphone Capture (16kHz / 512-sample chunks)"] -->|Non-blocking Callback| RAW["raw_audio_queue"]
+    end
 
-## 🛠 Installation & Setup
+    subgraph S2 ["Stage 2: Real-time Neural VAD"]
+        RAW --> SILERO["Silero Neural VAD (<0.2ms / chunk, 10.3x RT)"]
+        SILERO -->|Speech + AGC Normalization| UTT["utterance_queue"]
+        SILERO -->|Live RMS Level| HUD["Floating Cyber HUD"]
+    end
 
-Ensure you have Python 3.10+ and `ollama` installed on your system.
+    subgraph S3 ["Stage 3: Parallel ASR Worker (MXB-Parallel-ASR)"]
+        UTT --> ASR["ASR Engine (NVIDIA Parakeet / Faster-Whisper)"]
+        ASR -->|Emergency Word?| INT_CHECK{"'stop' / 'cancel'?"}
+        INT_CHECK -->|YES: Instant Halt| ABORT["self.executor.abort_current_action()"]
+        INT_CHECK -->|NO: User Command| ACT_Q["action_task_queue"]
+    end
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/Madhu-36/MXB.git
-cd MXB/mxb_app
+    subgraph S4 ["Stage 4: Parallel Action Worker (MXB-Parallel-Action)"]
+        ACT_Q --> ROUTER["Two-Tier Intent Router"]
+        ROUTER -->|Tier 1: <1ms Fast-Path| FAST["Deterministic Actions"]
+        ROUTER -->|Tier 2: Fast LLM| PLANNER["ActionPlanner (Multi-Step Pipeline)"]
+        PLANNER -->|Step Feedback Callback| HUD
+    end
 
-# 2. Setup Virtual Environment
-python -m venv .venv
-.\.venv\Scripts\activate
-
-# 3. Install Requirements
-pip install -r requirements.txt
-
-# 4. Start the Brain
-run.bat
+    subgraph S5 ["Stage 5: Two-Hands Desktop Automation"]
+        FAST --> HANDS["Two-Hands Controller"]
+        PLANNER --> HANDS
+        HANDS --> MOUSE["Mouse Controller (Click, Drag, Notch Scroll)"]
+        HANDS --> KB["Extended Keyboard (VK Map, Shortcuts, Clipboard)"]
+        HANDS --> VISION["Screen Vision (Native Windows OCR Word Click)"]
+        HANDS --> FILES["File Ops Manager (Desktop/Downloads/Create/Delete)"]
+    end
 ```
 
-## 🧠 AI Models & Dynamic Compilation
-MXB utilizes a custom Llama-3.1 based `Modelfile` to intelligently route intents (OS commands vs conversation). On first launch, `main.py` will automatically invoke the `LLMBuilder` module to compile and hash the `mxb-brain` model directly into your local Ollama instance. If you update the prompts in the `Modelfile`, MXB will automatically detect the changes and recompile the brain on your next boot.
+---
+
+## 🦾 "Two Hands" OS Automation Capabilities
+
+| Component | Capabilities | Primary Module |
+| :--- | :--- | :--- |
+| **Mouse Controller** | Left, right, double, middle clicks; smooth movement; notch scroll; drag-and-drop (`x1, y1 -> x2, y2`); multi-monitor safety boundary clipping. | `engine/mouse.py` |
+| **Extended Keyboard** | Full Windows Virtual-Key mapping (`VK_MAP`), system shortcuts (`Win+D`, `Win+E`, `Win+R`, `Win+L`, `Win+I`), browser shortcuts (`Ctrl+T`, `Ctrl+W`, `Ctrl+L`), and structured macro sequences. | `engine/keyboard_ext.py` |
+| **Screen Vision & OCR** | Hardware-accelerated Qt screen captures + Windows Native OCR (`winrt.windows.media.ocr`) for word bounding-box detection, text coordinate localization, and clicking screen elements by text label. | `engine/screen.py` |
+| **File Operations** | Safe OS file management with alias path resolution (`desktop`, `downloads`, `documents`, `projects`), folder creation, file creation, glob search, file hashing (SHA-256 / MD5), and safe deletion. | `engine/file_ops.py` |
+| **Action Planner** | Sliced multi-step execution pipeline with 50ms interval checks for `threading.Event()` abort signals, allowing immediate voice interruption at any moment. | `engine/planner.py` |
+| **64-bit Windows Stability** | Explicit ctypes `argtypes` and `restype` definitions on all Windows `user32.dll` APIs (`keybd_event`, `mouse_event`, `GetCursorPos`, `SetCursorPos`), completely eliminating stack canary corruption. | `engine/mouse.py` & `engine/keyboard_ext.py` |
+| **Clean TTS Teardown** | Native Windows SAPI `SpVoice` integration with `SVSFPurgeBeforeSpeak` (flag 2) to cancel in-flight audio playback instantly upon stop or interruption. | `engine/tts.py` |
 
 ---
-*Developed with a commitment to privacy, speed, and continuous ultimate upgrades.*
+
+## 🧪 Comprehensive Verification Suite (31 Tests)
+
+MXB includes 8 automated test suites verifying all subsystems:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/verify_all.py
+```
+
+```text
+=================================================================
+   MACHINE EXECUTIVE BRAIN (MXB) - FULL SUITE VERIFICATION
+=================================================================
+[RUNNING] tests.test_architecture...
+[RUNNING] tests.test_config_schema...
+[RUNNING] tests.test_mouse_safety...
+[RUNNING] tests.test_keyboard_macros...
+[RUNNING] tests.test_screen_roi...
+[RUNNING] tests.test_file_search...
+[RUNNING] tests.test_memory_export...
+[RUNNING] tests.test_executor_apps...
+=================================================================
+VERIFICATION SUMMARY: 31 tests in 34.76s
+Failures: 0 | Errors: 0
+=================================================================
+>>> ALL ARCHITECTURAL CHECKS & REGRESSIONS PASSED! [STATUS: GREEN]
+```
+
+---
+
+## 🚀 Quick Start
+
+```powershell
+# 1. Activate Environment
+.\.venv\Scripts\activate.bat
+
+# 2. Run All Verifications
+python scripts/verify_all.py
+
+# 3. Launch MXB Live
+python -u main.py
+```
+
+Press `Ctrl+Alt+K` for global kill-switch, `Ctrl+Space` to toggle mute, or simply say **"stop"** at any time to halt running actions.
