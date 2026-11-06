@@ -1,3 +1,4 @@
+import collections
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QProgressBar, QGraphicsDropShadowEffect
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QBrush, QPen
@@ -81,6 +82,8 @@ class FloatingHUD(QWidget):
 
         # Dynamic cyber glow color state
         self._glow_color = QColor(0, 229, 255, 140)
+        self.is_compact = False
+        self.waveform_history = collections.deque([0.0] * 24, maxlen=24)
 
         # Fade out animation
         self.fade_anim = QPropertyAnimation(self, b"windowOpacity")
@@ -90,6 +93,22 @@ class FloatingHUD(QWidget):
         self.hide_timer = QTimer(self)
         self.hide_timer.timeout.connect(self._fade_out)
         self.hide_timer.setSingleShot(True)
+
+    def set_compact_mode(self, compact: bool):
+        """Switches HUD between sleek compact badge and full detailed diagnostic view."""
+        self.is_compact = compact
+        if compact:
+            self.transcript_label.hide()
+            self.action_label.hide()
+            self.resize(320, 80)
+        else:
+            self.transcript_label.show()
+            self.action_label.show()
+            self.resize(500, 240)
+        self.update()
+
+    def toggle_compact_mode(self):
+        self.set_compact_mode(not self.is_compact)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -105,6 +124,22 @@ class FloatingHUD(QWidget):
 
         rect = self.rect().adjusted(2, 2, -2, -2)
         painter.drawRoundedRect(rect, 16, 16)
+
+        # Equalizer Waveform Visualizer
+        if self.waveform_history:
+            bar_w = 4
+            gap = 3
+            total_w = len(self.waveform_history) * (bar_w + gap) - gap
+            start_x = (self.width() - total_w) // 2
+            base_y = self.height() - 14
+
+            painter.setPen(Qt.PenStyle.NoPen)
+            for idx, mag in enumerate(self.waveform_history):
+                bar_h = max(3, int(mag * 22))
+                x = start_x + idx * (bar_w + gap)
+                y = base_y - bar_h
+                painter.setBrush(QBrush(QColor(0, 229, 255, min(240, int(mag * 200 + 40)))))
+                painter.drawRoundedRect(x, y, bar_w, bar_h, 2, 2)
 
     def _fade_out(self):
         self.fade_anim.setStartValue(1.0)
@@ -143,11 +178,13 @@ class FloatingHUD(QWidget):
             self.hide_timer.start(5000)
 
     def update_mic_level(self, level: float):
-        """Updates the audio activity progress bar (0.0 to 1.0)."""
+        """Updates the audio activity progress bar and waveform history (0.0 to 1.0)."""
         val = int(min(max(level * 100.0, 0), 100))
         self.mic_bar.setValue(val)
+        self.waveform_history.append(min(max(level, 0.0), 1.0))
         if val > 15 and self.windowOpacity() < 0.1:
             self._wake_up()
+        self.update()
 
     def update_transcript(self, text: str):
         self._wake_up()
