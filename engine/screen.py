@@ -28,6 +28,48 @@ class ScreenVision:
             log.warning(f"ScreenVision: Could not initialize Windows OCR: {e}")
             self._ocr_engine = None
 
+    @staticmethod
+    def get_active_window_rect() -> tuple[int, int, int, int] | None:
+        """
+        Returns (x, y, width, height) of the current foreground active window using 64-bit safe ctypes.
+        Returns None if no foreground window is present or on non-Windows platforms.
+        """
+        try:
+            import ctypes
+            from ctypes import wintypes
+            user32 = ctypes.windll.user32
+            user32.GetForegroundWindow.restype = wintypes.HWND
+            user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+            user32.GetWindowRect.restype = wintypes.BOOL
+
+            hwnd = user32.GetForegroundWindow()
+            if not hwnd:
+                return None
+            rect = wintypes.RECT()
+            if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                x = int(rect.left)
+                y = int(rect.top)
+                w = int(rect.right - rect.left)
+                h = int(rect.bottom - rect.top)
+                if w > 0 and h > 0:
+                    return (x, y, w, h)
+        except Exception as e:
+            log.warning(f"ScreenVision: Could not determine active window rect: {e}")
+        return None
+
+    def capture_active_window(self) -> Image.Image | None:
+        """
+        Captures only the currently focused/foreground window as a PIL Image.
+        Falls back to full screen capture if foreground window cannot be determined.
+        """
+        rect = self.get_active_window_rect()
+        if rect:
+            x, y, w, h = rect
+            img = self.capture_roi(x, y, w, h)
+            if img:
+                return img
+        return self.capture_screen_image()
+
     def capture_screen_image(self) -> Image.Image | None:
         """
         Captures the primary screen as a PIL Image.
@@ -145,9 +187,8 @@ class ScreenVision:
                 })
         return extracted
 
-    def get_screen_words(self) -> list[dict]:
-        """Captures screen and returns all detected words with bounding boxes."""
-        png_bytes = self.capture_screen_png_bytes()
+    def ocr_png_bytes(self, png_bytes: bytes) -> list[dict]:
+        """Runs Windows Native OCR synchronously on provided PNG bytes."""
         if not png_bytes:
             return []
         try:
@@ -155,6 +196,27 @@ class ScreenVision:
         except Exception as e:
             log.error(f"ScreenVision: OCR processing error: {e}")
             return []
+
+    # Alias for backward compatibility
+    ocr_screen_words = ocr_png_bytes
+
+    def get_screen_words(self) -> list[dict]:
+        """Captures screen and returns all detected words with bounding boxes."""
+        png_bytes = self.capture_screen_png_bytes()
+        return self.ocr_png_bytes(png_bytes)
+
+    def read_active_window_text(self) -> str:
+        """
+        Reads and extracts all text within the currently active foreground window via native OCR.
+        Falls back to full screen text if foreground window cannot be captured.
+        """
+        rect = self.get_active_window_rect()
+        if rect:
+            x, y, w, h = rect
+            text = self.read_roi_text(x, y, w, h)
+            if text:
+                return text
+        return self.read_screen_text()
 
     def read_screen_text(self) -> str:
         """Returns all visible text across the active display as a single formatted string."""
