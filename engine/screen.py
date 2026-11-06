@@ -15,18 +15,24 @@ class ScreenVision:
     and visual coordinate mapping for UI elements.
     """
 
+    _shared_ocr_engine = None
+    _ocr_initialized = False
+
     def __init__(self):
         self._ocr_engine = None
         self._init_ocr()
 
     def _init_ocr(self):
-        try:
-            import winrt.windows.media.ocr as ocr
-            self._ocr_engine = ocr.OcrEngine.try_create_from_user_profile_languages()
-            log.info("ScreenVision: Windows Native OCR engine initialized.")
-        except Exception as e:
-            log.warning(f"ScreenVision: Could not initialize Windows OCR: {e}")
-            self._ocr_engine = None
+        if not ScreenVision._ocr_initialized:
+            try:
+                import winrt.windows.media.ocr as ocr
+                ScreenVision._shared_ocr_engine = ocr.OcrEngine.try_create_from_user_profile_languages()
+                log.info("ScreenVision: Windows Native OCR engine initialized.")
+            except Exception as e:
+                log.warning(f"ScreenVision: Could not initialize Windows OCR: {e}")
+                ScreenVision._shared_ocr_engine = None
+            ScreenVision._ocr_initialized = True
+        self._ocr_engine = ScreenVision._shared_ocr_engine
 
     @staticmethod
     def get_active_window_rect() -> tuple[int, int, int, int] | None:
