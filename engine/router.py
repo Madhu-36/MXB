@@ -11,6 +11,7 @@ from engine.tts import VoiceSynthesizer
 from engine.memory import memory_bank
 from utils.credentials import CredentialsManager
 from utils.environment import EnvironmentContext
+from utils.math_evaluator import SafeMathEvaluator
 from utils.logger import log
 
 class IntentRouter:
@@ -81,6 +82,13 @@ class IntentRouter:
                 reply = "No previous command history recorded yet."
             self.tts.speak(reply)
             return f"MXB: {reply}"
+
+        # 0.3. Mathematical Query Fast-Path (<0.5ms)
+        math_solution = SafeMathEvaluator.try_solve(clean_text)
+        if math_solution:
+            self.tts.speak(math_solution)
+            self.history.append({"user": clean_text, "mxb": math_solution})
+            return f"MXB: {math_solution}"
 
         # 1. System Health / Telemetry
         if any(p in clean_text for p in [
