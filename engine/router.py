@@ -23,9 +23,9 @@ class IntentRouter:
     Tier 2: Deep LLM Multi-Step Action Planning and Conversational Reasoning.
     """
 
-    def __init__(self, config_path: str = None):
-        self.executor = OSExecutionManager()
-        self.tts = VoiceSynthesizer()
+    def __init__(self, config_path: str = None, executor = None, tts = None):
+        self.executor = executor if executor is not None else OSExecutionManager()
+        self.tts = tts if tts is not None else VoiceSynthesizer()
         self.memory = memory_bank
         self.history = deque(maxlen=6)
 
@@ -100,6 +100,96 @@ class IntentRouter:
             self.tts.speak(w_res["summary"])
             self.history.append({"user": clean_text, "mxb": w_res["summary"]})
             return f"MXB: {w_res['summary']}"
+
+        # 0.5. Battery & Power Telemetry (<0.5ms)
+        if any(p in clean_text for p in [
+            "battery", "battery status", "battery percentage", "how much battery",
+            "check battery", "power status", "is it charging", "battery level"
+        ]):
+            reply = "Checking battery status."
+            self.tts.speak(reply)
+            status = self.executor.execute_action("check_battery")
+            self.tts.speak(status)
+            self.history.append({"user": clean_text, "mxb": status})
+            return f"MXB: {reply}\n{status}"
+
+        # 0.6. Timers & Stopwatch Fast-Path (<0.5ms)
+        timer_match = re.search(r'^(?:set|start)(?:\s+a)?\s+timer\s+for\s+(.+)$', clean_text)
+        if timer_match:
+            duration_text = timer_match.group(1).strip()
+            reply = f"Setting timer for {duration_text}."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("timer_start", duration_text)
+            self.tts.speak(res)
+            self.history.append({"user": clean_text, "mxb": res})
+            return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["cancel timer", "stop timer", "clear timer"]):
+            reply = "Cancelling active timer."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("timer_cancel")
+            return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["timer status", "check timer", "how much time is left", "time left on timer", "active timers"]):
+            res = self.executor.execute_action("timer_status")
+            self.tts.speak(res)
+            return f"MXB: {res}"
+
+        # 0.7. Color Picker & Eyedropper Fast-Path (<0.5ms)
+        if any(p in clean_text for p in [
+            "what color is at my cursor", "pick color", "color picker", "cursor color",
+            "eyedropper", "sample color", "color at cursor"
+        ]):
+            res = self.executor.execute_action("pick_color")
+            self.tts.speak(res)
+            self.history.append({"user": clean_text, "mxb": res})
+            return f"MXB: {res}"
+
+        # 0.8. Process & Port Inspection (<1ms)
+        kill_proc_match = re.search(r'^(?:kill|terminate|stop)\s+process\s+([a-zA-Z0-9_\-\.]+)$', clean_text)
+        if kill_proc_match:
+            proc_target = kill_proc_match.group(1).strip()
+            reply = f"Terminating process {proc_target}."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("kill_process", proc_target)
+            return f"MXB: {reply}\nAction: {res}"
+
+        port_match = re.search(r'^(?:what(?:\'s|\s+is)\s+using\s+port|check\s+port|who\s+is\s+on\s+port)\s+(\d+)$', clean_text)
+        if port_match:
+            port_num = port_match.group(1).strip()
+            res = self.executor.execute_action("find_port", port_num)
+            self.tts.speak(res)
+            return f"MXB: {res}"
+
+        if any(p in clean_text for p in ["top processes", "ram hogs", "memory usage by app", "heavy processes"]):
+            res = self.executor.execute_action("top_processes")
+            self.tts.speak(res)
+            return f"MXB: {res}"
+
+        # 0.9. Native OS Lock & Maintenance (<1ms)
+        if any(p in clean_text for p in ["lock screen", "lock pc", "lock computer", "lock workstation", "lock windows"]):
+            reply = "Locking workstation now."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("lock_pc")
+            return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["empty recycle bin", "empty the recycle bin", "clean recycle bin", "empty trash", "clear trash"]):
+            reply = "Emptying recycle bin."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("empty_recycle_bin")
+            return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["open task manager", "open taskmgr", "show task manager", "launch task manager"]):
+            reply = "Opening Windows Task Manager."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("open_task_manager")
+            return f"MXB: {reply}\nAction: {res}"
+
+        if any(p in clean_text for p in ["open terminal", "open powershell", "open console", "launch terminal"]):
+            reply = "Opening terminal."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("open_terminal")
+            return f"MXB: {reply}\nAction: {res}"
 
         # 1. System Health / Telemetry
         if any(p in clean_text for p in [
@@ -178,6 +268,30 @@ class IntentRouter:
 
         if any(p in clean_text for p in ["snap right", "window right"]):
             res = self.executor.execute_action("manage_window", "right")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["snap top left", "snap window top left", "top left corner"]):
+            res = self.executor.execute_action("manage_window", "top_left")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["snap top right", "snap window top right", "top right corner"]):
+            res = self.executor.execute_action("manage_window", "top_right")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["snap bottom left", "snap window bottom left", "bottom left corner"]):
+            res = self.executor.execute_action("manage_window", "bottom_left")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["snap bottom right", "snap window bottom right", "bottom right corner"]):
+            res = self.executor.execute_action("manage_window", "bottom_right")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["center window", "snap center", "center screen"]):
+            res = self.executor.execute_action("manage_window", "center")
+            return f"Action: {res}"
+
+        if any(p in clean_text for p in ["shake window", "aero shake", "minimize other windows", "minimize others"]):
+            res = self.executor.execute_action("manage_window", "shake")
             return f"Action: {res}"
 
         if clean_text in ["close window", "close this window", "close active window"]:
@@ -321,6 +435,27 @@ class IntentRouter:
                 self.tts.speak(reply)
                 self.history.append({"user": clean_text, "mxb": reply})
                 return f"MXB: {reply}\nSaved: {fact}"
+
+        # 16. Hardware-Anchored Vault (DPAPI)
+        store_vault_match = re.search(r'^(?:store|save)\s+(?:secret|password|credential)\s+([a-zA-Z0-9_\-]+)\s+(?:as|value)\s+(.+)$', clean_text)
+        if store_vault_match:
+            v_key = store_vault_match.group(1).strip()
+            v_val = store_vault_match.group(2).strip()
+            res = self.executor.execute_action("vault_store", f"{v_key}::{v_val}")
+            self.tts.speak(res)
+            return f"MXB: {res}"
+
+        get_vault_match = re.search(r'^(?:get|show|retrieve)\s+(?:secret|password|credential)\s+([a-zA-Z0-9_\-]+)$', clean_text)
+        if get_vault_match:
+            v_key = get_vault_match.group(1).strip()
+            res = self.executor.execute_action("vault_get", v_key)
+            self.tts.speak(res)
+            return f"MXB: {res}"
+
+        if any(p in clean_text for p in ["list secrets", "vault keys", "list vault"]):
+            res = self.executor.execute_action("vault_list")
+            self.tts.speak(res)
+            return f"MXB: {res}"
 
         # =========================================================================
         # TIER 2: LLM MULTI-STEP ACTION PLANNER & SECOND BRAIN REASONING
