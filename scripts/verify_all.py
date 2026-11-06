@@ -21,7 +21,14 @@ def run_all_verifications():
         "tests.test_screen_roi",
         "tests.test_file_search",
         "tests.test_memory_export",
-        "tests.test_executor_apps"
+        "tests.test_executor_apps",
+        "tests.test_clipboard_monitor",
+        "tests.test_active_window_crop",
+        "tests.test_math_fastpath",
+        "tests.test_network_diagnostics",
+        "tests.test_file_preview",
+        "tests.test_shortcut_validation",
+        "tests.test_audio_feedback"
     ]
 
     total_tests = 0

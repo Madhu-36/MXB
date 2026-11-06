@@ -1,13 +1,13 @@
-# 🧠 MXB (Machine eXecutive Brain) v2.1
+# 🧠 MXB (Machine eXecutive Brain) v2.2
 > The Decoupled Parallel AI Desktop Executive Assistant & "Two Hands" Automation Engine for Windows
 
-[![MXB Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/Madhu-36/MXB)
+[![MXB Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/Madhu-36/MXB)
 [![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)](https://github.com/Madhu-36/MXB)
-[![Tests](https://img.shields.io/badge/tests-31%20Passed%20%7C%20Green-brightgreen.svg)](https://github.com/Madhu-36/MXB)
+[![Tests](https://img.shields.io/badge/tests-65%20Passed%20%7C%20Green-brightgreen.svg)](https://github.com/Madhu-36/MXB)
 [![AI Architecture](https://img.shields.io/badge/architecture-5--Stage%20Parallel%20Pipelines-cyan.svg)](https://github.com/Madhu-36/MXB)
 [![LLM Planner](https://img.shields.io/badge/LLM-llama3.2:1b%20%7C%20NVIDIA%20Cloud-orange.svg)](https://github.com/Madhu-36/MXB)
 
-**MXB v2.1** is an autonomous desktop executive brain capable of listening continuously and operating your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen vision, and file operations) while you talk.
+**MXB v2.2** is an autonomous desktop executive brain capable of listening continuously and operating your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen vision, and file operations) while you talk.
 
 ---
 
@@ -64,12 +64,29 @@ flowchart TD
 | **Action Planner** | Sliced multi-step execution pipeline with 50ms interval checks for `threading.Event()` abort signals, allowing immediate voice interruption at any moment. | `engine/planner.py` |
 | **64-bit Windows Stability** | Explicit ctypes `argtypes` and `restype` definitions on all Windows `user32.dll` APIs (`keybd_event`, `mouse_event`, `GetCursorPos`, `SetCursorPos`), completely eliminating stack canary corruption. | `engine/mouse.py` & `engine/keyboard_ext.py` |
 | **Clean TTS Teardown** | Native Windows SAPI `SpVoice` integration with `SVSFPurgeBeforeSpeak` (flag 2) to cancel in-flight audio playback instantly upon stop or interruption. | `engine/tts.py` |
+| **Safe Math AST Fast-Path** | Evaluates spoken arithmetic expressions in `<0.04ms` via an abstract syntax tree evaluator without LLM roundtrips. | `utils/math_evaluator.py` |
+| **Clipboard History & Search** | Background clipboard monitor with fuzzy search and rapid recall. | `utils/clipboard_monitor.py` |
+| **Non-blocking Earcons** | Windows native auditory feedback cues for listen, success, cancel, and error states. | `utils/audio_feedback.py` |
 
 ---
 
-## 🧪 Comprehensive Verification Suite (31 Tests)
+## ⚡ Performance Benchmarks
 
-MXB includes 8 automated test suites verifying all subsystems:
+Measured on native 64-bit Windows via `scripts/benchmark_suite.py`:
+
+| Component | Iterations | Avg Latency | Throughput | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Safe Math AST Evaluator** | 2,000 | **0.036 ms** | 27,691 ops/s | `PASS` |
+| **Clipboard Fuzzy Search** | 500 | **0.120 ms** | 8,366 ops/s | `PASS` |
+| **Config Schema Validation** | 1,500 | **0.003 ms** | 370,425 ops/s | `PASS` |
+| **Active Window Ctypes Rect** | 1,000 | **0.011 ms** | 89,186 ops/s | `PASS` |
+| **TCP Socket Connect RTT** | 1 | **16.53 ms** | - | `PASS` |
+
+---
+
+## 🧪 Comprehensive Verification Suite (65 Tests Across 15 Suites)
+
+MXB includes 15 automated test suites verifying all subsystems:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/verify_all.py
@@ -87,8 +104,15 @@ MXB includes 8 automated test suites verifying all subsystems:
 [RUNNING] tests.test_file_search...
 [RUNNING] tests.test_memory_export...
 [RUNNING] tests.test_executor_apps...
+[RUNNING] tests.test_clipboard_monitor...
+[RUNNING] tests.test_active_window_crop...
+[RUNNING] tests.test_math_fastpath...
+[RUNNING] tests.test_network_diagnostics...
+[RUNNING] tests.test_file_preview...
+[RUNNING] tests.test_shortcut_validation...
+[RUNNING] tests.test_audio_feedback...
 =================================================================
-VERIFICATION SUMMARY: 31 tests in 34.76s
+VERIFICATION SUMMARY: 65 tests in 11.52s
 Failures: 0 | Errors: 0
 =================================================================
 >>> ALL ARCHITECTURAL CHECKS & REGRESSIONS PASSED! [STATUS: GREEN]
