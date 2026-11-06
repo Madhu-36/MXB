@@ -243,6 +243,26 @@ class OSExecutionManager:
             elif action == "analyze_clipboard":
                 return self.analyze_clipboard(str(target))
 
+            elif action in ["clipboard_history", "recent_clips"]:
+                from utils.clipboard_monitor import clipboard_monitor
+                clips = clipboard_monitor.get_recent(limit=3)
+                if not clips:
+                    return "Clipboard history is empty."
+                formatted = [f"[{i+1}] {c['text'][:60]}..." if len(c['text']) > 60 else f"[{i+1}] {c['text']}" for i, c in enumerate(clips)]
+                return "Recent Clipboard:\n" + "\n".join(formatted)
+
+            elif action in ["search_clipboard", "find_clipboard"]:
+                from utils.clipboard_monitor import clipboard_monitor
+                matches = clipboard_monitor.search(str(target), limit=2)
+                if not matches:
+                    return f"No clipboard history found matching '{target}'."
+                return f"Found matching clip: '{matches[0]['text'][:100]}'"
+
+            elif action in ["clear_clipboard_history"]:
+                from utils.clipboard_monitor import clipboard_monitor
+                clipboard_monitor.clear()
+                return "Clipboard history cleared."
+
             # 10. System Telemetry & Screen Capture
             elif action == "check_system":
                 return self.check_system()
