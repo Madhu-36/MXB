@@ -85,6 +85,12 @@ class FloatingHUD(QWidget):
         self.is_compact = False
         self.waveform_history = collections.deque([0.0] * 24, maxlen=24)
 
+        # Mouse Drag & Move State
+        self._is_dragging = False
+        self._drag_start_pos = None
+        self.setCursor(Qt.CursorShape.SizeAllCursor)
+        self.setToolTip("Click & Drag to reposition. Double-click to toggle Compact mode.")
+
         # Fade out animation
         self.fade_anim = QPropertyAnimation(self, b"windowOpacity")
         self.fade_anim.setDuration(500)
@@ -109,6 +115,29 @@ class FloatingHUD(QWidget):
 
     def toggle_compact_mode(self):
         self.set_compact_mode(not self.is_compact)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._is_dragging = True
+            self._drag_start_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self._wake_up()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._is_dragging and self._drag_start_pos:
+            self.move(event.globalPosition().toPoint() - self._drag_start_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._is_dragging = False
+            self._drag_start_pos = None
+            event.accept()
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.toggle_compact_mode()
+            event.accept()
 
     def paintEvent(self, event):
         painter = QPainter(self)

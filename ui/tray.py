@@ -18,16 +18,50 @@ class MXBTray(QSystemTrayIcon):
 
         # Create Menu
         self.menu = QMenu()
+        self.menu.setStyleSheet("""
+            QMenu {
+                background-color: #12151E;
+                color: #FFFFFF;
+                border: 1px solid #00E5FF;
+                border-radius: 6px;
+                padding: 6px;
+                font-family: 'Segoe UI';
+            }
+            QMenu::item {
+                padding: 6px 20px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #00E5FF;
+                color: #000000;
+                font-weight: bold;
+            }
+            QMenu::separator {
+                height: 1px;
+                background: #333333;
+                margin: 4px 8px;
+            }
+        """)
         
         # Toggle HUD Action
         self.toggle_hud_action = QAction("Hide HUD")
         self.toggle_hud_action.triggered.connect(self.toggle_hud)
         self.menu.addAction(self.toggle_hud_action)
 
+        # Toggle Compact Mode Action
+        self.toggle_compact_action = QAction("Toggle Compact Badge")
+        self.toggle_compact_action.triggered.connect(self.toggle_compact)
+        self.menu.addAction(self.toggle_compact_action)
+
         # Pause/Resume Action
         self.pause_action = QAction("Pause Listening")
         self.pause_action.triggered.connect(self.toggle_listening)
         self.menu.addAction(self.pause_action)
+
+        # Battery / Power Telemetry
+        self.power_action = QAction("Power & Battery Status")
+        self.power_action.triggered.connect(self.show_power_status)
+        self.menu.addAction(self.power_action)
 
         # Settings Action
         self.settings_action = QAction("Settings Dashboard")
@@ -60,6 +94,16 @@ class MXBTray(QSystemTrayIcon):
         else:
             self.hud.show()
             self.toggle_hud_action.setText("Hide HUD")
+
+    def toggle_compact(self):
+        self.hud.toggle_compact_mode()
+        badge_state = "Compact" if self.hud.is_compact else "Expanded"
+        self.hud.update_action(f"Switched to {badge_state} HUD mode.")
+
+    def show_power_status(self):
+        from utils.power_manager import PowerManager
+        p_status = PowerManager.get_battery_status()
+        self.hud.update_action(p_status["summary"])
 
     def toggle_listening(self):
         if self.engine.is_listening:
