@@ -284,6 +284,11 @@ class OSExecutionManager:
             elif action == "check_system":
                 return self.check_system()
 
+            elif action in ["check_battery", "battery_status", "power_status", "battery"]:
+                from utils.power_manager import PowerManager
+                status = PowerManager.get_battery_status()
+                return status["summary"]
+
             elif action == "capture_screen":
                 return self.capture_screen()
 
