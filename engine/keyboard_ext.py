@@ -54,6 +54,67 @@ class KeyboardExtended:
     }
 
     KEYEVENTF_KEYUP = 0x0002
+    MODIFIERS = {"ctrl", "control", "alt", "shift", "win", "windows", "super"}
+
+    @classmethod
+    def validate_shortcut_keys(cls, *keys) -> dict:
+        """
+        Validates a hotkey combination sequence:
+        - Flattens arguments and splits composite strings like 'ctrl+shift+t'.
+        - Validates all key names against virtual key mappings.
+        - Sorts modifiers before trigger keys in canonical execution order.
+        - Detects OS-reserved combos like Ctrl+Alt+Del.
+        """
+        if len(keys) == 1 and isinstance(keys[0], (list, tuple)):
+            keys = keys[0]
+        elif len(keys) == 1 and isinstance(keys[0], str) and ("+" in keys[0] or " " in keys[0]):
+            delimiter = "+" if "+" in keys[0] else " "
+            keys = [k.strip() for k in keys[0].split(delimiter) if k.strip()]
+
+        raw_keys = [str(k).lower().strip() for k in keys if str(k).strip()]
+        if not raw_keys:
+            return {"valid": False, "error": "No keys specified in shortcut.", "normalized_keys": [], "vk_codes": []}
+
+        # Check for kernel-reserved combinations
+        raw_set = set(raw_keys)
+        if ("ctrl" in raw_set or "control" in raw_set) and "alt" in raw_set and ("del" in raw_set or "delete" in raw_set):
+            return {"valid": False, "error": "Ctrl+Alt+Del is reserved by Windows kernel.", "normalized_keys": [], "vk_codes": []}
+
+        # Separate modifiers from trigger keys to ensure canonical press ordering
+        mods = []
+        triggers = []
+        vk_codes = []
+
+        for k in raw_keys:
+            # Map aliases
+            canonical = "ctrl" if k == "control" else ("win" if k in ["windows", "super"] else ("del" if k == "delete" else ("esc" if k == "escape" else k)))
+            vk = cls.VK_MAP.get(canonical)
+            if not vk and len(canonical) == 1:
+                vk = ord(canonical.upper())
+
+            if not vk:
+                return {"valid": False, "error": f"Unknown key '{k}'", "normalized_keys": [], "vk_codes": []}
+
+            if canonical in cls.MODIFIERS or canonical in ["ctrl", "alt", "shift", "win"]:
+                if canonical not in mods:
+                    mods.append(canonical)
+            else:
+                triggers.append(canonical)
+
+        canonical_sequence = mods + triggers
+        canonical_vks = []
+        for k in canonical_sequence:
+            vk = cls.VK_MAP.get(k) or (ord(k.upper()) if len(k) == 1 else 0)
+            canonical_vks.append(vk)
+
+        return {
+            "valid": True,
+            "error": None,
+            "normalized_keys": canonical_sequence,
+            "vk_codes": canonical_vks,
+            "has_modifier": len(mods) > 0,
+            "trigger_count": len(triggers)
+        }
 
     def __init__(self):
         self.pynput_kb = PynputController()
