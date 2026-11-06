@@ -284,6 +284,27 @@ class OSExecutionManager:
                 clipboard_monitor.clear()
                 return "Clipboard history cleared."
 
+            elif action in ["vault_store", "store_secret"]:
+                from utils.vault import secure_vault
+                parts = str(target).split("::", 1)
+                if len(parts) == 2:
+                    k, v = parts[0].strip(), parts[1].strip()
+                    ok = secure_vault.set_secret(k, v)
+                    return f"Stored secret '{k}' in encrypted vault." if ok else f"Failed to store '{k}'."
+                return "Invalid format. Expected 'key::secret_value'."
+
+            elif action in ["vault_get", "get_secret"]:
+                from utils.vault import secure_vault
+                val = secure_vault.get_secret(str(target))
+                if val is not None:
+                    return f"Secret '{target}': {val}"
+                return f"Secret '{target}' not found in vault."
+
+            elif action in ["vault_list", "list_secrets"]:
+                from utils.vault import secure_vault
+                keys = secure_vault.list_keys()
+                return ("Vault keys: " + ", ".join(keys)) if keys else "Vault is currently empty."
+
             # 10. System Telemetry & Screen Capture
             elif action == "check_system":
                 return self.check_system()
