@@ -195,8 +195,12 @@ class OSExecutionManager:
                 return f"Closed {clean_target}"
 
             # 5. Window Management
-            elif action == "manage_window":
+            elif action in ["manage_window", "snap_window"]:
                 return self.manage_window(str(target))
+
+            elif action in ["aero_shake", "minimize_others"]:
+                from engine.window_manager import window_manager
+                return window_manager.minimize_all_except_active()
 
             elif action == "switch_window":
                 return self.switch_window(str(target))
@@ -341,6 +345,12 @@ class OSExecutionManager:
             elif cmd == "right":
                 self.keyboard.snap_window_right()
                 return "Snapped window right"
+            elif cmd in ["top_left", "top_right", "bottom_left", "bottom_right", "top", "bottom", "center", "middle"]:
+                from engine.window_manager import window_manager
+                return window_manager.snap_active_window(cmd)
+            elif cmd in ["shake", "minimize_others", "isolate"]:
+                from engine.window_manager import window_manager
+                return window_manager.minimize_all_except_active()
             else:
                 return f"Unknown window command: {command}"
         except Exception as e:
