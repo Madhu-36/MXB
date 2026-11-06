@@ -28,7 +28,14 @@ def run_all_verifications():
         "tests.test_network_diagnostics",
         "tests.test_file_preview",
         "tests.test_shortcut_validation",
-        "tests.test_audio_feedback"
+        "tests.test_audio_feedback",
+        "tests.test_power_manager",
+        "tests.test_window_geometry",
+        "tests.test_vault",
+        "tests.test_weather",
+        "tests.test_process_manager",
+        "tests.test_color_picker",
+        "tests.test_timer_manager"
     ]
 
     total_tests = 0
