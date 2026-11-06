@@ -7,3 +7,5 @@ logs/
 .env
 llm/.modelfile_hash
 make_commits.py
+config/*.enc
+*.enc
