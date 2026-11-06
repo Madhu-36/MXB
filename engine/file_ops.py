@@ -39,6 +39,11 @@ class FileOperationsManager:
         if p.is_absolute():
             return p
 
+        # If it exists relative to current working directory
+        cwd_relative = Path.cwd() / clean
+        if cwd_relative.exists():
+            return cwd_relative
+
         # Default relative to Desktop
         return (Path.home() / "Desktop") / clean
 
@@ -155,3 +160,97 @@ class FileOperationsManager:
         except Exception as e:
             log.error(f"FileOps: Hash calculation failed: {e}")
             return None
+
+    def preview_file(self, file_path: str, max_lines: int = 15, max_bytes: int = 32768) -> dict:
+        """
+        Safely inspects a file and previews its leading lines.
+        Detects binary files automatically to prevent terminal corruption.
+        """
+        target = self.resolve_path(file_path)
+        if not target.exists() or not target.is_file():
+            return {
+                "error": f"File does not exist: {file_path}",
+                "path": str(target),
+                "is_binary": False,
+                "content": ""
+            }
+
+        try:
+            size = target.stat().st_size
+            with open(target, "rb") as f:
+                header = f.read(min(1024, size))
+                if b"\x00" in header:
+                    return {
+                        "path": str(target),
+                        "name": target.name,
+                        "size_bytes": size,
+                        "is_binary": True,
+                        "content": f"[Binary file: {target.name} ({size} bytes)]",
+                        "truncated": False
+                    }
+
+                f.seek(0)
+                raw_data = f.read(max_bytes)
+
+            try:
+                text_content = raw_data.decode("utf-8")
+            except UnicodeDecodeError:
+                text_content = raw_data.decode("latin-1", errors="replace")
+
+            lines = text_content.splitlines()
+            preview_lines = lines[:max_lines]
+            is_truncated = len(lines) > max_lines or size > max_bytes
+
+            return {
+                "path": str(target),
+                "name": target.name,
+                "size_bytes": size,
+                "is_binary": False,
+                "lines_shown": len(preview_lines),
+                "total_lines": len(lines),
+                "truncated": is_truncated,
+                "content": "\n".join(preview_lines)
+            }
+        except Exception as e:
+            log.error(f"FileOps: Preview failed for '{target}': {e}")
+            return {
+                "error": str(e),
+                "path": str(target),
+                "is_binary": False,
+                "content": ""
+            }
+
+    def get_directory_tree(self, folder_path: str = "desktop", max_depth: int = 2, max_items_per_dir: int = 15) -> str:
+        """
+        Generates an ASCII hierarchy tree for the specified directory up to max_depth.
+        """
+        target = self.resolve_path(folder_path)
+        if not target.exists() or not target.is_dir():
+            return f"Directory not found: {folder_path}"
+
+        tree_lines = [f"[DIR] {target.name}/"]
+
+        def _walk(curr_dir: Path, depth: int, prefix: str):
+            if depth > max_depth:
+                return
+            try:
+                entries = sorted(list(curr_dir.iterdir()), key=lambda e: (not e.is_dir(), e.name.lower()))
+            except PermissionError:
+                tree_lines.append(f"{prefix}\\-- [Permission Denied]")
+                return
+
+            visible_entries = entries[:max_items_per_dir]
+            for idx, entry in enumerate(visible_entries):
+                is_last = (idx == len(visible_entries) - 1) and (len(entries) <= max_items_per_dir)
+                connector = "\\-- " if is_last else "+-- "
+                tag = "[DIR] " if entry.is_dir() else "      "
+                tree_lines.append(f"{prefix}{connector}{tag}{entry.name}")
+                if entry.is_dir() and depth < max_depth:
+                    new_prefix = prefix + ("    " if is_last else "|   ")
+                    _walk(entry, depth + 1, new_prefix)
+
+            if len(entries) > max_items_per_dir:
+                tree_lines.append(f"{prefix}\\-- ... and {len(entries) - max_items_per_dir} more items")
+
+        _walk(target, 1, "")
+        return "\n".join(tree_lines)
