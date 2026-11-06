@@ -194,6 +194,26 @@ class OSExecutionManager:
                 log.info(f"OSExecution: Terminated application '{clean_target}'")
                 return f"Closed {clean_target}"
 
+            elif action in ["kill_process", "terminate_process"]:
+                from utils.process_manager import ProcessManager
+                res = ProcessManager.terminate_process(str(target))
+                return res.get("summary") or res.get("error", "Process termination failed.")
+
+            elif action in ["top_processes", "heavy_processes", "ram_hogs"]:
+                from utils.process_manager import ProcessManager
+                procs = ProcessManager.get_top_processes(limit=4)
+                if procs:
+                    lines = [f"- {p['name']} ({p['memory_mb']} MB)" for p in procs]
+                    return "Top RAM Processes:\n" + "\n".join(lines)
+                return "No process telemetry available."
+
+            elif action in ["find_port", "check_port"]:
+                from utils.process_manager import ProcessManager
+                res = ProcessManager.find_process_by_port(str(target))
+                if res:
+                    return f"Port {res['port']} is occupied by {res['name']} (PID: {res['pid']})."
+                return f"Port {target} is free (no active listeners)."
+
             # 5. Window Management
             elif action in ["manage_window", "snap_window"]:
                 return self.manage_window(str(target))
