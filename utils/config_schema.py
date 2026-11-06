@@ -107,3 +107,29 @@ class ConfigSchema:
         }
 
         return len(warnings) == 0, validated, warnings
+
+    @classmethod
+    def export_to_file(cls, config: Dict[str, Any], file_path: str) -> bool:
+        """Exports validated config to designated file path."""
+        try:
+            _, validated, _ = cls.validate(config)
+            dest = Path(file_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with open(dest, "w", encoding="utf-8") as f:
+                json.dump(validated, f, indent=2)
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def import_from_file(cls, file_path: str) -> Tuple[bool, Dict[str, Any], list[str]]:
+        """Imports and validates configuration from an external JSON file."""
+        src = Path(file_path)
+        if not src.exists() or not src.is_file():
+            return False, cls.DEFAULTS.copy(), [f"File does not exist: {file_path}"]
+        try:
+            with open(src, "r", encoding="utf-8") as f:
+                raw_data = json.load(f)
+            return cls.validate(raw_data)
+        except Exception as e:
+            return False, cls.DEFAULTS.copy(), [f"Failed to parse JSON: {e}"]

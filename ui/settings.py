@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 import numpy as np
 from utils.credentials import CredentialsManager
+from utils.config_schema import ConfigSchema
 
 class SettingsDashboard(QWidget):
     def __init__(self):
@@ -114,11 +115,19 @@ class SettingsDashboard(QWidget):
         self.test_timer.timeout.connect(self._update_meter)
         self._start_level_test()
 
-        # Save Button
+        # Button Bar
+        btn_layout = QHBoxLayout()
+        self.reset_btn = QPushButton("Reset to Defaults")
+        self.reset_btn.setStyleSheet("background-color: #333; color: #FFF; padding: 8px; border-radius: 5px;")
+        self.reset_btn.clicked.connect(self.reset_to_defaults)
+        btn_layout.addWidget(self.reset_btn)
+
         self.save_btn = QPushButton("Save Settings")
         self.save_btn.setStyleSheet("background-color: #00E5FF; color: #000; font-weight: bold; padding: 8px; border-radius: 5px;")
         self.save_btn.clicked.connect(self.save_settings)
-        layout.addWidget(self.save_btn)
+        btn_layout.addWidget(self.save_btn)
+
+        layout.addLayout(btn_layout)
 
         self.setLayout(layout)
 
@@ -158,6 +167,16 @@ class SettingsDashboard(QWidget):
             except Exception:
                 pass
         super().closeEvent(event)
+
+    def reset_to_defaults(self):
+        """Resets all settings UI fields to default canonical values."""
+        defaults = ConfigSchema.DEFAULTS
+        self.config = defaults.copy()
+        self.ptt_hotkey.setText(defaults["hotkeys"]["push_to_talk"])
+        self.kill_hotkey.setText(defaults["hotkeys"]["kill_switch"])
+        self.sens_combo.setCurrentIndex(0)
+        self.audio_combo.setCurrentIndex(0)
+        print("[Settings] Reset configuration fields to canonical defaults.")
 
     def save_settings(self):
         # Update config dictionary
