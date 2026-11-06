@@ -1,13 +1,13 @@
-# 🧠 MXB (Machine eXecutive Brain) v2.3
+# 🧠 MXB (Machine eXecutive Brain) v2.4
 > The Decoupled Parallel AI Desktop Executive Assistant & "Two Hands" Automation Engine for Windows
 
-[![MXB Version](https://img.shields.io/badge/version-2.3.0-blue.svg)](https://github.com/Madhu-36/MXB)
+[![MXB Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/Madhu-36/MXB)
 [![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)](https://github.com/Madhu-36/MXB)
-[![Tests](https://img.shields.io/badge/tests-92%20Passed%20%7C%20Green-brightgreen.svg)](https://github.com/Madhu-36/MXB)
+[![Tests](https://img.shields.io/badge/tests-109%20Passed%20%7C%20Green-brightgreen.svg)](https://github.com/Madhu-36/MXB)
 [![AI Architecture](https://img.shields.io/badge/architecture-5--Stage%20Parallel%20Pipelines-cyan.svg)](https://github.com/Madhu-36/MXB)
 [![LLM Planner](https://img.shields.io/badge/LLM-llama3.2:1b%20%7C%20NVIDIA%20Cloud-orange.svg)](https://github.com/Madhu-36/MXB)
 
-**MXB v2.3** is an autonomous desktop executive brain capable of listening continuously and operating your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen vision, and file operations) while you talk.
+**MXB v2.4** is an autonomous desktop executive brain capable of listening continuously and operating your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen vision, and file operations) while you talk.
 
 ---
 
@@ -74,6 +74,10 @@ flowchart TD
 | **Process Lifecycle Supervisor** | Windows protected process guards, listening port mapper, and memory ranking. | `utils/process_manager.py` |
 | **Screen Color Eyedropper** | 64-bit Windows GDI pixel sampler with Euclidean RGB color name approximation. | `engine/color_picker.py` |
 | **Countdown Timers** | Asynchronous countdown timers with natural language duration parsing and auditory alerts. | `utils/timer_manager.py` |
+| **Native Workstation Lock** | Direct kernel `LockWorkStation` invocation (<0.1ms) for instantaneous workstation privacy. | `engine/executor.py` |
+| **Silent Recycle Bin Cleaner** | Headless Windows `SHEmptyRecycleBinW` API execution with zero confirmation dialogues. | `engine/executor.py` |
+| **Draggable Floating Cyber HUD** | Smooth click-and-drag repositions across multi-monitors with double-click compact badge toggling. | `ui/hud.py` & `ui/tray.py` |
+| **Multimedia Virtual Keys** | Genuine Windows OSD virtual multimedia key control (`VK_VOLUME_UP`, `VK_VOLUME_DOWN`, `VK_VOLUME_MUTE`, `VK_MEDIA_PLAY_PAUSE`, `VK_MEDIA_NEXT`, `VK_MEDIA_PREV`). | `engine/keyboard_ext.py` |
 
 ---
 
@@ -94,9 +98,9 @@ Measured on native 64-bit Windows via `scripts/benchmark_suite.py`:
 
 ---
 
-## 🧪 Comprehensive Verification Suite (92 Tests Across 22 Suites)
+## 🧪 Comprehensive Verification Suite (109 Tests Across 24 Suites)
 
-MXB includes 22 automated test suites verifying all subsystems:
+MXB includes 24 automated test suites verifying all subsystems:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/verify_all.py
@@ -128,8 +132,10 @@ MXB includes 22 automated test suites verifying all subsystems:
 [RUNNING] tests.test_process_manager...
 [RUNNING] tests.test_color_picker...
 [RUNNING] tests.test_timer_manager...
+[RUNNING] tests.test_lock_and_trash...
+[RUNNING] tests.test_router_extensions...
 =================================================================
-VERIFICATION SUMMARY: 92 tests in 11.35s
+VERIFICATION SUMMARY: 109 tests in 10.78s
 Failures: 0 | Errors: 0
 =================================================================
 >>> ALL ARCHITECTURAL CHECKS & REGRESSIONS PASSED! [STATUS: GREEN]
