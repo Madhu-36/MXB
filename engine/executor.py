@@ -126,6 +126,11 @@ class OSExecutionManager:
                 log.info(f"OSExecution: Read {len(text)} characters from screen.")
                 return f"Visible on Screen:\n{text[:400]}..."
 
+            elif action in ["read_active_window", "active_window_text"]:
+                text = self.screen.read_active_window_text()
+                log.info(f"OSExecution: Read {len(text)} characters from active window.")
+                return f"Active Window Text:\n{text[:400]}..."
+
             # 3. Keyboard & Typing Operations
             elif action == "type_text":
                 self.keyboard.type_text(str(target))
@@ -215,6 +220,18 @@ class OSExecutionManager:
 
             elif action in ["list_files", "list_directory"]:
                 return self.file_ops.list_directory(str(target) if target else "desktop")
+
+            elif action in ["preview_file", "view_file", "read_file"]:
+                res = self.file_ops.preview_file(str(target))
+                if res.get("error"):
+                    return f"File preview failed: {res['error']}"
+                if res.get("is_binary"):
+                    return res["content"]
+                return f"Preview of {res['name']} ({res.get('lines_shown', 0)}/{res.get('total_lines', 0)} lines):\n{res.get('content', '')}"
+
+            elif action in ["directory_tree", "folder_tree", "show_tree"]:
+                folder = str(target) if target else "desktop"
+                return self.file_ops.get_directory_tree(folder)
 
             elif action == "delete_file":
                 return self.file_ops.delete_file(str(target))
