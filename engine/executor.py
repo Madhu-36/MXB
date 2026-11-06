@@ -131,6 +131,16 @@ class OSExecutionManager:
                 log.info(f"OSExecution: Read {len(text)} characters from active window.")
                 return f"Active Window Text:\n{text[:400]}..."
 
+            elif action in ["pick_color", "cursor_color", "eyedropper"]:
+                from engine.color_picker import color_picker
+                if target and "," in str(target):
+                    parts = [int(p.strip()) for p in str(target).split(",") if p.strip().isdigit()]
+                    if len(parts) >= 2:
+                        res = color_picker.get_color_at(parts[0], parts[1])
+                        return res["summary"]
+                res = color_picker.get_color_at_cursor()
+                return res["summary"]
+
             # 3. Keyboard & Typing Operations
             elif action == "type_text":
                 self.keyboard.type_text(str(target))
