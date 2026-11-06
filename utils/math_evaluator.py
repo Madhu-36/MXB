@@ -77,7 +77,7 @@ class SafeMathEvaluator:
         try:
             tree = ast.parse(expression.strip(), mode='eval')
             return cls._eval_node(tree.body)
-        except Exception:
+        except (ValueError, TypeError, SyntaxError):
             return None
 
     @classmethod
