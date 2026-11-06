@@ -35,7 +35,9 @@ def run_all_verifications():
         "tests.test_weather",
         "tests.test_process_manager",
         "tests.test_color_picker",
-        "tests.test_timer_manager"
+        "tests.test_timer_manager",
+        "tests.test_lock_and_trash",
+        "tests.test_router_extensions"
     ]
 
     total_tests = 0
