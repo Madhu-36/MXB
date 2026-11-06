@@ -103,6 +103,24 @@ class VoicePipeline(QThread):
             except Exception:
                 pass
 
+    @staticmethod
+    def calculate_adaptive_silence_threshold(speech_frames_count: int, trailing_rms: float, base_threshold: int) -> int:
+        """
+        Dynamically adjusts the required trailing silence frames before cutting an utterance:
+        - Short snappy commands (< 18 frames) cut faster (base - 2) for minimum command latency.
+        - Longer complex dictation (> 45 frames) receives extra breathing room (+4 frames).
+        - Residual trailing energy above noise floor (+2 frames) avoids clipping terminal consonants.
+        """
+        thresh = base_threshold
+        if speech_frames_count < 18:
+            thresh = max(10, base_threshold - 2)
+        elif speech_frames_count > 45:
+            thresh = base_threshold + 4
+
+        if trailing_rms > 0.0015:
+            thresh += 2
+        return thresh
+
     def _resolve_audio_device(self):
         dev_setting = self.config.get("audio_input_device", "auto")
         devs = sd.query_devices()
@@ -288,6 +306,8 @@ class VoicePipeline(QThread):
         # 2. Local Faster-Whisper Fallback
         if text is None and self.whisper_model:
             try:
+                audio_len_s = len(audio_data) / 16000.0
+                adaptive_speech_pad = min(350, max(180, int(audio_len_s * 55)))
                 segments, _ = self.whisper_model.transcribe(
                     audio_data,
                     beam_size=5,
@@ -296,7 +316,7 @@ class VoicePipeline(QThread):
                         threshold=0.35,
                         min_speech_duration_ms=100,
                         min_silence_duration_ms=300,
-                        speech_pad_ms=200
+                        speech_pad_ms=adaptive_speech_pad
                     ),
                     condition_on_previous_text=False,
                     initial_prompt="Desktop commands: open app, close window, check system, click, scroll down, type text.",
@@ -470,7 +490,13 @@ class VoicePipeline(QThread):
                                 silence_frames += 1
                                 buffer.append(chunk)
 
-                                if silence_frames > silence_threshold:
+                                adaptive_silence_target = self.calculate_adaptive_silence_threshold(
+                                    speech_frames_count=speech_frames_count,
+                                    trailing_rms=rms_volume,
+                                    base_threshold=silence_threshold
+                                )
+
+                                if silence_frames > adaptive_silence_target:
                                     is_speaking = False
 
                                     if speech_frames_count < min_speech_frames:
