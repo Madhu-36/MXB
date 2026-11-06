@@ -12,6 +12,7 @@ from engine.memory import memory_bank
 from utils.credentials import CredentialsManager
 from utils.environment import EnvironmentContext
 from utils.math_evaluator import SafeMathEvaluator
+from utils.audio_feedback import audio_feedback
 from utils.logger import log
 
 class IntentRouter:
@@ -55,6 +56,7 @@ class IntentRouter:
         # 0. Emergency Voice Interruption (<1ms)
         if clean_text in ["stop", "cancel", "halt", "pause", "abort", "freeze", "stop executing", "cancel action", "shut up"]:
             log.warning("Router: Emergency Voice Interruption Triggered!")
+            audio_feedback.play("abort")
             self.executor.abort_current_action()
             reply = "Actions stopped."
             self.tts.speak(reply)
