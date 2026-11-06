@@ -13,6 +13,7 @@ from utils.credentials import CredentialsManager
 from utils.environment import EnvironmentContext
 from utils.math_evaluator import SafeMathEvaluator
 from utils.audio_feedback import audio_feedback
+from utils.weather import WeatherProbe
 from utils.logger import log
 
 class IntentRouter:
@@ -91,6 +92,14 @@ class IntentRouter:
             self.tts.speak(math_solution)
             self.history.append({"user": clean_text, "mxb": math_solution})
             return f"MXB: {math_solution}"
+
+        # 0.4. Weather & Meteorology Fast-Path
+        target_city = WeatherProbe.extract_city(clean_text)
+        if target_city or clean_text in ["what is the weather", "current weather", "how is the weather outside"]:
+            w_res = WeatherProbe.get_weather(target_city or "")
+            self.tts.speak(w_res["summary"])
+            self.history.append({"user": clean_text, "mxb": w_res["summary"]})
+            return f"MXB: {w_res['summary']}"
 
         # 1. System Health / Telemetry
         if any(p in clean_text for p in [
