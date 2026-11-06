@@ -20,6 +20,54 @@ class SystemDiagnostics:
             return False
 
     @staticmethod
+    def check_network_rtt(target_host: str = "1.1.1.1", port: int = 53, timeout: float = 2.0) -> dict:
+        """
+        Measures TCP socket round-trip time (RTT) and DNS resolution latency.
+        Returns dict with:
+        - connected: bool
+        - target: str
+        - rtt_ms: float (or None)
+        - dns_resolve_ms: float (or None)
+        - rating: 'excellent' (<30ms), 'good' (<100ms), 'fair' (<250ms), 'poor' (>250ms), or 'offline'
+        """
+        result = {
+            "connected": False,
+            "target": target_host,
+            "rtt_ms": None,
+            "dns_resolve_ms": None,
+            "rating": "offline"
+        }
+
+        # 1. DNS resolution latency
+        t_dns_start = time.perf_counter()
+        try:
+            resolved_ip = socket.gethostbyname(target_host)
+            result["dns_resolve_ms"] = round((time.perf_counter() - t_dns_start) * 1000.0, 2)
+        except Exception:
+            resolved_ip = target_host
+
+        # 2. TCP connect RTT
+        t_connect_start = time.perf_counter()
+        try:
+            with socket.create_connection((resolved_ip, port), timeout=timeout):
+                rtt = (time.perf_counter() - t_connect_start) * 1000.0
+                result["connected"] = True
+                result["rtt_ms"] = round(rtt, 2)
+                if rtt < 30.0:
+                    result["rating"] = "excellent"
+                elif rtt < 100.0:
+                    result["rating"] = "good"
+                elif rtt < 250.0:
+                    result["rating"] = "fair"
+                else:
+                    result["rating"] = "poor"
+        except OSError:
+            result["connected"] = False
+            result["rating"] = "offline"
+
+        return result
+
+    @staticmethod
     def check_nvidia_build() -> dict:
         result = {"has_key": False, "authenticated": False, "models": [], "status": "Not Configured"}
         api_key = CredentialsManager.get_nvidia_api_key()
