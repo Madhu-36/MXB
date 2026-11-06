@@ -344,6 +344,61 @@ class OSExecutionManager:
                 status = PowerManager.get_battery_status()
                 return status["summary"]
 
+            elif action in ["weather", "check_weather", "get_weather"]:
+                from utils.weather import WeatherProbe
+                city = str(target) if target and str(target).strip() else ""
+                res = WeatherProbe.get_weather(city)
+                return res.get("summary", "Weather data unavailable.")
+
+            elif action in ["timer_start", "start_timer", "set_timer"]:
+                from utils.timer_manager import timer_manager
+                if "::" in str(target):
+                    label, dur_str = str(target).split("::", 1)
+                else:
+                    label, dur_str = "Timer", str(target)
+                sec = timer_manager.parse_duration(dur_str)
+                if sec <= 0:
+                    return f"Could not determine timer duration from '{dur_str}'."
+                res = timer_manager.start_timer(label.strip(), sec)
+                return res.get("summary", f"Timer set for {sec} seconds.")
+
+            elif action in ["timer_cancel", "cancel_timer", "stop_timer"]:
+                from utils.timer_manager import timer_manager
+                active = timer_manager.list_active_timers()
+                if not active:
+                    return "No active timers running."
+                target_label = str(target).strip() if target else active[0]["label"]
+                ok = timer_manager.cancel_timer(target_label)
+                return f"Timer '{target_label}' cancelled." if ok else f"Could not cancel timer '{target_label}'."
+
+            elif action in ["timer_status", "check_timer", "list_timers"]:
+                from utils.timer_manager import timer_manager
+                active = timer_manager.list_active_timers()
+                if not active:
+                    return "No timers currently active."
+                items = [f"{t['label']}: {t['remaining_sec']}s remaining" for t in active]
+                return "Active Timers: " + ", ".join(items)
+
+            elif action in ["lock_pc", "lock_screen", "lock_workstation"]:
+                self._lock_workstation_native()
+                return "Workstation locked successfully."
+
+            elif action in ["empty_recycle_bin", "empty_trash", "clean_recycle_bin"]:
+                self._empty_recycle_bin_native()
+                return "Recycle bin emptied successfully."
+
+            elif action in ["open_task_manager", "taskmgr"]:
+                subprocess.Popen(["taskmgr.exe"])
+                return "Opened Windows Task Manager."
+
+            elif action in ["open_terminal", "open_powershell", "open_console"]:
+                try:
+                    subprocess.Popen(["wt.exe"])
+                    return "Opened Windows Terminal."
+                except Exception:
+                    subprocess.Popen(["powershell.exe"])
+                    return "Opened PowerShell."
+
             elif action == "capture_screen":
                 return self.capture_screen()
 
@@ -491,19 +546,25 @@ class OSExecutionManager:
     def control_volume(self, action: str) -> str:
         action = action.lower().strip()
         if action in ["volume_up", "up", "louder"]:
-            for _ in range(3):
-                self.keyboard.tap_key("f3")  # Or media volume up
+            for _ in range(4):
+                self.keyboard.tap_key("volume_up")
             return "Volume increased"
         elif action in ["volume_down", "down", "quieter"]:
-            for _ in range(3):
-                self.keyboard.tap_key("f2")
+            for _ in range(4):
+                self.keyboard.tap_key("volume_down")
             return "Volume decreased"
         elif action in ["mute", "unmute"]:
-            self.keyboard.tap_key("f1")
+            self.keyboard.tap_key("volume_mute")
             return "Audio mute toggled"
-        elif action in ["play", "pause"]:
-            self.keyboard.tap_key("space")
+        elif action in ["play", "pause", "play_pause"]:
+            self.keyboard.tap_key("media_play_pause")
             return "Media playback toggled"
+        elif action in ["next", "next_track"]:
+            self.keyboard.tap_key("media_next")
+            return "Skipped to next track"
+        elif action in ["prev", "previous", "prev_track"]:
+            self.keyboard.tap_key("media_prev")
+            return "Returned to previous track"
         return f"Unknown volume action: {action}"
 
     def capture_screen(self) -> str:
@@ -562,3 +623,20 @@ class OSExecutionManager:
             "memory_mb": round(total_rss / (1024 * 1024), 1),
             "cpu_percent": round(total_cpu, 1)
         }
+
+    @staticmethod
+    def _lock_workstation_native():
+        import ctypes
+        user32 = ctypes.windll.user32
+        user32.LockWorkStation.argtypes = []
+        user32.LockWorkStation.restype = ctypes.c_bool
+        return user32.LockWorkStation()
+
+    @staticmethod
+    def _empty_recycle_bin_native():
+        import ctypes
+        shell32 = ctypes.windll.shell32
+        shell32.SHEmptyRecycleBinW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_uint32]
+        shell32.SHEmptyRecycleBinW.restype = ctypes.c_long
+        # SHERB_NOCONFIRMATION = 0x00000001, SHERB_NOPROGRESSUI = 0x00000002, SHERB_NOSOUND = 0x00000004 -> 7
+        return shell32.SHEmptyRecycleBinW(None, None, 7)
