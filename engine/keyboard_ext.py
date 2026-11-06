@@ -51,6 +51,15 @@ class KeyboardExtended:
         "f10": 0x79,
         "f11": 0x7A,
         "f12": 0x7B,
+        "volume_mute": 0xAD,
+        "volume_down": 0xAE,
+        "volume_up": 0xAF,
+        "media_next": 0xB0,
+        "media_prev": 0xB1,
+        "media_stop": 0xB2,
+        "media_play_pause": 0xB3,
+        "print_screen": 0x2C,
+        "prtsc": 0x2C,
     }
 
     KEYEVENTF_KEYUP = 0x0002
