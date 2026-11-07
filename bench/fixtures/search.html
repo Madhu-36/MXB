@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>MXB Bench Search</title>
+<style>body{font:18px Segoe UI,sans-serif;margin:60px}input{font-size:20px;padding:8px;width:420px}</style></head>
+<body>
+<h1>MXB Bench: search box</h1>
+<input id="q" type="search" placeholder="Search" aria-label="Search">
+<script>
+document.getElementById('q').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { document.title = 'Searched: ' + e.target.value; }
+});
+</script>
+</body></html>

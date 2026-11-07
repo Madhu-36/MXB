@@ -370,6 +370,8 @@ class CommandBus(QObject):
                 break
             text, source = item
             try:
+                from safety.injection import set_source
+                set_source(source)
                 self.tts.set_thread_speaking(source == "voice" or self.speak_text_replies)
                 if lane == "action":
                     self._action_busy.set()

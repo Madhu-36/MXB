@@ -18,3 +18,11 @@ undo_journal.json
 schedules.json
 routines.json
 remote.json
+audit.log.jsonl*
+.ci-data/
+dist/
+build/
+*.spec.bak
+bench/results/
+.build-venv/
+packaging/mxb.ico

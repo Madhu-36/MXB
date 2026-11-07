@@ -4,6 +4,7 @@ import threading
 from pathlib import Path
 from thefuzz import fuzz
 from utils.logger import log
+from utils.paths import data_file
 
 class MemoryBank:
     """
@@ -13,7 +14,7 @@ class MemoryBank:
     """
 
     def __init__(self):
-        self.filepath = Path(__file__).parent.parent / "memory_bank.json"
+        self.filepath = data_file("memory_bank.json")
         self._lock = threading.Lock()
         self._ensure_db()
 

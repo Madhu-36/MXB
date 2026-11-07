@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from rapidfuzz import fuzz, process
 from utils.logger import log
+from utils.paths import data_file
 
 SPECIAL_KEYS = {"enter", "tab", "esc", "backspace", "delete", "up", "down", "left", "right", "home", "end",
                 "page_up", "page_down", "space", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12"}
@@ -107,7 +108,7 @@ def events_to_plan(events: list[dict], max_wait: float = 5.0) -> tuple[list[dict
 
 class RoutineStore:
     def __init__(self, store_path: str | Path | None = None):
-        self.store_path = Path(store_path) if store_path else Path(__file__).parent.parent / "routines.json"
+        self.store_path = Path(store_path) if store_path else data_file("routines.json")
         self._lock = threading.Lock()
         self.items: dict[str, dict] = {}
         try:

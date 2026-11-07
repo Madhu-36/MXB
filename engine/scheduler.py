@@ -18,6 +18,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from utils.logger import log
+from utils.paths import data_file
 
 WEEKDAYS = {"monday": 0, "mon": 0, "tuesday": 1, "tue": 1, "tues": 1, "wednesday": 2, "wed": 2, "thursday": 3,
             "thu": 3, "thurs": 3, "friday": 4, "fri": 4, "saturday": 5, "sat": 5, "sunday": 6, "sun": 6}
@@ -177,7 +178,7 @@ def split_trailing_time(text: str, now: datetime | None = None) -> tuple[str, st
 
 class Scheduler:
     def __init__(self, store_path: str | Path | None = None, fire=None, clock=datetime.now):
-        self.store_path = Path(store_path) if store_path else Path(__file__).parent.parent / "schedules.json"
+        self.store_path = Path(store_path) if store_path else data_file("schedules.json")
         self.fire = fire
         self.clock = clock
         self._lock = threading.Lock()

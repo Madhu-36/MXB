@@ -1,10 +1,21 @@
-# MXB v4.0 Companion Guide
+# MXB v4.1 Companion Guide
 
 MXB is a Windows desktop companion you can **talk to or type to**. It keeps listening while it works, can operate any app through the mouse, keyboard and accessibility tree, controls your hardware, and works with your files. Anything destructive needs your "yes" first.
 
 ---
 
 ## 1. Setup
+
+**Installer (recommended).** Run `MXB-Setup-<version>.exe` from the GitHub Releases page. It installs for your user only (no admin prompt) into `%LOCALAPPDATA%\Programs\MXB`. On first launch the setup wizard walks you through:
+
+1. **Microphone**: pick one and press *Test* to see the level.
+2. **AI brain**: paste an NVIDIA key (checked live) and/or use a local Ollama model (detected automatically).
+3. **Voice and listening**: speech engine, voice (play a sample), wake word(s), wake-word vs always-listening.
+4. **Finish**: start with Windows, open chat on start, daily update check.
+
+Run it again any time from the tray: *Run Setup Wizard*. Your settings, memory, document index, audit log and logs live in `%APPDATA%\MXB` (set `MXB_DATA_DIR` to move them). Uninstalling leaves that folder alone; delete it yourself to remove everything.
+
+**From source:**
 
 ```powershell
 python -m venv .venv
@@ -15,6 +26,12 @@ setx NVIDIA_API_KEY "nvapi-..."      # cloud: fast, best planning quality
 ollama pull llama3.1:8b               # local: private; set llm.local_model to it
 python -u main.py
 ```
+
+A source checkout keeps its data next to the code, exactly as before. The setup wizard appears once (skip it with `MXB_SKIP_SETUP=1`).
+
+**Updates.** Say *"check for updates"* or use the tray. MXB also checks once a day and only mentions it when a new version exists. *"Install the update"* asks first, downloads the installer, verifies its SHA-256 against the release's `SHA256SUMS.txt` (a mismatched download is deleted), closes MXB, upgrades and reopens it. From source, update with `git pull`.
+
+**Start with Windows.** *"start with windows"*, *"don't start with windows"*, or the wizard checkbox. It's a per-user Run entry (no admin), removed on uninstall. Only one MXB runs at a time; opening it again just tells you it's already in the tray.
 
 `llama3.2:1b` (the old default) handles simple commands, but it is too small for reliable multi-step plans or agent mode. Use the NVIDIA model or a local 8B model for those.
 
@@ -156,6 +173,13 @@ Restart MXB. The pattern runs instantly, and the skill also appears in the LLM's
 9. **Recording is explicit and visible.** Only between "start recording" and "stop recording", never in password fields.
 10. **Scheduled commands get no free pass.** A destructive scheduled command still asks for confirmation; if nobody answers, it's cancelled.
 
+11. **Prompt-injection protection (agent mode).** Text MXB reads from the screen, web pages, files, the clipboard or your document index is untrusted. It's fenced with a random marker the page can't fake, and the model is told it's data, not instructions. On top of that, the executor enforces:
+    - **A per-goal allowlist.** UI actions are allowed; file reading, volume, Bluetooth etc. only when your goal mentions them. Deleting, the vault, power, terminal, routines, schedules, updates, autostart and memory changes are never available during a screen task: ask for those directly.
+    - **Typed-text provenance.** If the agent wants to type something that isn't from your request, you're asked first.
+    - **Risky buttons.** Clicking Send, Pay, Delete, Allow, Install, Share and the like asks first unless your goal said so.
+    - **Suspicious mode.** If the screen contains instruction-like text ("ignore previous instructions", "send the file to…"), MXB warns you and asks before every non-read action for the rest of the task.
+12. **Audit log.** Every action, block and refusal is appended to `audit.log.jsonl` in the data folder with the time, source (voice, text, phone, schedule, agent) and outcome. Passwords, OTPs and card or account numbers are redacted; vault actions are fully hidden. Ask *"show the audit log"* or *"what did you do today?"*. It rotates at 5 MB (3 old files kept).
+
 To turn confirmations off entirely (not recommended), set `safety.confirm_destructive: false`.
 
 ---
@@ -186,10 +210,27 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `agent.max_marks` / `agent.max_stuck_turns` | `60` / `3` | Set-of-Marks size, stuck limit |
 | `remote.enabled` / `remote.port` / `remote.allow_screen` | `false` / `8765` / `true` | Phone remote |
 | `skills.enabled` / `skills.disabled` | `true` / `[]` | Plugin loading; disable by file name |
+| `ui.start_with_windows` | `false` | Set by the wizard or "start with windows" (the Run entry is the source of truth) |
+| `update.check_on_start` / `update.repo` | `true` / `"Madhu-36/MXB"` | Daily quiet update check; where releases come from |
+| `llm.build_custom_model` | `false` | Build the old `mxb-brain` Ollama model on start (pulls a 4.7 GB base) |
+| `setup_complete` | absent | Set after the first-run wizard; delete it to see the wizard again |
 
 ---
 
-## 6. Known limits
+## 6. Measuring MXB (MXB-Bench)
+
+```powershell
+python -m bench.run                        # routing: precision, coverage, latency (tuned vs held-out set)
+python -m bench.run --suite live --yes     # 27 real desktop tasks (Windows; uses your mouse and keyboard)
+python -m bench.run --suite all --llm --update-readme   # everything, with the LLM, published to README
+python -m bench.run --list                 # list live tasks and what they need
+```
+
+The live suite works in a sandbox folder (`Documents\MXB-Bench-<time>`) with its own memory, audit log and schedules, restores your volume, and closes what it opened. Move the mouse to the top-left corner to abort. The held-out routing set is never used for tuning, so its numbers are the honest ones.
+
+---
+
+## 7. Known limits
 
 - **Bluetooth connect/disconnect** works for classic audio devices (earbuds, headphones, speakers) by toggling their audio profiles through the Win32 Bluetooth API. Some drivers require admin rights. BLE mice and keyboards can't be connected programmatically; MXB opens Bluetooth settings instead and says so.
 - **Wi-Fi connect** works for networks Windows has already saved. For new networks MXB opens Wi-Fi settings so you can type the password yourself.
@@ -200,4 +241,6 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 - **edge-tts needs internet**; when it fails MXB switches to Windows voices for the session. Use Piper for an offline neural voice.
 - **The offline wake word** ships with pretrained phrases ("hey jarvis", "alexa", "hey mycroft"). A custom "hey MXB" needs a model trained with openWakeWord's training notebook.
 - **Local hashing embeddings** match by keywords and phrases, not deep meaning. Run `ollama pull nomic-embed-text` for real semantic recall.
+- **Unsigned installer.** SmartScreen may warn on first install (*More info → Run anyway*). The update checksum catches corrupted or tampered downloads, but only code signing protects against a compromised release account.
+- **Injection detection is pattern-based.** A clever page may not trip it; the per-goal allowlist and confirmations are what actually stop harm.
 - **Tool calling** depends on the model. If the hosted model rejects `tools`, MXB detects that once and uses JSON mode from then on.

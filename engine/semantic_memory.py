@@ -12,11 +12,13 @@ Semantic long-term memory (SQLite + embeddings).
 import json
 import re
 import sqlite3
+from contextlib import contextmanager
 import threading
 import time
 from pathlib import Path
 import numpy as np
 from utils.logger import log
+from utils.paths import data_file
 
 SENSITIVE = re.compile(r"\b(password|passcode|pin|otp|cvv|card number|credit card|debit card|account number|"
                        r"aadhaar|aadhar|pan number|ssn|social security|bank account|ifsc|secret key|api key|token)\b", re.I)
@@ -60,19 +62,26 @@ def _from_blob(blob: bytes) -> np.ndarray:
 
 class SemanticMemory:
     def __init__(self, db_path: str | Path | None = None, embedder=None, legacy_json: str | Path | None = None):
-        base = Path(__file__).parent.parent
-        self.db_path = Path(db_path) if db_path else base / "mxb_memory.db"
+        self.db_path = Path(db_path) if db_path else data_file("mxb_memory.db")
         if embedder is None:
             from engine.embeddings import Embedder
             embedder = Embedder()
         self.embedder = embedder
         self._lock = threading.Lock()
         self._init_db()
-        self._migrate_legacy(Path(legacy_json) if legacy_json else base / "memory_bank.json")
+        self._migrate_legacy(Path(legacy_json) if legacy_json else data_file("memory_bank.json"))
 
     # ------------------------------------------------------------------ db plumbing
+    @contextmanager
     def _conn(self):
-        return sqlite3.connect(str(self.db_path), check_same_thread=False, timeout=10)
+        """Commit-or-rollback AND close: sqlite3's own context manager never closes, which leaks
+        connections and keeps the file locked on Windows."""
+        conn = sqlite3.connect(str(self.db_path), check_same_thread=False, timeout=10)
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _init_db(self):
         with self._lock, self._conn() as c:

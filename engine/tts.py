@@ -30,8 +30,8 @@ SVSF_PURGE_BEFORE_SPEAK = 2
 
 def _load_voice_config() -> dict:
     try:
-        cfg = json.loads((Path(__file__).parent.parent / "config.json").read_text(encoding="utf-8"))
-        return cfg.get("voice", {}) or {}
+        from utils.paths import load_config
+        return load_config().get("voice", {}) or {}
     except Exception:
         return {}
 

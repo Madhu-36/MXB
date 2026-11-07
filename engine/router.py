@@ -17,6 +17,7 @@ from utils.math_evaluator import SafeMathEvaluator
 from utils.audio_feedback import audio_feedback
 from utils.weather import WeatherProbe
 from utils.logger import log
+from utils.paths import config_path as app_config_path
 
 class IntentRouter:
     """
@@ -32,7 +33,7 @@ class IntentRouter:
         self.history = deque(maxlen=6)
 
         # Load config
-        self.config_path = Path(config_path) if config_path else Path(__file__).parent.parent / "config.json"
+        self.config_path = Path(config_path) if config_path else app_config_path()
         self.config = self._load_config()
         self.llm = LLMClient(self.config)
 
@@ -53,6 +54,7 @@ class IntentRouter:
         clean_text = re.sub(r'[\.,!\?]+$', '', text).strip()
         # Same text with the user's capitalization, for anything that gets typed or stored.
         original_text = re.sub(r'[\.,!\?]+$', '', transcription.strip()).strip()
+        clean_text, original_text = self._strip_politeness(clean_text, original_text)
         log.info(f"IntentRouter: Routing intent for '{clean_text}'")
 
         # =========================================================================
@@ -201,7 +203,8 @@ class IntentRouter:
 
         # 1. System Health / Telemetry
         if any(p in clean_text for p in [
-            "check system", "system status", "pc status", "how is my pc", "how is my computer",
+            "check system", "check the system", "check my system", "check my pc", "check my computer",
+            "system status", "pc status", "how is my pc", "how is my computer",
             "cpu usage", "ram usage", "battery percentage", "battery status", "pc metrics"
         ]):
             reply = "Checking your hardware status now."
@@ -371,7 +374,8 @@ class IntentRouter:
             return f"MXB: {reply}\nAction: {res}"
 
         # 9. App Launching
-        launch_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:open|launch|start)\s+(?:up\s+)?([a-zA-Z0-9\s]+)$', clean_text)
+        launch_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:open|launch|start|pull up|bring up|fire up)\s+(?:up\s+)?'
+                                 r'(?:the\s+|my\s+)?([a-zA-Z0-9\s]+?)(?:\s+app)?$', clean_text)
         if launch_match:
             app_name = launch_match.group(1).strip()
             if app_name and app_name not in ["the door", "a tab", "window", "folder"]:
@@ -381,7 +385,7 @@ class IntentRouter:
                 return f"MXB: {reply}\n" + self.executor.execute_action("open_app", app_name)
 
         # 10. App Closing
-        close_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:close|kill|quit|terminate|exit)\s+([a-zA-Z0-9\s]+)$', clean_text)
+        close_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:close|kill|quit|terminate|exit)\s+(?:the\s+|my\s+)?([a-zA-Z0-9\s]+)$', clean_text)
         if close_match:
             target_app = close_match.group(1).strip()
             if target_app and target_app not in ["window", "this window", "active window"]:
@@ -400,7 +404,7 @@ class IntentRouter:
 
         # 12. File System Operations
         if clean_text.startswith("create folder ") or clean_text.startswith("make folder "):
-            fname = re.sub(r'^(?:create|make)\s+folder\s+', '', clean_text).strip()
+            fname = re.sub(r'^(?:create|make)\s+folder\s+', '', original_text, flags=re.IGNORECASE).strip()
             reply = f"Creating folder {fname}."
             self.tts.speak(reply)
             res = self.executor.execute_action("create_folder", fname)
@@ -415,7 +419,8 @@ class IntentRouter:
             return f"MXB: {reply}\n{res}"
 
         # 13. Web Search
-        search_match = re.search(r'^(?:search the web for|search for|search|google|look up)\s+(.+)$', clean_text)
+        search_match = re.search(r'^(?:search (?:the web|google|online|the internet) for|search on google for|google search(?: for)?|'
+                                 r'search for|search|google|look up)\s+(.+)$', clean_text)
         if search_match:
             query = search_match.group(1).strip()
             reply = f"Searching the web for {query}."
@@ -478,6 +483,25 @@ class IntentRouter:
         log.info("IntentRouter: No direct match in Tier 1. Delegating to LLM Multi-Step Planner...")
         return self._route_to_llm(transcription, feedback_callback=feedback_callback)
 
+    _POLITE_PREFIX = re.compile(r"^(?:(?:hey|hi|ok|okay)\s+)?(?:mxb[,\s]+)?(?:(?:please|kindly)\s+)?"
+                                r"(?:(?:can|could|would|will)\s+you\s+(?:please\s+)?)?")
+    # Only filler that never carries meaning ("...saying thanks" must keep "thanks").
+    _POLITE_SUFFIX = re.compile(r"(?:,?\s+(?:please|for me))+$")
+
+    @classmethod
+    def _strip_politeness(cls, t: str, o: str) -> tuple[str, str]:
+        """'could you open notepad for me' -> 'open notepad' (same cut applied to the original-case text)."""
+        if len(t) != len(o):
+            return t, o
+        m = cls._POLITE_PREFIX.match(t)
+        start = m.end() if m else 0
+        if start and start < len(t):
+            t, o = t[start:], o[start:]
+        m = cls._POLITE_SUFFIX.search(t)
+        if m and m.start() > 0:
+            t, o = t[:m.start()], o[:m.start()]
+        return t.strip(), o.strip()
+
     @staticmethod
     def _clean_and_parse_json(raw: str) -> dict | None:
         return parse_json_reply(raw)
@@ -508,9 +532,11 @@ class IntentRouter:
             active_window_context = ""
             try:
                 import pygetwindow as gw
+                from safety.injection import detect_injection, wrap_untrusted
                 active = gw.getActiveWindow()
-                if active and active.title:
-                    active_window_context = f"Active Window: '{active.title}'\n\n"
+                # Web pages control their own window titles, so the title is untrusted text.
+                if active and active.title and not detect_injection(active.title):
+                    active_window_context = f"Active window title: {wrap_untrusted(active.title, 'window-title', 200)}\n\n"
             except Exception:
                 pass
 
@@ -728,6 +754,21 @@ class IntentRouter:
             if isinstance(found, tuple):
                 return self._act(t, "run_routine", m.group("name"))
 
+        # ---------------- Trust: audit log, updates, autostart ----------------
+        if t in {"show the audit log", "show audit log", "audit log", "show activity log", "what have you done",
+                 "what did you do", "show your activity"}:
+            return self._act(t, "audit_log", "")
+        if t in {"what did you do today", "what have you done today", "what did you do while i was away"}:
+            return self._act(t, "audit_log", "today")
+        if t in {"check for updates", "check for update", "is there an update", "any updates", "update check"}:
+            return self._act(t, "check_updates", "")
+        if t in {"install the update", "install update", "update mxb", "update yourself", "install the new version"}:
+            return self._act(t, "install_update", "")
+        if t in {"start with windows", "start automatically", "launch at startup", "enable autostart", "start mxb with windows"}:
+            return self._act(t, "autostart", "on")
+        if t in {"don't start with windows", "do not start with windows", "disable autostart", "stop starting with windows"}:
+            return self._act(t, "autostart", "off")
+
         # ---------------- Phone remote ----------------
         phone = r"(?:phone|mobile)\s+(?:remote|control|access|app)"
         if re.match(rf"^(?:turn on|enable|start|open|switch on)\s+(?:the\s+)?{phone}$", t):
@@ -739,6 +780,26 @@ class IntentRouter:
         if t in {"new phone link", "reset phone remote", "change phone remote link", "rotate phone remote token"}:
             return self._act(t, "phone_remote", "rotate")
         return None
+
+    _NUM_WORDS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+                  "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+                  "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30,
+                  "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+
+    @classmethod
+    def _words_to_number(cls, text: str) -> int | None:
+        """'fifty' -> 50, 'seventy five' -> 75, 'a hundred' / 'one hundred' -> 100."""
+        words = [w for w in re.split(r"[\s-]+", (text or "").lower().strip()) if w and w != "and"]
+        if not words:
+            return None
+        if words[-1] == "hundred" and len(words) <= 2 and (len(words) == 1 or words[0] in {"a", "one"}):
+            return 100
+        total = 0
+        for w in words:
+            if w not in cls._NUM_WORDS:
+                return None
+            total += cls._NUM_WORDS[w]
+        return total if 0 <= total <= 100 else None
 
     @staticmethod
     def _parse_reminder(rest: str) -> tuple[str, str] | None:
@@ -813,6 +874,34 @@ class IntentRouter:
         if v4 is not None:
             return v4
 
+        # ---------------- Known folders, websites, settings, media (bench-driven fixes) ----------------
+        m = re.match(r"^(?P<verb>open|show|go to)\s+(?:my\s+|the\s+)?(?P<f>desktop|downloads|documents|pictures|music|videos|home)(?P<folder>\s+folder)?$", t)
+        if m and not (m.group("f") == "desktop" and m.group("verb") != "open" and not m.group("folder")):
+            # ("show desktop" / "go to desktop" still mean minimize-everything)
+            return self._act(t, "open_path", m.group("f"), speak_result=False)
+        m = re.match(r"^(?:go to|open|visit|browse to|navigate to)\s+(?P<url>(?:https?://)?(?:www\.)?[\w\-]+(?:\.[\w\-]+)*\."
+                     r"(?:com|in|org|net|io|dev|edu|gov|co|ai|app|me|tv|ly|so)(?:/\S*)?)$", t)
+        if m:
+            return self._act(t, "open_url", self._grp(m, "url", t, o), speak_result=False)
+        if t in {"open settings", "open windows settings", "show settings", "open the settings"}:
+            return self._act(t, "open_settings", "", speak_result=False)
+        if re.match(r"^(?:pause|stop|resume|continue|play)\s+(?:the\s+)?(?:music|song|video|playback|track)$", t):
+            return self._act(t, "media_control", "play", speak_result=False)
+        if t in {"next song", "next track", "skip song", "skip this song", "play the next song", "skip track"}:
+            return self._act(t, "media_control", "next", speak_result=False)
+        if t in {"previous song", "previous track", "last song", "play the previous song", "go back a song"}:
+            return self._act(t, "media_control", "prev", speak_result=False)
+        if re.match(r"^(?:turn|put)\s+(?:the\s+)?volume\s+all the way (?:down|off)$|^mute everything$", t):
+            return self._act(t, "set_volume", "0")
+        if re.match(r"^(?:turn|put)\s+(?:the\s+)?volume\s+all the way up$|^max(?:imum)? volume$", t):
+            return self._act(t, "set_volume", "100")
+        m = re.match(r"^(?:set|change|put|turn)\s+(?:the\s+)?(?P<what>volume|sound|brightness|screen brightness)\s+(?:to|at)\s+(?P<n>[a-z][a-z\s-]+?)\s*(?:%|percent)?$", t)
+        if m and self._words_to_number(m.group("n")) is not None:
+            action = "set_brightness" if "bright" in m.group("what") else "set_volume"
+            return self._act(t, action, str(self._words_to_number(m.group("n"))))
+        if t in {"lock my computer", "lock my pc", "lock my laptop", "lock the computer", "lock the pc", "lock it"}:
+            return self._act(t, "lock_pc")
+
         # ---------------- Search box on screen ----------------
         sb, tail = self._SEARCH_BOX, self._ENTER_TAIL
         p1 = (rf"^(?:please\s+)?(?:go\s+to|click(?:\s+on)?|focus(?:\s+on)?|open|use|select|tap(?:\s+on)?)\s+(?:the\s+|that\s+)?"
@@ -864,7 +953,7 @@ class IntentRouter:
         # ---------------- Bluetooth ----------------
         bt = r"blue\s?tooth"
         m = re.match(rf"^(?:please\s+)?(?:turn|switch|put)\s+(on|off)\s+(?:the\s+)?{bt}$", t) or \
-            re.match(rf"^(?:please\s+)?(?:turn|switch|put)\s+(?:the\s+)?{bt}\s+(on|off)$", t)
+            re.match(rf"^(?:please\s+)?(?:turn|switch|put)\s+(?:the\s+)?{bt}\s+(?:back\s+)?(on|off)$", t)
         if m:
             return self._act(t, "bluetooth_power", m.group(1))
         m = re.match(rf"^(enable|disable)\s+(?:the\s+)?{bt}$", t)
@@ -872,14 +961,14 @@ class IntentRouter:
             return self._act(t, "bluetooth_power", "on" if m.group(1) == "enable" else "off")
         if re.match(rf"^(?:is\s+)?{bt}\s+(?:on|status|enabled)$|^(?:{bt}\s+status|is\s+(?:the\s+)?{bt}\s+on)$", t):
             return self._act(t, "bluetooth_power", "status")
-        if re.match(rf"^(?:list|show|what are)(?:\s+(?:my|all|the))?\s+(?:paired\s+|connected\s+)?{bt}\s+devices(?:\s+(?:are\s+)?(?:connected|paired))?$", t) or \
+        if re.match(rf"^(?:list|show(?:\s+me)?|what are)(?:\s+(?:my|all|the))?\s+(?:paired\s+|connected\s+)?{bt}\s+devices(?:\s+(?:are\s+)?(?:connected|paired))?$", t) or \
            re.match(rf"^what\s+{bt}\s+devices\s+are\s+(?:connected|paired)$", t):
             return self._act(t, "bluetooth_devices")
 
         # ---------------- Wi-Fi ----------------
         wifi = r"(?:wi-?fi|wireless|wlan)"
         m = re.match(rf"^(?:please\s+)?(?:turn|switch)\s+(on|off)\s+(?:the\s+)?{wifi}$", t) or \
-            re.match(rf"^(?:please\s+)?(?:turn|switch)\s+(?:the\s+)?{wifi}\s+(on|off)$", t)
+            re.match(rf"^(?:please\s+)?(?:turn|switch)\s+(?:the\s+)?{wifi}\s+(?:back\s+)?(on|off)$", t)
         if m:
             return self._act(t, "wifi_power", m.group(1))
         m = re.match(rf"^(enable|disable)\s+(?:the\s+)?{wifi}$", t)
@@ -925,7 +1014,7 @@ class IntentRouter:
             return self._act(t, "set_brightness", m.group(1))
         if re.match(r"^(?:increase|raise|turn up)\s+(?:the\s+)?(?:screen\s+)?brightness$|^brightness\s+up$|^(?:make\s+(?:the\s+)?screen\s+)?brighter$", t):
             return self._act(t, "set_brightness", "up")
-        if re.match(r"^(?:decrease|lower|reduce|turn down|dim)\s+(?:the\s+)?(?:screen\s+)?(?:brightness)?$|^brightness\s+down$|^(?:make\s+(?:the\s+)?screen\s+)?dimmer$", t):
+        if re.match(r"^(?:decrease|lower|reduce|turn down|dim)\s+(?:the\s+)?(?:screen|display)?\s*(?:brightness)?$|^brightness\s+down$|^(?:make\s+(?:the\s+)?screen\s+)?dimmer$", t):
             return self._act(t, "set_brightness", "down")
         if t in {"what is the brightness", "what's the brightness", "brightness level", "current brightness"}:
             return self._act(t, "set_brightness", "status")
@@ -990,7 +1079,7 @@ class IntentRouter:
             return self._act(t, "read_file", f"{path} :: Summarize this file in 3 short sentences.")
 
         m = re.match(r"^(?:please\s+)?open\s+(?:the\s+|my\s+)?(?:file|folder|document|pdf)\s+(?:named\s+|called\s+)?(?P<p>.+)$", t)
-        if m:
+        if m and m.group("p") not in {"explorer", "manager", "history"}:
             path = self._grp(m, "p", t, o)
             return self._act(t, "open_path", path, speak_result=False)
 

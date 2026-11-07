@@ -1,13 +1,12 @@
-import os
 import hashlib
 import subprocess
-from pathlib import Path
 
 class LLMBuilder:
     def __init__(self):
-        self.base_dir = Path(__file__).parent.parent
+        from utils.paths import bundle_dir, data_file
+        self.base_dir = bundle_dir()
         self.modelfile_path = self.base_dir / "llm" / "Modelfile"
-        self.hash_path = self.base_dir / "llm" / ".modelfile_hash"
+        self.hash_path = data_file("llm", ".modelfile_hash")
 
     def _get_current_hash(self) -> str:
         if not self.modelfile_path.exists():

@@ -1,15 +1,21 @@
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
-from PySide6.QtGui import QIcon, QAction
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QStyle
 from ui.settings import SettingsDashboard
 
 class MXBTray(QSystemTrayIcon):
-    def __init__(self, hud, engine, parent=None, chat=None):
+    quit_requested = Signal()   # thread-safe: the updater emits this from a worker thread
+
+    def __init__(self, hud, engine, parent=None, chat=None, bus=None):
         super().__init__(parent)
         self.hud = hud
         self.engine = engine
         self.chat = chat
+        self.bus = bus if bus is not None else getattr(chat, "bus", None)
         self.settings_window = None
+        self.wizard = None
+        self.quit_requested.connect(self.exit_app)
         
         # Use a default system icon for the tray
         app = QApplication.instance()
@@ -80,6 +86,15 @@ class MXBTray(QSystemTrayIcon):
         self.settings_action.triggered.connect(self.open_settings)
         self.menu.addAction(self.settings_action)
 
+        # Setup wizard + updates
+        self.wizard_action = QAction("Run Setup Wizard")
+        self.wizard_action.triggered.connect(self.open_setup_wizard)
+        self.menu.addAction(self.wizard_action)
+
+        self.updates_action = QAction("Check for Updates")
+        self.updates_action.triggered.connect(self.check_updates)
+        self.menu.addAction(self.updates_action)
+
         # Health Diagnostics Action
         self.diagnostics_action = QAction("Run Health Diagnostics")
         self.diagnostics_action.triggered.connect(self.run_diagnostics)
@@ -137,6 +152,18 @@ class MXBTray(QSystemTrayIcon):
         self.settings_window.show()
         self.settings_window.activateWindow()
 
+    def open_setup_wizard(self):
+        from ui.setup_wizard import SetupWizard
+        self.wizard = SetupWizard()
+        self.wizard.accepted.connect(
+            lambda: self.hud.update_action("Setup saved. Restart MXB to apply microphone and voice changes."))
+        self.wizard.show()
+        self.wizard.raise_()
+
+    def check_updates(self):
+        if self.bus is not None:
+            self.bus.submit("check for updates", "text")   # reply shows in chat + HUD
+
     def run_diagnostics(self):
         from utils.diagnostics import SystemDiagnostics
         health = SystemDiagnostics.get_health_report()
@@ -149,5 +176,12 @@ class MXBTray(QSystemTrayIcon):
             self.hud.update_action("Command history cleared.")
 
     def exit_app(self):
-        self.engine.stop()
-        QApplication.quit()
+        try:
+            self.engine.stop()
+        finally:
+            if self.bus is not None:
+                try:
+                    self.bus.shutdown()
+                except Exception:
+                    pass
+            QApplication.quit()

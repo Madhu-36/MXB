@@ -89,6 +89,8 @@ class SafetyPolicy:
         if action == "grant_file_access":
             scope = "your entire file system" if target.lower() in {"all", "everything", "full", "*"} else f"'{target}'"
             return f"Give MXB access to {scope}?"
+        if action == "install_update":
+            return "Download and install the new MXB version now? MXB will restart."
         if action == "vault_get":
             return f"Reveal the secret '{target}' out loud and on screen?"
         return f"Run {action.replace('_', ' ')} on '{target}'?"

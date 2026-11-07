@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from utils.logger import log
+from utils.paths import data_file
 
 INDEX_HTML = r"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -127,7 +128,7 @@ class RemoteServer:
         self.port = int(cfg.get("port", 8765))
         self.host = cfg.get("host", "0.0.0.0")
         self.allow_screen = bool(cfg.get("allow_screen", True))
-        self.store_path = Path(store_path) if store_path else Path(__file__).parent.parent / "remote.json"
+        self.store_path = Path(store_path) if store_path else data_file("remote.json")
         self.token = self._load_or_create_token()
         self.events = EventLog()
         self.screen_grabber = screen_grabber

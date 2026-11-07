@@ -1,12 +1,15 @@
 import logging
-import os
+import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 def setup_logger():
-    base_dir = Path(__file__).parent.parent
-    log_dir = base_dir / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        from utils.paths import logs_dir
+        log_dir = logs_dir()
+    except Exception:
+        log_dir = Path(__file__).parent.parent / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger("MXB")
     logger.setLevel(logging.DEBUG)
@@ -32,7 +35,10 @@ def setup_logger():
         console_handler.setFormatter(formatter)
 
         logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+        if not getattr(sys, "frozen", False):
+            # The windowed build has no console; its stderr is logs/console.log, which would
+            # otherwise duplicate this rotating log forever. Source runs keep console output.
+            logger.addHandler(console_handler)
 
     return logger
 

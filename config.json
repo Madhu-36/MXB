@@ -66,7 +66,8 @@
     "max_stuck_turns": 3
   },
   "ui": {
-    "open_chat_on_start": true
+    "open_chat_on_start": true,
+    "start_with_windows": false
   },
   "memory": {
     "embedding_provider": "auto",
@@ -81,5 +82,9 @@
   "skills": {
     "enabled": true,
     "disabled": []
+  },
+  "update": {
+    "check_on_start": true,
+    "repo": "Madhu-36/MXB"
   }
 }

@@ -8,7 +8,30 @@ root_dir = Path(__file__).parent.parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-def run_all_verifications():
+# Suites that only need plain Python + Qt (run on any OS via tests/_stubs.py).
+PORTABLE_SUITES = [
+    "tests.test_config_schema",
+    "tests.test_file_search",
+    "tests.test_memory_export",
+    "tests.test_math_fastpath",
+    "tests.test_file_preview",
+    "tests.test_safety_policy",
+    "tests.test_file_permissions",
+    "tests.test_wake_word",
+    "tests.test_command_bus",
+    "tests.test_companion_router",
+    "tests.test_ui_and_hardware_logic",
+    "tests.test_chat_window",
+    "tests.test_end_to_end_flow",
+    "tests.test_v4_agent",
+    "tests.test_v4_voice",
+    "tests.test_v4_memory",
+    "tests.test_v4_automation",
+    "tests.test_section1",
+]
+
+
+def run_all_verifications(mode: str = "all"):
     print("=" * 65)
     print("   MACHINE EXECUTIVE BRAIN (MXB) - FULL SUITE VERIFICATION")
     print("=" * 65)
@@ -49,8 +72,14 @@ def run_all_verifications():
         "tests.test_v4_agent",
         "tests.test_v4_voice",
         "tests.test_v4_memory",
-        "tests.test_v4_automation"
+        "tests.test_v4_automation",
+        "tests.test_section1"
     ]
+    if mode == "portable":
+        test_modules = PORTABLE_SUITES
+    elif mode == "windows":
+        test_modules = [m for m in test_modules if m not in PORTABLE_SUITES]
+    print(f"Mode: {mode} ({len(test_modules)} suites)")
 
     total_tests = 0
     total_failures = 0
@@ -80,4 +109,14 @@ def run_all_verifications():
         return 1
 
 if __name__ == "__main__":
-    sys.exit(run_all_verifications())
+    import argparse
+    parser = argparse.ArgumentParser(description="Run MXB test suites.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--portable", action="store_true", help="only suites that run on any OS")
+    group.add_argument("--windows", action="store_true", help="only the Windows hardware/integration suites")
+    args = parser.parse_args()
+    if args.portable:
+        import os
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        import tests._stubs  # noqa: F401  (stand-ins for Windows-only packages off Windows)
+    sys.exit(run_all_verifications("portable" if args.portable else "windows" if args.windows else "all"))

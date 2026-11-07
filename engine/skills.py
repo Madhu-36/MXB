@@ -66,20 +66,26 @@ class SkillContext:
 
 class SkillRegistry:
     def __init__(self, plugin_dir: str | Path | None = None, disabled: list[str] | None = None):
-        self.plugin_dir = Path(plugin_dir) if plugin_dir else Path(__file__).parent.parent / "plugins"
+        if plugin_dir:
+            self.plugin_dirs = [Path(plugin_dir)]
+        else:
+            from utils.paths import plugin_dirs
+            self.plugin_dirs = plugin_dirs()   # shipped examples + %APPDATA%\MXB\plugins when installed
+        self.plugin_dir = self.plugin_dirs[-1]
         self.disabled = {d.lower().removesuffix(".py") for d in (disabled or [])}
         self.skills: dict[str, Skill] = {}
         self.errors: dict[str, str] = {}
         self.context = SkillContext()
 
     def load_all(self) -> int:
-        if not self.plugin_dir.is_dir():
-            return 0
-        for path in sorted(self.plugin_dir.glob("*.py")):
-            if path.name.startswith("_") or path.stem.lower() in self.disabled:
+        for folder in self.plugin_dirs:
+            if not folder.is_dir():
                 continue
-            self.load_file(path)
-        log.info(f"Skills: loaded {len(self.skills)} skills from {self.plugin_dir} ({len(self.errors)} errors)")
+            for path in sorted(folder.glob("*.py")):
+                if path.name.startswith("_") or path.stem.lower() in self.disabled:
+                    continue
+                self.load_file(path)
+        log.info(f"Skills: loaded {len(self.skills)} skills from {', '.join(map(str, self.plugin_dirs))} ({len(self.errors)} errors)")
         return len(self.skills)
 
     def load_file(self, path: Path) -> list[str]:

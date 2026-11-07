@@ -15,6 +15,7 @@ import re
 import sys
 import threading
 from pathlib import Path
+from utils.paths import data_file, load_config
 
 _ALL_WORDS = {"all", "everything", "full", "*", "all files", "entire disk", "whole computer", "all drives"}
 
@@ -56,7 +57,7 @@ def parse_location(text: str) -> str:
 class FileAccessManager:
     def __init__(self, store_path: str | Path | None = None, default_roots: list | None = None,
                  protected_roots: list | None = None, extra_allowed: list | None = None):
-        self.store_path = Path(store_path) if store_path else Path(__file__).parent.parent / "permissions.json"
+        self.store_path = Path(store_path) if store_path else data_file("permissions.json")
         self._lock = threading.Lock()
         self._default_roots = default_roots
         self._protected_roots = protected_roots
@@ -187,7 +188,7 @@ def get_file_access() -> FileAccessManager:
     if _shared is None:
         extra = []
         try:
-            cfg = json.loads((Path(__file__).parent.parent / "config.json").read_text(encoding="utf-8"))
+            cfg = load_config()
             extra = cfg.get("files", {}).get("extra_allowed_folders", []) or []
         except Exception:
             pass

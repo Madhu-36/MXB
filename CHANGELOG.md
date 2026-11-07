@@ -1,3 +1,28 @@
+## v4.1.0 — Made real
+**Install & update**
+- One-click per-user installer (PyInstaller one-folder + Inno Setup, no admin), Start-menu entry, optional desktop icon; upgrades clear stale files; uninstall removes autostart and keeps your data.
+- First-run setup wizard: microphone picker with live level test, NVIDIA key check, Ollama detection, voice and sample, wake words, start with Windows, update checks. Also in the tray.
+- User data moved to `%APPDATA%\MXB` for installed builds (`MXB_DATA_DIR` overrides; source checkouts unchanged).
+- Updater: GitHub Releases, SHA-256 verified downloads, installer starts only after MXB exits, MXB relaunches after the upgrade. Voice: "check for updates", "install the update". Quiet daily check.
+- Start with Windows (per-user Run key) by voice or wizard; single-instance guard; `--smoke-test` mode proves a frozen build bundled every module and data file.
+- Release workflow: tag `v*` → tests + bench → build → smoke test → installer + `SHA256SUMS.txt` → GitHub Release.
+
+**Security**
+- Prompt-injection defense: untrusted-text fences with random tokens, injection detection → ask-before-every-action, per-goal action allowlist enforced in the executor, typed-text provenance check, risky-button confirmation, dangerous shortcuts blocked in agent mode.
+- Audit log (JSONL, redacted, rotated): "show the audit log", "what did you do today".
+
+**Quality**
+- CI on every push: ruff (fatal rules), 236 cross-platform tests on Python 3.11/3.12 (Linux) and Windows, routing-bench gate.
+- MXB-Bench: routing precision/coverage/latency on a tuned and a held-out set (published in README), 27 live Windows desktop tasks including a prompt-injection attack page.
+- Router: new fast paths for the natural phrasings the bench's blind set exposed (number words, "pull up"/"bring up", known folders, website names, media keys, settings pages, "thanks" no longer cut from agent goals).
+
+**Fixes**
+- SQLite connections in memory and documents are now closed (they kept files locked on Windows).
+- Tests no longer write into the real data folder (audit log, memory, undo journal, logs).
+- Dropped unused torch/torchaudio from requirements (~2.5 GB per install).
+- Windowed build: stdout/stderr go to a bounded `logs/console.log` so progress bars can't crash it; no duplicate logging.
+- NVIDIA key from the wizard works immediately; `.env` lookup checks every candidate location.
+
 ## v4.0.0 — Advanced Companion
 **Smarter agent**
 - Set-of-Marks: numbered clickable elements for the agent and for voice ("show numbers", "click 12", "type hello in 3") with a click-through on-screen overlay.

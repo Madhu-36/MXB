@@ -147,6 +147,12 @@ CATALOG: tuple[ActionSpec, ...] = (
     ActionSpec("start_recording", "workflow name", "Record the user's clicks and typing as a replayable workflow", "automation"),
     ActionSpec("stop_recording", '""', "Stop and save the recording", "automation"),
     ActionSpec("phone_remote", '"on", "off" or "status"', "Turn the phone remote-control web app on/off", "automation", risk="confirm"),
+
+    # ---------------- v4.1: trust, install & updates ----------------
+    ActionSpec("audit_log", '"today", "last 2 hours" or ""', "Summarize what MXB did, blocked or was refused", "system"),
+    ActionSpec("check_updates", '""', "Check GitHub for a newer MXB release", "system"),
+    ActionSpec("install_update", '""', "Download (SHA-256 verified) and install the newest MXB release", "system", risk="confirm"),
+    ActionSpec("autostart", '"on", "off" or "status"', "Start MXB when Windows starts", "system"),
     ActionSpec("wait", "seconds e.g. '1.5'", "Pause between steps (e.g. while an app opens)", "control"),
     ActionSpec("conversation", '"none"', "Just answer in the reply field, no OS action", "control"),
 )
@@ -289,8 +295,9 @@ def plan_tool_schema(agent: bool = False) -> dict:
 
 
 def planner_system_prompt(assistant_name: str = "MXB") -> str:
+    from safety.injection import UNTRUSTED_RULES
     return (
         f"You are {assistant_name}, an AI desktop companion with full control of the user's Windows PC "
         "(mouse, keyboard, apps, windows, files, Bluetooth, Wi-Fi, volume, brightness).\n\n"
-        f"{PLANNER_RULES}\n\nAvailable actions:\n{prompt_tool_list()}"
+        f"{PLANNER_RULES}\n{UNTRUSTED_RULES}\n\nAvailable actions:\n{prompt_tool_list()}"
     )

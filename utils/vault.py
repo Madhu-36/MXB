@@ -24,7 +24,8 @@ class SecureVault:
         if vault_path:
             self.vault_file = Path(vault_path)
         else:
-            self.vault_file = Path(__file__).parent.parent / "config" / ".mxb_vault.enc"
+            from utils.paths import data_file
+            self.vault_file = data_file("config", ".mxb_vault.enc")
         
         self._lock = threading.Lock()
         self.crypt32 = ctypes.windll.crypt32 if sys.platform == "win32" else None

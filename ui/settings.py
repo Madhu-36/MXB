@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt, QTimer
 import numpy as np
 from utils.credentials import CredentialsManager
 from utils.config_schema import ConfigSchema
+from utils.paths import config_path as app_config_path, data_dir
 
 class SettingsDashboard(QWidget):
     def __init__(self):
@@ -18,7 +19,7 @@ class SettingsDashboard(QWidget):
         self.resize(480, 480)
 
         # Load config directly from file
-        self.config_path = Path(__file__).parent.parent / 'config.json'
+        self.config_path = app_config_path()
         with open(self.config_path, 'r') as f:
             self.config = json.load(f)
 
@@ -195,7 +196,7 @@ class SettingsDashboard(QWidget):
         # Save NVIDIA API Key to .env file safely
         nv_key = self.nv_key_input.text().strip()
         if nv_key:
-            env_path = Path(__file__).parent.parent / '.env'
+            env_path = data_dir() / '.env'
             lines = []
             if env_path.exists():
                 with open(env_path, 'r') as f:

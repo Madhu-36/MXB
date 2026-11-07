@@ -13,11 +13,13 @@ class CredentialsManager:
         if key and key.strip():
             return key.strip()
 
-        # 2. Local mxb_app/.env
-        local_env = Path(__file__).parent.parent / '.env'
-        if local_env.exists():
+        # 2. MXB's own .env (data folder when installed, project folder otherwise)
+        from utils.paths import data_dir, APP_DIR
+        for local_env in dict.fromkeys([data_dir() / '.env', APP_DIR / '.env']):
+            if not local_env.exists():
+                continue
             try:
-                with open(local_env, 'r') as f:
+                with open(local_env, 'r', encoding='utf-8') as f:
                     for line in f:
                         line = line.strip()
                         if line.startswith("NVIDIA_API_KEY="):

@@ -16,15 +16,15 @@ import threading
 import time
 from pathlib import Path
 from utils.logger import log
+from utils.paths import data_file, data_dir
 
 BACKUP_LIMIT_BYTES = 50 * 1024 * 1024
 
 
 class UndoJournal:
     def __init__(self, store_path: str | Path | None = None, backup_dir: str | Path | None = None, max_entries: int = 50):
-        base = Path(__file__).parent.parent
-        self.store_path = Path(store_path) if store_path else base / "undo_journal.json"
-        self.backup_dir = Path(backup_dir) if backup_dir else Path.home() / ".mxb" / "backups"
+        self.store_path = Path(store_path) if store_path else data_file("undo_journal.json")
+        self.backup_dir = Path(backup_dir) if backup_dir else data_dir() / "backups"
         self.max_entries = max_entries
         self._lock = threading.Lock()
         self.entries: list[dict] = []

@@ -1,0 +1,14 @@
+# Minimal dependencies for the cross-platform test suites and MXB-Bench routing (Linux/macOS/Windows CI).
+# Windows-only packages are replaced by tests/_stubs.py on other platforms.
+PySide6>=6.5.0
+numpy>=1.24.0
+requests>=2.31.0
+rapidfuzz>=3.0.0
+thefuzz
+Pillow>=10.0.0
+pyperclip>=1.8.2
+psutil>=5.9.0
+Send2Trash>=1.8.2
+edge-tts>=7.0.0
+miniaudio>=1.59
+qrcode[pil]>=7.4
