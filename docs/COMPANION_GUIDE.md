@@ -1,4 +1,4 @@
-# MXB v3.0 Companion Guide
+# MXB v4.0 Companion Guide
 
 MXB is a Windows desktop companion you can **talk to or type to**. It keeps listening while it works, can operate any app through the mouse, keyboard and accessibility tree, controls your hardware, and works with your files. Anything destructive needs your "yes" first.
 
@@ -91,6 +91,55 @@ Questions and chat · *"search the web for…"* · *"summarize clipboard"* · *"
 ### Agent mode
 `agent: <goal>` (or "autopilot: …"). MXB looks at the active window (title, clickable elements with coordinates, OCR text, optional screenshot), plans 1–3 steps, acts, and repeats up to `agent.max_steps`. Say "stop" at any time. Set `agent.use_vision: true` to also send a screenshot to the vision model.
 
+### v4: precision clicking, undo
+| Say / type | Action |
+| :--- | :--- |
+| show numbers · hide numbers | Numbered boxes over every clickable element (auto-hides after 20 s) |
+| click 12 · type hello in 3 | `click_mark` / `type_mark` |
+| undo the move · undo the last file action · undo that (within 2 min) | `undo_last`: reverses MXB's last move/rename/copy/create/delete/overwrite |
+
+### v4: memory & your documents
+| Say / type | Action |
+| :--- | :--- |
+| I prefer short answers · my manager is Ravi · call me S10 | Learned automatically (`remember_preference`). Anything that looks like a password/PIN/card/account number is never stored |
+| what do you remember about me · what do you know about my manager | `recall_memories` |
+| forget my old address | `forget_memory` |
+| index my Notes folder · index D:\Projects | `index_folder` (background; MXB tells you when done; re-run to pick up changes) |
+| ask my documents when is the SIH deadline · what do my notes say about X | `ask_documents`: answers only from your files, with `Sources:` |
+| knowledge status | What's indexed |
+
+Embeddings: `memory.embedding_provider = "auto"` uses Ollama (`ollama pull nomic-embed-text`) when it's running, otherwise a local keyword-hashing embedder. Your documents are never sent to the cloud unless you set it to `"nvidia"` yourself.
+
+### v4: reminders, schedules, routines, recordings
+| Say / type | Action |
+| :--- | :--- |
+| remind me in 20 minutes to stretch · remind me to call mom at 5 pm · remind me tomorrow at 9 am to submit the form | `set_reminder`: toast + voice + chat |
+| remind me every 2 hours to drink water · every monday at 9 am remind me to send the report | Recurring reminders |
+| schedule open outlook every weekday at 9 am · every day at 10 pm lock the pc | `schedule_command`: runs the command through the normal pipeline (risky ones still ask "yes"; unanswered = no) |
+| list my reminders · cancel the reminder to call mom · cancel reminder 2 · cancel all reminders | Manage jobs |
+| create a routine called work mode: open vs code; open chrome; set volume to 30 | `create_routine` (`;` or "then" separates steps) |
+| run the work mode routine · run work mode | `run_routine` |
+| start recording expense report … stop recording · run expense report | Record your clicks/typing and replay them. Clicks replay by element name, with the recorded spot as fallback. Password fields are never recorded; clicks in MXB's own window are ignored |
+| list routines · delete the routine work mode | Manage |
+
+### v4: phone remote
+1. Say or type **"turn on phone remote"** and answer **yes**.
+2. Scan the QR code shown in the chat window (or open the link) on a phone on the **same Wi-Fi**.
+3. On the phone you can chat, follow live progress, press **Stop**, answer **Yes/No** questions, and tap **Screen** to peek at the PC.
+"turn off phone remote" stops it; "new phone link" invalidates old links.
+
+### v4: plugins
+Drop a Python file into `plugins/`:
+```python
+from engine.skills import skill
+
+@skill(name="open_github", patterns=[r"^open my github$"], description="Open my GitHub profile", target="none")
+def open_github(target, ctx):
+    ctx.executor.execute_action("open_url", "github.com/your-name")
+    return "Opening your GitHub."
+```
+Restart MXB. The pattern runs instantly, and the skill also appears in the LLM's action list. `risk="confirm"` makes MXB ask first. Included examples: `quick_notes.py` ("note that…", "read my notes") and `youtube.py` ("play lofi on youtube"). "list plugins" shows what's loaded. **Plugins run with your permissions; only install code you've read.**
+
 ---
 
 ## 4. Safety model
@@ -101,6 +150,11 @@ Questions and chat · *"search the web for…"* · *"summarize clipboard"* · *"
 4. **OS folders are always read-only.** Even with full access, MXB never writes to Windows, Program Files or ProgramData. A misheard command must not be able to break the OS.
 5. **Deletes are recoverable by default.** Normal deletes go to the Recycle Bin. Permanent deletion must be asked for explicitly.
 6. **Wake word by default.** With `listening.mode: "always"` MXB acts on everything it hears, including a TV or other people in the room. Only switch it on in a quiet room.
+
+7. **Phone remote is off by default** and needs a "yes" to turn on. Every request needs a 128-bit token, only private-network addresses are served, and 10 bad tokens block that address for 10 minutes. It's plain HTTP on your LAN, so don't enable it on public Wi-Fi. Set `remote.allow_screen: false` to disable screen peek.
+8. **Memory never stores secrets.** Statements mentioning passwords, PINs, OTPs, card, Aadhaar or bank/account numbers are not learned. Memory and indexes stay on this PC (`mxb_memory.db`, `mxb_knowledge.db`).
+9. **Recording is explicit and visible.** Only between "start recording" and "stop recording", never in password fields.
+10. **Scheduled commands get no free pass.** A destructive scheduled command still asks for confirmation; if nobody answers, it's cancelled.
 
 To turn confirmations off entirely (not recommended), set `safety.confirm_destructive: false`.
 
@@ -121,6 +175,17 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `llm.vision_model` / `llm.local_vision_model` | NVIDIA Llama 3.2 Vision / `llama3.2-vision` | Used by agent mode when vision is on |
 | `hotkeys.open_chat` | `ctrl+alt+space` | Toggle chat window |
 | `ui.open_chat_on_start` | `true` | Show chat on launch |
+| `llm.streaming` / `llm.use_tool_calling` | `true` / `true` | Speak while streaming (voice) / native tool calling (text, agent) |
+| `voice.tts_engine` | `"auto"` | `edge`, `piper`, `sapi` |
+| `voice.edge_voice` | `en-IN-NeerjaNeural` | Any edge-tts voice, e.g. `en-IN-PrabhatNeural`, `en-US-AriaNeural` |
+| `voice.piper_exe` / `voice.piper_model` | `""` | Paths for offline Piper TTS |
+| `voice.barge_in` | `"auto"` | `headset`, `speaker`, `off` |
+| `listening.engine` | `"transcript"` | `"openwakeword"` for the offline audio wake word |
+| `listening.openwakeword_model` / `_threshold` | `hey_jarvis` / `0.5` | Pretrained name or path to a custom `.onnx` |
+| `memory.embedding_provider` | `"auto"` | `ollama`, `nvidia`, `local` |
+| `agent.max_marks` / `agent.max_stuck_turns` | `60` / `3` | Set-of-Marks size, stuck limit |
+| `remote.enabled` / `remote.port` / `remote.allow_screen` | `false` / `8765` / `true` | Phone remote |
+| `skills.enabled` / `skills.disabled` | `true` / `[]` | Plugin loading; disable by file name |
 
 ---
 
@@ -131,3 +196,8 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 - **Brightness** works on laptop panels (WMI) and monitors with DDC/CI enabled.
 - **Accessibility tree:** most Windows apps, Chrome, Edge and Firefox expose their controls. Games and custom-drawn UIs don't, so MXB falls back to OCR or shortcuts.
 - **Switching the default audio output** has no public Windows API; MXB lists devices and opens Sound settings instead.
+- **Barge-in on laptop speakers** relies on the echo filter (comparing what it heard with what it just said). Headsets interrupt instantly and are more reliable.
+- **edge-tts needs internet**; when it fails MXB switches to Windows voices for the session. Use Piper for an offline neural voice.
+- **The offline wake word** ships with pretrained phrases ("hey jarvis", "alexa", "hey mycroft"). A custom "hey MXB" needs a model trained with openWakeWord's training notebook.
+- **Local hashing embeddings** match by keywords and phrases, not deep meaning. Run `ollama pull nomic-embed-text` for real semantic recall.
+- **Tool calling** depends on the model. If the hosted model rejects `tools`, MXB detects that once and uses JSON mode from then on.

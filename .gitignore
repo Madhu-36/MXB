@@ -12,3 +12,9 @@ config/*.enc
 permissions.json
 memory_bank.export.json
 tests/_test_temp_files/
+mxb_memory.db
+mxb_knowledge.db
+undo_journal.json
+schedules.json
+routines.json
+remote.json

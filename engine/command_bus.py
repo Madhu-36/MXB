@@ -91,6 +91,7 @@ class CommandBus(QObject):
     confirmation_requested = Signal(str)     # question
     confirmation_resolved = Signal(bool)
     open_chat_requested = Signal()
+    qr_ready = Signal(str, bytes)            # phone remote URL + QR PNG for the chat window
 
     def __init__(self, config: dict | None = None, router=None, start: bool = True):
         super().__init__()
@@ -116,6 +117,15 @@ class CommandBus(QObject):
             self.executor.confirm_callback = self.request_confirmation
         if hasattr(self.executor, "feedback_callback"):
             self.executor.feedback_callback = self.feedback.emit
+        # v4 hooks: background announcements, routines, skills speech
+        if hasattr(self.executor, "announce"):
+            self.executor.announce = self.announce
+        if hasattr(self.executor, "command_runner"):
+            self.executor.command_runner = lambda text: self.router.route(text, feedback_callback=self.feedback.emit)
+        if hasattr(self.executor, "speak"):
+            self.executor.speak = lambda text: self.tts.speak(text)
+        self.scheduler = None
+        self.remote = None
 
         listen_cfg = self.config.get("listening", {})
         self.wake = WakeWordGate(
@@ -143,8 +153,71 @@ class CommandBus(QObject):
             t.start()
             self._workers.append(t)
 
+    def start_services(self, scheduler=True, remote=True):
+        """Starts the scheduler and prepares the phone remote (it only listens once turned on)."""
+        services = getattr(self.executor, "services", None)
+        if scheduler and self.scheduler is None:
+            from engine.scheduler import Scheduler
+            self.scheduler = Scheduler(fire=self._fire_job)
+            self.scheduler.start()
+            if services is not None:
+                services["scheduler"] = self.scheduler
+        if remote and self.remote is None:
+            from engine.remote_server import RemoteServer
+            screen = getattr(self.executor, "screen", None)
+            grab = getattr(screen, "capture_screen_image", None)
+            self.remote = RemoteServer(bus=self, config=self.config, screen_grabber=grab)
+            if services is not None:
+                services["remote"] = self.remote
+            if self.config.get("remote", {}).get("enabled", False):
+                try:
+                    self.remote.start()
+                except OSError as e:
+                    log.warning(f"CommandBus: phone remote could not start: {e}")
+        hooks = getattr(self.executor, "ui_hooks", None)
+        if hooks is not None:
+            hooks.setdefault("show_qr", lambda url, png: self.qr_ready.emit(url, png or b""))
+
+    def _fire_job(self, job: dict):
+        if job.get("kind") == "reminder":
+            text = f"Reminder: {job['text']}"
+            try:
+                from utils.notifications import Notifier
+                Notifier.show_notification("MXB Reminder", job["text"])
+            except Exception:
+                pass
+            try:
+                from utils.audio_feedback import audio_feedback
+                audio_feedback.play("listen")
+            except Exception:
+                pass
+            self.reply_ready.emit(text, "schedule")
+            try:
+                self.tts.speak_always(text)
+            except Exception:
+                pass
+        else:
+            self.feedback.emit(f"Scheduled: {job['text']}")
+            self.submit(job["text"], "schedule")
+
+    def announce(self, text: str, speak: bool = True):
+        """Background jobs (indexing, scheduler) report back here."""
+        self.reply_ready.emit(text, "system")
+        if speak:
+            try:
+                self.tts.speak_always(text)
+            except Exception:
+                pass
+
     def shutdown(self):
         self._running = False
+        if self.scheduler is not None:
+            self.scheduler.stop()
+        if self.remote is not None:
+            try:
+                self.remote.stop()
+            except Exception:
+                pass
         self.confirm.cancel_pending()
         for q in (self.action_queue, self.info_queue):
             try:

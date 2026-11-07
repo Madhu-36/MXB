@@ -122,6 +122,30 @@ class TestEndToEnd(unittest.TestCase):
         time.sleep(0.2)
         self.assertTrue(f.exists())
 
+    def test_reminder_round_trip_through_bus(self):
+        from datetime import datetime, timedelta
+        from engine.scheduler import Scheduler
+        clock = {"now": datetime(2026, 11, 7, 21, 15)}
+        sched = Scheduler(self.home / "s.json", fire=self.bus._fire_job, clock=lambda: clock["now"])
+        self.bus.scheduler = sched
+        self.executor.services["scheduler"] = sched
+        self.bus.submit("remind me in 20 minutes to stretch", "text")
+        self.assertTrue(wait_for(lambda: any("remind you at 9:35 PM today to stretch" in r for r in self.replies)))
+        clock["now"] += timedelta(minutes=21)
+        sched.tick()
+        self.assertTrue(wait_for(lambda: "Reminder: stretch" in self.replies))
+
+    def test_undo_after_voice_move(self):
+        src = self.home / "report.txt"
+        src.write_text("x")
+        (self.home / "Archive").mkdir()
+        self.executor.journal.store_path = self.home / "journal.json"
+        self.executor.journal.entries = []
+        self.bus.submit(f"move {src} to {self.home / 'Archive'}", "text")
+        self.assertTrue(wait_for(lambda: (self.home / "Archive" / "report.txt").exists()))
+        self.bus.submit("undo the move", "text")
+        self.assertTrue(wait_for(src.exists))
+
     def test_input_lock_serializes_parallel_typing(self):
         order = []
         kb = self.executor.keyboard

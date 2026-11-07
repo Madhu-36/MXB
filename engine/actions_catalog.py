@@ -119,19 +119,103 @@ CATALOG: tuple[ActionSpec, ...] = (
     ActionSpec("timer_start", 'duration like "5 minutes"', "Start a countdown timer", "intelligence"),
     ActionSpec("agent_task", "the full goal in plain words", "Multi-step task that needs looking at the screen between steps", "intelligence", uses_input=True),
     ActionSpec("vault_get", "secret key name", "Read a secret from the encrypted vault", "intelligence", risk="confirm"),
+
+    # ---------------- v4: agent precision & undo ----------------
+    ActionSpec("show_marks", '""', "Number every clickable element on screen so the user can say 'click 12'", "screen"),
+    ActionSpec("hide_marks", '""', "Hide the on-screen numbers", "screen"),
+    ActionSpec("click_mark", "mark number from the element list, e.g. '12'", "Click the element with that mark number", "screen", uses_input=True),
+    ActionSpec("type_mark", '"mark number :: text"', "Click the field with that mark number and type", "screen", uses_input=True),
+    ActionSpec("undo_last", '""', "Undo MXB's last file action (move, rename, copy, create, delete-to-bin, overwrite)", "files"),
+
+    # ---------------- v4: memory & documents ----------------
+    ActionSpec("remember_preference", "preference in the user's words", "Store a lasting user preference", "memory"),
+    ActionSpec("recall_memories", 'topic or ""', "List what MXB remembers (about a topic)", "memory"),
+    ActionSpec("forget_memory", "what to forget", "Delete matching memories", "memory"),
+    ActionSpec("index_folder", "folder path or name", "Read and index a folder's documents for question answering", "memory"),
+    ActionSpec("ask_documents", "question", "Answer a question from the user's indexed documents, with sources", "memory"),
+    ActionSpec("knowledge_status", '""', "Which folders are indexed and how many documents", "memory"),
+
+    # ---------------- v4: automation ----------------
+    ActionSpec("set_reminder", '"when :: what" e.g. "in 20 minutes :: stretch" or "at 5 pm :: call mom"', "Set a reminder", "automation"),
+    ActionSpec("schedule_command", '"when :: command" e.g. "every day at 9 am :: open outlook"', "Run a command later or on a schedule", "automation"),
+    ActionSpec("list_schedules", '""', "List reminders and scheduled commands", "automation"),
+    ActionSpec("cancel_schedule", 'number, text, or "all"', "Cancel reminders / scheduled commands", "automation"),
+    ActionSpec("create_routine", '"name :: command 1 ; command 2 ; ..."', "Save a named routine of commands", "automation"),
+    ActionSpec("run_routine", "routine or recorded workflow name", "Run a saved routine or recorded workflow", "automation", uses_input=True),
+    ActionSpec("list_routines", '""', "List routines and recorded workflows", "automation"),
+    ActionSpec("delete_routine", "name", "Delete a routine or workflow", "automation"),
+    ActionSpec("start_recording", "workflow name", "Record the user's clicks and typing as a replayable workflow", "automation"),
+    ActionSpec("stop_recording", '""', "Stop and save the recording", "automation"),
+    ActionSpec("phone_remote", '"on", "off" or "status"', "Turn the phone remote-control web app on/off", "automation", risk="confirm"),
     ActionSpec("wait", "seconds e.g. '1.5'", "Pause between steps (e.g. while an app opens)", "control"),
     ActionSpec("conversation", '"none"', "Just answer in the reply field, no OS action", "control"),
 )
 
 _BY_NAME = {spec.name: spec for spec in CATALOG}
+_DYNAMIC: dict[str, ActionSpec] = {}   # plugin skills register here at runtime
+
+ALIASES = {
+    "click": "left_click", "type": "type_text", "press": "press_key", "hotkey": "shortcut", "key": "press_key",
+    "launch_app": "open_app", "start_app": "open_app", "open_application": "open_app", "open": "open_app",
+    "close": "close_app", "browse": "open_url", "go_to_url": "open_url", "open_website": "open_url",
+    "search_box": "search_on_screen", "find_file": "find_files", "search_files": "find_files",
+    "remind": "set_reminder", "reminder": "set_reminder", "sleep": "wait", "pause": "wait", "answer": "conversation",
+}
+
+
+def register_dynamic(spec: ActionSpec):
+    _DYNAMIC[spec.name] = spec
+
+
+def unregister_dynamic(name: str):
+    _DYNAMIC.pop(name, None)
 
 
 def get_spec(action: str) -> ActionSpec | None:
-    return _BY_NAME.get((action or "").lower().strip())
+    key = (action or "").lower().strip()
+    return _BY_NAME.get(key) or _DYNAMIC.get(key)
 
 
-def action_names() -> list[str]:
-    return [spec.name for spec in CATALOG]
+def action_names(include_dynamic: bool = True) -> list[str]:
+    names = [spec.name for spec in CATALOG]
+    if include_dynamic:
+        names += [n for n in _DYNAMIC if n not in _BY_NAME]
+    return names
+
+
+def all_specs() -> list[ActionSpec]:
+    return list(CATALOG) + [s for n, s in _DYNAMIC.items() if n not in _BY_NAME]
+
+
+def normalize_action(action: str) -> str:
+    a = str(action or "").lower().strip().replace(" ", "_").replace("-", "_")
+    return ALIASES.get(a, a)
+
+
+def validate_plan(steps, max_steps: int = 12) -> tuple[list[dict], list[str]]:
+    """
+    Cleans an LLM plan: normalizes/aliases action names, drops unknown actions and
+    no-op 'conversation' steps, stringifies targets, keeps 'expect', caps length.
+    Returns (valid_steps, dropped_action_names).
+    """
+    valid, dropped = [], []
+    known = set(action_names())
+    for step in steps or []:
+        if not isinstance(step, dict):
+            continue
+        action = normalize_action(step.get("action", ""))
+        if not action or action in ("conversation", "none"):
+            continue
+        if action not in known:
+            dropped.append(action)
+            continue
+        clean = {"action": action, "target": "" if step.get("target") is None else str(step.get("target"))}
+        if step.get("expect"):
+            clean["expect"] = str(step["expect"])
+        valid.append(clean)
+        if len(valid) >= max_steps:
+            break
+    return valid, dropped
 
 
 def risk_of(action: str) -> str:
@@ -145,10 +229,10 @@ def uses_input(action: str) -> bool:
 
 
 def prompt_tool_list(exclude: tuple[str, ...] = ()) -> str:
-    """Renders the catalog as a compact tool list for LLM system prompts."""
+    """Renders the catalog (plus plugin skills) as a compact tool list for LLM system prompts."""
     lines = []
     current = None
-    for spec in CATALOG:
+    for spec in all_specs():
         if spec.name in exclude:
             continue
         if spec.category != current:
@@ -167,7 +251,41 @@ PLANNER_RULES = """Rules:
 - If the task needs looking at the screen to decide later steps, use one agent_task step with the whole goal.
 - Never invent file paths. Use find_files first when the user names a file without a location.
 - Dangerous actions (delete, kill, shutdown, overwrite) are confirmed by the system; do not ask for confirmation yourself.
-- Keep "reply" to one or two short spoken sentences without markdown."""
+- Put "reply" FIRST in the JSON. Keep it to one or two short spoken sentences without markdown.
+- Questions about the user's own documents/notes -> ask_documents. Things the user says about themselves -> remember_preference."""
+
+
+def plan_tool_schema(agent: bool = False) -> dict:
+    """OpenAI-style function schema used for native tool calling (NVIDIA NIM / Ollama)."""
+    props = {
+        "reply": {"type": "string", "description": "One or two short spoken sentences for the user."},
+        "plan": {
+            "type": "array",
+            "description": "Ordered desktop actions to run. Empty for plain answers.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": action_names()},
+                    "target": {"type": "string"},
+                    "expect": {"type": "string", "description": "Optional text that should be visible after this step."},
+                },
+                "required": ["action", "target"],
+            },
+        },
+    }
+    required = ["reply", "plan"]
+    if agent:
+        props["thought"] = {"type": "string", "description": "One short sentence of reasoning."}
+        props["done"] = {"type": "boolean", "description": "True when the goal is achieved or impossible."}
+        required.append("done")
+    return {
+        "type": "function",
+        "function": {
+            "name": "execute_plan",
+            "description": "Reply to the user and run desktop actions on their Windows PC in order.",
+            "parameters": {"type": "object", "properties": props, "required": required},
+        },
+    }
 
 
 def planner_system_prompt(assistant_name: str = "MXB") -> str:

@@ -14,12 +14,12 @@ ROOT = Path(__file__).parent.parent
 
 class TestCatalog(unittest.TestCase):
     def test_names_unique(self):
-        names = action_names()
+        names = action_names(include_dynamic=False)
         self.assertEqual(len(names), len(set(names)))
 
     def test_every_catalog_action_is_handled_by_executor(self):
         source = (ROOT / "engine" / "executor.py").read_text(encoding="utf-8")
-        missing = [n for n in action_names() if n != "wait" and not re.search(rf'["\']{n}["\']', source)]
+        missing = [n for n in action_names(include_dynamic=False) if n != "wait" and not re.search(rf'["\']{n}["\']', source)]
         self.assertEqual(missing, [], f"Executor does not handle: {missing}")
 
     def test_destructive_actions_require_confirmation(self):

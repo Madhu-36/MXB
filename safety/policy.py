@@ -68,6 +68,10 @@ class SafetyPolicy:
             return None
         if action == "power_action" and target.lower().replace(" ", "_") in {"cancel", "abort", "cancel_shutdown"}:
             return None  # cancelling a shutdown is always safe
+        if action == "phone_remote":
+            if target.lower().strip() not in {"on", "start", "enable"}:
+                return None  # turning it off / checking status is always safe
+            return "Turn on the phone remote? Anyone on this Wi-Fi with the secret link could control this PC."
 
         if action == "delete_file":
             path, _, mode = target.partition("::")

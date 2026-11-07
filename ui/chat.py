@@ -11,8 +11,8 @@ Toggle with the tray menu, the hotkey (default Ctrl+Alt+Space) or by saying "MXB
 """
 import html
 import time
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QKeyEvent
+from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtGui import QFont, QKeyEvent, QImage, QTextDocument
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTextBrowser, QFrame,
 )
@@ -144,6 +144,8 @@ class ChatWindow(QWidget):
         bus.confirmation_requested.connect(self.show_confirmation)
         bus.confirmation_resolved.connect(self.hide_confirmation)
         bus.open_chat_requested.connect(self.show_and_focus)
+        if hasattr(bus, "qr_ready"):
+            bus.qr_ready.connect(self.show_qr)
         self.toggle_requested.connect(self.toggle_visible)
 
         self._append_html(self._bubble("MXB", "Hi! Talk to me (say “MXB” first) or type here. "
@@ -172,6 +174,20 @@ class ChatWindow(QWidget):
     def add_reply(self, text: str, source: str):
         if text:
             self._append_html(self._bubble("MXB", text, "#00E5FF"))
+
+    def show_qr(self, url: str, png: bytes):
+        """Phone remote link (+ QR code when the qrcode package is installed)."""
+        img_html = ""
+        if png:
+            image = QImage.fromData(png)
+            if not image.isNull():
+                self.transcript.document().addResource(QTextDocument.ResourceType.ImageResource, QUrl("mxb://qr"), image)
+                img_html = '<br><img src="mxb://qr" width="200" height="200">'
+        safe = html.escape(url)
+        self._append_html(f'<p style="margin:6px 0;"><span style="color:#00E5FF;font-weight:bold;">MXB</span><br>'
+                          f'<span style="color:#E8ECF4;">Scan with your phone (same Wi-Fi) or open:</span><br>'
+                          f'<a href="{safe}" style="color:#7FDBFF;">{safe}</a>{img_html}</p>')
+        self.show_and_focus()
 
     def set_progress(self, text: str):
         self.progress_label.setText(text[:220])

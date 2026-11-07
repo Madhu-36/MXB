@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication
 from ui.hud import FloatingHUD
 from ui.tray import MXBTray
 from ui.chat import ChatWindow
+from ui.marks_overlay import MarksOverlay
 from engine.audio import VoicePipeline
 from engine.command_bus import CommandBus
 from safety.hotkeys import GlobalHotkeyListener
@@ -25,7 +26,7 @@ def load_config():
 
 def main():
     log.info("=" * 55)
-    log.info("Starting Machine eXecutive Brain (MXB v3.0 Companion)...")
+    log.info("Starting Machine eXecutive Brain (MXB v4.0 Advanced Companion)...")
     log.info("=" * 55)
 
     config = load_config()
@@ -55,6 +56,16 @@ def main():
     # 5. Command Bus: the single brain entry point shared by voice and text
     bus = CommandBus(config)
 
+    # 5b. v4 services: scheduler, phone remote (off until asked), plugins, number overlay
+    overlay = MarksOverlay()
+    bus.executor.ui_hooks["show_marks"] = overlay.show_requested.emit
+    bus.executor.ui_hooks["hide_marks"] = overlay.hide_requested.emit
+    bus.start_services()
+    try:
+        log.info(bus.executor.skills.describe())
+    except Exception as e:
+        log.warning(f"Plugins: {e}")
+
     # 6. Core Voice Pipeline (feeds transcripts into the bus, keeps listening while MXB works)
     voice_pipeline = VoicePipeline(config, bus=bus)
     voice_pipeline.vad_status_changed.connect(hud.update_status)
@@ -78,7 +89,7 @@ def main():
     hotkeys = GlobalHotkeyListener(config, voice_pipeline, on_open_chat=chat.toggle_requested.emit)
     hotkeys.start()
 
-    log.info("MXB v3.0 successfully initialized: voice + text companion active.")
+    log.info("MXB v4.0 initialized: voice + text + phone, agent, memory, automation active.")
     sys.exit(app.exec())
 
 

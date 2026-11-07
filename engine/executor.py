@@ -1,4 +1,5 @@
 import json
+import re
 import time
 import threading
 import subprocess
@@ -16,7 +17,8 @@ from engine.screen import ScreenVision
 from engine.file_ops import FileOperationsManager
 from engine.planner import ActionPlanner
 from engine.actions_catalog import uses_input
-from engine.ui_automation import fallback_search_shortcut
+from engine.ui_automation import fallback_search_shortcut, build_marks
+from engine.undo import UndoJournal
 from safety.policy import SafetyPolicy
 from safety.permissions import get_file_access
 from utils.logger import log
@@ -51,7 +53,8 @@ class OSExecutionManager:
         self.mouse = MouseController()
         self.keyboard = KeyboardExtended()
         self.screen = ScreenVision()
-        self.file_ops = FileOperationsManager(access=get_file_access())
+        self.journal = UndoJournal()
+        self.file_ops = FileOperationsManager(access=get_file_access(), journal=self.journal)
         self.app_launcher = SmartAppLauncher()
         self.memory = memory_bank
         self.planner = ActionPlanner(self)
@@ -65,6 +68,18 @@ class OSExecutionManager:
         self._hardware = None
         self._llm = None
         self._agent = None
+        # v4 subsystems (lazy) and hooks wired by CommandBus / main
+        self._semantic = None
+        self._knowledge = None
+        self._routines = None
+        self._recorder = None
+        self._skills = None
+        self.marks: dict = {}
+        self.ui_hooks: dict = {}          # "show_marks", "hide_marks", "show_qr" -> thread-safe callables
+        self.services: dict = {}          # "scheduler", "remote"
+        self.command_runner = None        # fn(text) -> str: run a full natural-language command
+        self.announce = None              # fn(text): tell the user something later (background jobs)
+        self.speak = lambda text: None
 
     @staticmethod
     def _load_config() -> dict:
@@ -94,6 +109,71 @@ class OSExecutionManager:
             from engine.llm_client import LLMClient
             self._llm = LLMClient(self.config)
         return self._llm
+
+    @property
+    def semantic(self):
+        if self._semantic is None:
+            from engine.embeddings import Embedder
+            from engine.semantic_memory import SemanticMemory
+            self._semantic = SemanticMemory(embedder=Embedder(self.config))
+        return self._semantic
+
+    @property
+    def knowledge(self):
+        if self._knowledge is None:
+            from engine.knowledge import KnowledgeBase
+            embedder = self._semantic.embedder if self._semantic is not None else None
+            if embedder is None:
+                from engine.embeddings import Embedder
+                embedder = Embedder(self.config)
+            self._knowledge = KnowledgeBase(embedder=embedder, file_ops=self.file_ops)
+        return self._knowledge
+
+    @property
+    def routines(self):
+        if self._routines is None:
+            from engine.routines import RoutineStore
+            self._routines = RoutineStore()
+        return self._routines
+
+    @property
+    def recorder(self):
+        if self._recorder is None:
+            from engine.routines import WorkflowRecorder
+            self._recorder = WorkflowRecorder(element_at=self.uia.element_at, foreground_title=self.uia.foreground_title)
+        return self._recorder
+
+    @property
+    def skills(self):
+        if self._skills is None:
+            from engine.skills import SkillRegistry, SkillContext
+            disabled = self.config.get("skills", {}).get("disabled", [])
+            self._skills = SkillRegistry(disabled=disabled)
+            if self.config.get("skills", {}).get("enabled", True):
+                self._skills.load_all()
+            self._skills.context = SkillContext(executor=self, speak=lambda t: self.speak(t), llm=self.llm,
+                                                memory=None, config=self.config)
+        return self._skills
+
+    def set_marks(self, marks: dict):
+        self.marks = dict(marks or {})
+
+    def _hook(self, name: str, *args):
+        fn = self.ui_hooks.get(name)
+        if fn:
+            try:
+                fn(*args)
+            except Exception as e:
+                log.warning(f"OSExecution: UI hook '{name}' failed: {e}")
+
+    def _announce(self, text: str):
+        if self.announce:
+            try:
+                self.announce(text)
+                return
+            except Exception:
+                pass
+        log.info(f"OSExecution: {text}")
 
     @property
     def agent(self):
@@ -608,6 +688,80 @@ class OSExecutionManager:
                 usage = self.get_app_resource_usage(str(target))
                 return f"{target} ({usage['instances']} inst): {usage['memory_mb']} MB RAM, {usage['cpu_percent']}% CPU"
 
+            # 7b. v4: set-of-marks, undo
+            elif action == "show_marks":
+                return self.show_marks()
+            elif action == "hide_marks":
+                self._hook("hide_marks")
+                return "Numbers hidden."
+            elif action == "click_mark":
+                return self.click_mark(str(target))
+            elif action == "type_mark":
+                num, text = _split_target(target)
+                res = self.click_mark(num, hide=False)
+                if res.startswith("Clicked"):
+                    self.keyboard.select_all()
+                    self.keyboard.type_text(text)
+                    self._hook("hide_marks")
+                    return f"{res} Typed '{text}'."
+                return res
+            elif action in ("undo_last", "undo_file_action"):
+                return self.journal.undo_last()
+
+            # 7c. v4: memory & documents
+            elif action == "remember_preference":
+                stored = self.semantic.add(str(target), kind="preference")
+                self.memory.remember(str(target))
+                return "Got it, I'll remember that." if stored else "I already knew that."
+            elif action == "recall_memories":
+                return self.recall_memories(str(target or ""))
+            elif action == "forget_memory":
+                removed = self.semantic.forget(str(target))
+                return f"Forgot: {'; '.join(removed)}." if removed else f"I don't have anything stored about '{target}'."
+            elif action == "index_folder":
+                return self.index_folder(str(target))
+            elif action == "ask_documents":
+                return self.knowledge.answer(str(target), self.llm)
+            elif action == "knowledge_status":
+                return self.knowledge.status()
+
+            # 7d. v4: automation
+            elif action in ("set_reminder", "schedule_command"):
+                sched = self.services.get("scheduler")
+                if sched is None:
+                    return "The scheduler isn't running."
+                when, what = _split_target(target)
+                if not when or not what:
+                    return "Tell me when and what, like 'in 20 minutes :: stretch'."
+                return sched.add("reminder" if action == "set_reminder" else "command", when, what)
+            elif action == "list_schedules":
+                sched = self.services.get("scheduler")
+                return sched.list_text() if sched else "The scheduler isn't running."
+            elif action == "cancel_schedule":
+                sched = self.services.get("scheduler")
+                return sched.cancel(str(target or "")) if sched else "The scheduler isn't running."
+            elif action == "create_routine":
+                name, commands = _split_target(target)
+                return self.routines.create(name, [c for c in re.split(r"\s*(?:;|\bthen\b|\band then\b)\s*", commands) if c])
+            elif action == "run_routine":
+                return self.run_routine(str(target))
+            elif action == "list_routines":
+                return self.routines.list_text()
+            elif action == "delete_routine":
+                return self.routines.delete(str(target))
+            elif action == "start_recording":
+                return self.recorder.start(str(target or "workflow"))
+            elif action == "stop_recording":
+                name, steps, skipped = self.recorder.stop()
+                if not name:
+                    return "I wasn't recording."
+                if not steps:
+                    return "I didn't capture any clicks or typing, so nothing was saved."
+                note = f" ({skipped} password keystrokes were not recorded — you'll type those yourself)" if skipped else ""
+                return self.routines.save_recording(name, steps) + note
+            elif action == "phone_remote":
+                return self.phone_remote(str(target or "status"))
+
             elif action == "agent_task":
                 if not str(target).strip():
                     return "What should I do?"
@@ -620,6 +774,9 @@ class OSExecutionManager:
                 from utils.notifications import Notifier
                 Notifier.show_notification("MXB Executive Brain", str(target))
                 return f"Notification: {target}"
+
+            elif self.skills.has(action):
+                return self.skills.run(action, str(target or ""))
 
             else:
                 log.warning(f"OSExecution: Unsupported action '{action}'")
@@ -846,6 +1003,15 @@ class OSExecutionManager:
 
     def click_element(self, name: str, try_ocr: bool = True) -> str:
         name = (name or "").strip()
+        fallback = None
+        if "||" in name:  # recorded workflows: "Submit || 640,480"
+            name, _, coords = name.partition("||")
+            name = name.strip()
+            m = re.fullmatch(r"\s*(-?\d+)\s*,\s*(-?\d+)\s*", coords)
+            fallback = (int(m.group(1)), int(m.group(2))) if m else None
+        if not name and fallback:
+            self._click_at(*fallback)
+            return f"Clicked at {fallback}."
         if not name:
             return "What should I click?"
         el = None
@@ -862,6 +1028,9 @@ class OSExecutionManager:
             if coords:
                 self._click_at(*coords)
                 return f"Clicked '{name}' at {coords}."
+        if fallback:
+            self._click_at(*fallback)
+            return f"Clicked the recorded spot for '{name}' at {fallback}."
         return f"Could not find '{name}' on screen to click."
 
     def list_ui_elements(self) -> str:
@@ -902,6 +1071,116 @@ class OSExecutionManager:
         if not force:
             return f"{clean} didn't close (it may be asking to save). Say 'force close {clean}' to kill it."
         return f"Could not close {clean}: {out.strip()[:120]}"
+
+    # ------------------------------------------------------------------ v4 helpers
+    def show_marks(self) -> str:
+        try:
+            elements, _ = self.uia.collect() if self.uia.available() else ([], 0)
+        except Exception as e:
+            return f"Could not inspect the window: {e}"
+        marks = build_marks(elements, limit=int(self.config.get("agent", {}).get("max_marks", 60)))
+        self.set_marks(marks)
+        if not marks:
+            return "I couldn't find clickable elements in this window."
+        self._hook("show_marks", [(n, el.rect, el.label()) for n, el in marks.items()])
+        return f"Numbered {len(marks)} items. Say 'click' and a number, or 'type hello in 3'."
+
+    def click_mark(self, number: str, hide: bool = True) -> str:
+        m = re.search(r"\d+", str(number))
+        if not m:
+            return "Which number should I click?"
+        n = int(m.group(0))
+        if n not in self.marks:
+            try:
+                elements, _ = self.uia.collect() if self.uia.available() else ([], 0)
+                self.set_marks(build_marks(elements))
+            except Exception:
+                pass
+        el = self.marks.get(n)
+        if el is None:
+            return f"There's no item number {n} on screen. Say 'show numbers' first."
+        self._click_at(*el.center)
+        if hide:
+            self._hook("hide_marks")
+        return f"Clicked {n}: {el.control_type.lower()} '{el.label()}'."
+
+    def recall_memories(self, topic: str) -> str:
+        if topic.strip():
+            hits = self.semantic.search(topic, k=5)
+            if not hits:
+                return f"I don't remember anything about {topic}."
+            return "Here's what I remember: " + "; ".join(t for t, _s, _k in hits) + "."
+        items = self.semantic.list_all(limit=10)
+        if not items:
+            return "I haven't learned anything about you yet."
+        return f"I remember {self.semantic.count()} things. Most recent: " + "; ".join(t for t, _k in items) + "."
+
+    def index_folder(self, folder: str) -> str:
+        from safety.permissions import parse_location
+        path = self.file_ops.resolve_path(parse_location(folder) if folder else "documents")
+        if not path.is_dir():
+            found = self.file_ops.locate(folder)
+            path = found if found is not None and found.is_dir() else path
+        if not path.is_dir():
+            return f"I couldn't find a folder called '{folder}'."
+        ok, reason = (self.file_ops.access.check(path) if self.file_ops.access else (True, ""))
+        if not ok:
+            return reason
+        if self.knowledge.indexing:
+            return "I'm already indexing a folder; I'll tell you when it's done."
+
+        def job():
+            stats = self.knowledge.index_folder(path, progress=self.feedback_callback)
+            if stats.get("error"):
+                self._announce(stats["error"])
+            else:
+                self._announce(f"Finished learning {path.name}: {stats['indexed']} new or changed files, "
+                               f"{stats['unchanged']} unchanged. Ask me anything about them.")
+
+        threading.Thread(target=job, name="MXB-Indexer", daemon=True).start()
+        return f"Reading the documents in {path} in the background. I'll tell you when I'm done."
+
+    def run_routine(self, name: str) -> str:
+        found = self.routines.find(name)
+        if not found:
+            return f"I don't have a routine or workflow called '{name}'. {self.routines.list_text()}"
+        key, item = found
+        if item["type"] == "recording":
+            results = self.planner.execute_plan(item["steps"], feedback_callback=self.feedback_callback, reset=False)
+            failed = [r for r in results if r and ("could not" in r.lower() or "failed" in r.lower())]
+            return f"Replayed '{key}' ({len(results)} steps)" + (f"; {len(failed)} steps had problems." if failed else ".")
+        if self.command_runner is None:
+            return "Routines need the command bus to run."
+        done = 0
+        for cmd in item["commands"]:
+            if self.planner.is_aborted:
+                return f"Stopped routine '{key}' after {done} steps."
+            if self.feedback_callback:
+                self.feedback_callback(f"Routine '{key}' step {done + 1}/{len(item['commands'])}: {cmd}")
+            self.command_runner(cmd)
+            done += 1
+            time.sleep(0.6)
+        return f"Finished routine '{key}' ({done} steps)."
+
+    def phone_remote(self, mode: str) -> str:
+        remote = self.services.get("remote")
+        if remote is None:
+            return "Phone remote isn't available in this build."
+        mode = mode.lower().strip()
+        if mode in ("on", "start", "enable"):
+            try:
+                url = remote.start()
+            except OSError as e:
+                return f"Couldn't start the phone remote (port {remote.port} busy?): {e}"
+            self._hook("show_qr", url, remote.qr_png())
+            return f"Phone remote is on. On the same Wi-Fi, open {url} or scan the QR code in the chat window."
+        if mode in ("off", "stop", "disable"):
+            remote.stop()
+            return "Phone remote is off."
+        if mode in ("new token", "rotate", "reset"):
+            remote.rotate_token()
+            return "Made a new access link; old links stop working. Turn the remote on again to see it."
+        return f"Phone remote is {'on at ' + remote.url() if remote.running else 'off'}."
 
     def find_files(self, target: str) -> str:
         query, root = _split_target(target)

@@ -32,13 +32,21 @@ class FileOperationsManager:
         ".sh", ".bat", ".ps1", ".tex", ".rtf",
     }
 
-    def __init__(self, access=None):
+    def __init__(self, access=None, journal=None):
         """
         access: a safety.permissions.FileAccessManager. When given (as the executor
         does), every operation is checked against the user's granted folders.
         When None (direct library use / unit tests), no permission checks run.
         """
         self.access = access
+        self.journal = journal  # engine.undo.UndoJournal (optional): makes file actions undoable
+
+    def _record(self, kind: str, **data):
+        if self.journal is not None:
+            try:
+                self.journal.record(kind, **data)
+            except Exception as e:
+                log.warning(f"FileOps: undo journal error: {e}")
 
     def _guard(self, path, write: bool = False) -> str | None:
         if self.access is None:
@@ -84,7 +92,10 @@ class FileOperationsManager:
         if denied:
             return denied
         try:
+            existed = target.exists()
             target.mkdir(parents=True, exist_ok=True)
+            if not existed:
+                self._record("create", path=target)
             log.info(f"FileOps: Created directory '{target}'")
             return f"Created folder at: {target.name}"
         except Exception as e:
@@ -99,6 +110,12 @@ class FileOperationsManager:
             return denied
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists() and self.journal is not None:
+                backup = self.journal.backup_before_overwrite(target)
+                if backup:
+                    self._record("overwrite", path=target, backup=backup)
+            elif not target.exists():
+                self._record("create", path=target)
             with open(target, "w", encoding="utf-8") as f:
                 f.write(content)
             log.info(f"FileOps: Created file '{target}' ({len(content)} chars)")
@@ -167,10 +184,12 @@ class FileOperationsManager:
         try:
             if not permanent:
                 if self._send_to_recycle_bin(target):
+                    self._record("recycle", path=target)
                     log.info(f"FileOps: Recycled '{target}'")
                     return f"Moved {target.name} to the Recycle Bin."
                 return (f"I couldn't use the Recycle Bin for {target.name}, so I didn't delete it. "
                         "Say 'permanently delete' if you really want it gone.")
+            self._record("permanent_delete", path=target)
             if target.is_dir():
                 shutil.rmtree(target)
                 log.info(f"FileOps: Permanently removed directory '{target}'")
@@ -231,6 +250,12 @@ class FileOperationsManager:
                 return denied
         try:
             dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.is_file() and self.journal is not None:
+                backup = self.journal.backup_before_overwrite(dest)
+                if backup:
+                    self._record("overwrite", path=dest, backup=backup)
+            elif not dest.exists():
+                self._record("copy", dst=dest)
             if src.is_dir():
                 shutil.copytree(src, dest, dirs_exist_ok=True)
             else:
@@ -252,6 +277,7 @@ class FileOperationsManager:
         try:
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(src), str(dest))
+            self._record("move", src=src, dst=dest)
             log.info(f"FileOps: Moved '{src}' -> '{dest}'")
             return f"Moved {src.name} to {dest.parent}."
         except Exception as e:
@@ -272,6 +298,7 @@ class FileOperationsManager:
             return f"{dest.name} already exists in that folder."
         try:
             src.rename(dest)
+            self._record("rename", src=src, dst=dest)
             return f"Renamed {src.name} to {dest.name}."
         except Exception as e:
             return f"Failed to rename {src.name}: {e}"

@@ -7,8 +7,11 @@ from collections import deque
 from engine.executor import OSExecutionManager
 from engine.tts import VoiceSynthesizer
 from engine.memory import memory_bank
-from engine.actions_catalog import planner_system_prompt
+from engine.actions_catalog import planner_system_prompt, plan_tool_schema, validate_plan
 from engine.llm_client import LLMClient, parse_json_reply
+from engine.streaming import ReplyStreamer
+from engine.semantic_memory import extract_preference
+from engine.scheduler import parse_when, split_leading_time, split_trailing_time
 from utils.environment import EnvironmentContext
 from utils.math_evaluator import SafeMathEvaluator
 from utils.audio_feedback import audio_feedback
@@ -436,6 +439,10 @@ class IntentRouter:
             fact = re.sub(r'^remember(?:\s+that)?\s+', '', original_text, flags=re.IGNORECASE).strip()
             if fact:
                 self.memory.remember(fact)
+                try:
+                    self.executor.semantic.add(fact, kind="fact")
+                except Exception:
+                    pass
                 reply = "I've saved that to my long-term memory."
                 self.tts.speak(reply)
                 self.history.append({"user": clean_text, "mxb": reply})
@@ -477,8 +484,14 @@ class IntentRouter:
 
     def _route_to_llm(self, text: str, feedback_callback=None) -> str:
         try:
-            # 1. Fetch relevant user memories
-            saved_memories = self.memory.get_memories(query=text, limit=4)
+            # 1. Fetch relevant user memories (semantic search first, keyword memory as fallback)
+            saved_memories = []
+            try:
+                saved_memories = list(self.executor.semantic.recall_texts(text, k=5))
+            except Exception:
+                pass
+            if not saved_memories:
+                saved_memories = self.memory.get_memories(query=text, limit=4)
             memory_context = ""
             if saved_memories:
                 memory_context = "User's Saved Memories:\n" + "\n".join([f"- {m}" for m in saved_memories]) + "\n\n"
@@ -508,7 +521,7 @@ class IntentRouter:
 
             if feedback_callback:
                 feedback_callback("Thinking...")
-            plan_data = self.llm.chat_json(planner_system_prompt(), augmented_prompt)
+            plan_data, already_spoke = self._plan(augmented_prompt)
 
             if not plan_data:
                 fallback_msg = ("I understood your request but could not reach my reasoning engine. "
@@ -527,10 +540,13 @@ class IntentRouter:
 
             if reply:
                 reply = re.sub(r'^(?:mxb\s*:\s*)+', '', reply, flags=re.IGNORECASE).strip()
-                self.tts.speak(reply)
+                if not already_spoke:
+                    self.tts.speak(reply)
                 self.history.append({"user": text, "mxb": reply})
 
-            steps = [st for st in steps if isinstance(st, dict) and st.get("action") not in (None, "", "conversation", "none")]
+            steps, dropped = validate_plan(steps)
+            if dropped:
+                log.warning(f"Router: LLM proposed unknown actions {dropped}; skipped.")
             if steps:
                 results = self.executor.planner.execute_plan(steps, feedback_callback=feedback_callback)
                 results = [r for r in results if r]
@@ -547,6 +563,200 @@ class IntentRouter:
             traceback.print_exc()
             log.error(f"Router LLM Error: {e}")
             return f"Speech Understanding Error: {e}"
+
+    def _plan(self, prompt: str) -> tuple[dict | None, bool]:
+        """
+        Voice turns: stream the plan and speak the reply sentence-by-sentence as it
+        arrives (lowest latency). Text turns: native tool calling (most reliable),
+        then JSON mode as a fallback. Returns (plan_data, reply_already_spoken).
+        """
+        system = planner_system_prompt()
+        llm_cfg = self.config.get("llm", {})
+        speaking = True
+        try:
+            speaking = bool(self.tts.speaking_enabled())
+        except Exception:
+            pass
+        if llm_cfg.get("streaming", True) and speaking:
+            streamer = ReplyStreamer(self.tts.speak)
+            raw = self.llm.stream_chat(system, prompt, on_delta=streamer.feed)
+            streamer.finish()
+            data = parse_json_reply(raw) if raw else None
+            if data:
+                return data, streamer.spoke
+        data = self.llm.plan_with_tools(system, prompt, plan_tool_schema())
+        if not data:
+            data = self.llm.chat_json(system, prompt)
+        return data, False
+
+    # =========================================================================
+    # MXB v4 FAST-PATHS: marks, undo, memory, documents, schedules, routines, remote, plugins
+    # =========================================================================
+    def _route_v4(self, t: str, o: str) -> str | None:
+        # ---------------- Plugin skills (user-installed, so they get first pick) ----------------
+        try:
+            matched = self.executor.skills.match(o)
+        except Exception:
+            matched = None
+        if isinstance(matched, tuple):
+            sk, target = matched
+            return self._act(t, sk.name, target)
+        if t in {"list skills", "list plugins", "what plugins do you have", "what skills do you have", "show plugins"}:
+            try:
+                reply = self.executor.skills.describe()
+            except Exception:
+                reply = "No plugin skills are installed."
+            self.tts.speak(reply)
+            return f"MXB: {reply}"
+
+        # ---------------- Set-of-marks voice clicking ----------------
+        if t in {"show numbers", "show marks", "show labels", "show hints", "label the screen", "number the screen",
+                 "number everything", "show clickable items", "show numbers on screen"}:
+            return self._act(t, "show_marks")
+        if t in {"hide numbers", "hide marks", "hide labels", "hide hints", "clear numbers"}:
+            return self._act(t, "hide_marks", speak_result=False)
+        m = re.match(r"^(?:click|press|tap|select|open)\s+(?:on\s+)?(?:number\s+|mark\s+|item\s+)?(?P<n>\d{1,3})$", t)
+        if m:
+            return self._act(t, "click_mark", m.group("n"), speak_result=False)
+        m = re.match(r"^(?:type|enter|write)\s+(?P<text>.+?)\s+(?:in|into|on)\s+(?:number\s+|mark\s+|item\s+)(?P<n>\d{1,3})$", t) or \
+            re.match(r"^(?:type|enter|write)\s+(?P<text>.+?)\s+(?:in|into)\s+(?P<n>\d{1,3})$", t)
+        if m:
+            return self._act(t, "type_mark", f"{m.group('n')} :: {self._grp(m, 'text', t, o)}", speak_result=False)
+
+        # ---------------- Undo MXB's file actions ----------------
+        if t in {"undo the last file action", "undo last file action", "undo your last action", "undo what you did",
+                 "revert that", "revert the last change", "undo the move", "undo the delete", "undo the rename",
+                 "undo the copy", "undo last action"}:
+            return self._act(t, "undo_last")
+        if t == "undo that":
+            age = None
+            try:
+                age = float(self.executor.journal.seconds_since_last())
+            except Exception:
+                pass
+            if age is not None and age < 120:
+                return self._act(t, "undo_last")
+
+        # ---------------- Memory ----------------
+        if t in {"what do you remember", "what do you remember about me", "what do you know about me",
+                 "what have you learned about me", "list memories", "show memories"}:
+            return self._act(t, "recall_memories", "")
+        m = re.match(r"^what do you (?:remember|know) about (?P<x>.+)$", t)
+        if m:
+            return self._act(t, "recall_memories", m.group("x"))
+        m = re.match(r"^forget (?:that |about |what i said about |the fact that )?(?P<x>.+)$", t)
+        if m and m.group("x") not in {"it", "that", "this", "everything"}:
+            return self._act(t, "forget_memory", self._grp(m, "x", t, o))
+        pref = extract_preference(o)
+        if pref:
+            res = self.executor.execute_action("remember_preference", pref)
+            reply = "Got it, I'll remember that." if "already" not in str(res).lower() else "I already knew that."
+            self.tts.speak(reply)
+            self.history.append({"user": t, "mxb": reply})
+            return f"MXB: {reply}"
+
+        # ---------------- Documents (RAG) ----------------
+        docs = r"(?:documents|docs|notes|files|pdfs|folder)"
+        m = re.match(rf"^(?:ask my {docs}|search my {docs} for|what do my {docs} say about|according to my {docs},?|"
+                     rf"check my {docs} (?:for|about)|look in my {docs} for)\s+(?P<q>.+)$", t)
+        if m:
+            return self._act(t, "ask_documents", self._grp(m, "q", t, o))
+        if t in {"what have you indexed", "knowledge status", "what documents do you know", "which folders have you indexed",
+                 "index status", "what folders have you learned"}:
+            return self._act(t, "knowledge_status")
+        m = re.match(r"^(?:index|re-?index)\s+(?:the\s+|my\s+)?(?:folder\s+)?(?P<f>.+?)(?:\s+folder)?$", t) or \
+            re.match(r"^(?:learn|read and remember|study|learn from)\s+(?:the\s+|my\s+)?(?:folder\s+(?P<f2>.+)|(?P<f>.+?)\s+folder)$", t)
+        if m:
+            group = "f" if m.groupdict().get("f") else "f2"
+            return self._act(t, "index_folder", self._grp(m, group, t, o))
+
+        # ---------------- Reminders & schedules ----------------
+        if re.match(r"^(?:list|show|what are)\s+(?:my\s+|all\s+)?(?:reminders|schedules|scheduled (?:commands|tasks))$|^what(?:'s| is) scheduled$", t):
+            return self._act(t, "list_schedules")
+        if re.match(r"^(?:cancel|delete|clear|remove)\s+all\s+(?:my\s+)?(?:reminders|schedules|scheduled (?:commands|tasks))$", t):
+            return self._act(t, "cancel_schedule", "all")
+        m = re.match(r"^(?:cancel|delete|remove)\s+(?:the\s+|my\s+)?(?:reminder|schedule|scheduled (?:command|task))\s*(?:number\s+)?(?:to\s+|about\s+|for\s+)?(?P<x>.*)$", t)
+        if m:
+            return self._act(t, "cancel_schedule", m.group("x").strip() or "1")
+        m = re.match(r"^(?:set\s+(?:a\s+)?reminder|remind me)\s+(?P<rest>.+)$", t)
+        if m:
+            parsed = self._parse_reminder(self._grp(m, "rest", t, o))
+            if parsed:
+                when, what = parsed
+                return self._act(t, "set_reminder", f"{when} :: {what}")
+        m = re.match(r"^(?:schedule|automatically|auto)\s+(?P<rest>.+)$", t)
+        if m:
+            rest = self._grp(m, "rest", t, o)
+            split = split_trailing_time(rest) or (lambda r: (r[1], r[0]) if r else None)(split_leading_time(rest))
+            if split:
+                cmd, when = split
+                return self._act(t, "schedule_command", f"{when} :: {cmd}")
+        if t.startswith("every "):
+            split = split_leading_time(o)
+            if split:
+                when, cmd = split
+                rem = re.match(r"^(?:remind me to|remind me)\s+(?P<w>.+)$", cmd, re.I)
+                if rem:
+                    return self._act(t, "set_reminder", f"{when} :: {rem.group('w')}")
+                return self._act(t, "schedule_command", f"{when} :: {cmd}")
+
+        # ---------------- Routines & recordings ----------------
+        m = re.match(r"^(?:create|make|save|add)\s+(?:a\s+|new\s+)?routine\s+(?:called\s+|named\s+)?(?P<name>.+?)\s*(?::|that does|which does|with|to do)\s*(?P<cmds>.+)$", t)
+        if m:
+            return self._act(t, "create_routine", f"{self._grp(m, 'name', t, o)} :: {self._grp(m, 'cmds', t, o)}")
+        if re.match(r"^(?:list|show|what are)\s+(?:my\s+)?(?:routines|workflows|macros)$|^what routines do i have$", t):
+            return self._act(t, "list_routines")
+        m = re.match(r"^(?:delete|remove)\s+(?:the\s+)?(?:routine|workflow|macro)\s+(?P<name>.+)$", t)
+        if m:
+            return self._act(t, "delete_routine", m.group("name"))
+        m = re.match(r"^(?:start|begin)\s+recording(?:\s+(?:a\s+)?(?:workflow|macro|routine))?(?:\s+(?:called|named|for))?\s*(?P<name>.*)$", t)
+        if m:
+            return self._act(t, "start_recording", self._grp(m, "name", t, o) or "workflow")
+        if t in {"stop recording", "finish recording", "end recording", "save recording", "save the recording", "done recording"}:
+            return self._act(t, "stop_recording")
+        m = re.match(r"^(?:run|start|do|play)\s+(?:my\s+|the\s+)?(?:routine|workflow|macro)\s+(?P<name>.+)$", t) or \
+            re.match(r"^(?:run|start|do)\s+(?:my\s+|the\s+)?(?P<name>.+?)\s+(?:routine|workflow|macro)$", t)
+        if m:
+            return self._act(t, "run_routine", m.group("name"), speak_result=True)
+        m = re.match(r"^run\s+(?:my\s+|the\s+)?(?P<name>.+)$", t)
+        if m:
+            found = None
+            try:
+                found = self.executor.routines.find(m.group("name"))
+            except Exception:
+                pass
+            if isinstance(found, tuple):
+                return self._act(t, "run_routine", m.group("name"))
+
+        # ---------------- Phone remote ----------------
+        phone = r"(?:phone|mobile)\s+(?:remote|control|access|app)"
+        if re.match(rf"^(?:turn on|enable|start|open|switch on)\s+(?:the\s+)?{phone}$", t):
+            return self._act(t, "phone_remote", "on")
+        if re.match(rf"^(?:turn off|disable|stop|close|switch off)\s+(?:the\s+)?{phone}$", t):
+            return self._act(t, "phone_remote", "off")
+        if re.match(rf"^(?:{phone}\s+status|is (?:the\s+)?{phone} on)$", t):
+            return self._act(t, "phone_remote", "status")
+        if t in {"new phone link", "reset phone remote", "change phone remote link", "rotate phone remote token"}:
+            return self._act(t, "phone_remote", "rotate")
+        return None
+
+    @staticmethod
+    def _parse_reminder(rest: str) -> tuple[str, str] | None:
+        """'in 20 minutes to stretch' | 'to call mom at 5 pm' | 'about the demo tomorrow at 9' -> (when, what)."""
+        rest = rest.strip()
+        m = re.match(r"^(?:to|about|that)\s+(?P<what>.+)$", rest, re.I)
+        if m:
+            split = split_trailing_time(m.group("what"))
+            if split:
+                return split[1], split[0]
+            return None
+        parts = re.split(r"\s+(?:to|about|that)\s+", rest, maxsplit=1)
+        if len(parts) == 2 and parse_when(parts[0]):
+            return parts[0], parts[1]
+        split = split_leading_time(rest)
+        if split:
+            return split[0], re.sub(r"^(?:to|about|that)\s+", "", split[1], flags=re.I)
+        return None
 
     @staticmethod
     def _is_informative(result: str) -> bool:
@@ -598,6 +808,10 @@ class IntentRouter:
             reply = time.strftime("Today is %A, %d %B %Y.")
             self.tts.speak(reply)
             return f"MXB: {reply}"
+
+        v4 = self._route_v4(t, o)
+        if v4 is not None:
+            return v4
 
         # ---------------- Search box on screen ----------------
         sb, tail = self._SEARCH_BOX, self._ENTER_TAIL

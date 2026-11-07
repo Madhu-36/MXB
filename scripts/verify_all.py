@@ -45,7 +45,11 @@ def run_all_verifications():
         "tests.test_companion_router",
         "tests.test_ui_and_hardware_logic",
         "tests.test_chat_window",
-        "tests.test_end_to_end_flow"
+        "tests.test_end_to_end_flow",
+        "tests.test_v4_agent",
+        "tests.test_v4_voice",
+        "tests.test_v4_memory",
+        "tests.test_v4_automation"
     ]
 
     total_tests = 0

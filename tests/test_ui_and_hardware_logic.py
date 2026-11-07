@@ -122,28 +122,32 @@ class FakePlanner:
 
 
 class TestAgentLoop(unittest.TestCase):
-    def make(self, responses):
+    def make(self, responses, elements=None):
         executor = MagicMock()
         executor.planner = FakePlanner()
+        executor.uia.available.return_value = True
         executor.uia.foreground_title.return_value = "Inbox - Gmail"
-        executor.uia.summarize.return_value = [{"type": "Hyperlink", "name": "Ravi", "x": 300, "y": 200}]
+        executor.uia.collect.return_value = (elements if elements is not None else
+                                             [UIElement("Ravi", "Hyperlink", rect=(250, 190, 350, 210))], 0)
         executor.screen.read_active_window_text.return_value = "Inbox Ravi Project update"
         llm = MagicMock()
+        llm.plan_with_tools.return_value = None      # force the JSON-mode fallback path
         llm.chat_json.side_effect = responses
         return AgentLoop(executor, llm, {"agent": {"max_steps": 3}}), executor, llm
 
     def test_runs_until_done(self):
         loop, ex, llm = self.make([
-            {"thought": "open mail", "done": False, "plan": [{"action": "left_click", "target": "300,200"}]},
+            {"thought": "open mail", "done": False, "plan": [{"action": "click_mark", "target": "1"}]},
             {"done": True, "reply": "Opened Ravi's email."},
         ])
         self.assertEqual(loop.run("open Ravi's email"), "Opened Ravi's email.")
-        self.assertEqual(ex.planner.executed, [{"action": "left_click", "target": "300,200"}])
+        self.assertEqual(ex.planner.executed, [{"action": "click_mark", "target": "1"}])
         prompt = llm.chat_json.call_args_list[0].args[1]
-        self.assertIn("Ravi | 300,200", prompt)
+        self.assertIn('[1] Hyperlink "Ravi" @ 300,200', prompt)
 
     def test_no_recursion_and_step_cap(self):
         loop, ex, _ = self.make([{"plan": [{"action": "agent_task", "target": "x"}, {"action": "wait", "target": "1"}]}] * 3)
+        loop.max_stuck_turns = 99
         loop.run("loop forever")
         self.assertTrue(all(s["action"] != "agent_task" for s in ex.planner.executed))
         self.assertEqual(len(ex.planner.executed), 3)

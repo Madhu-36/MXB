@@ -1,34 +1,49 @@
 """
-MXB Agent Loop — observe -> think -> act, repeated until the goal is done.
+MXB Agent Loop v2 — observe -> think -> act -> verify, repeated until the goal is done.
 
-Used for tasks that can't be planned blind, e.g.
-  "open the latest email from Ravi and reply thanks"
-  "find the cheapest flight on this page and click it"
-
-Each iteration MXB looks at the foreground window (title, clickable elements
-with coordinates from UI Automation, OCR text, and optionally a screenshot for a
-vision model), asks the LLM for the next 1-3 steps, runs them through the
-interruptible ActionPlanner, and feeds the results back. Saying "stop" aborts
-between any two steps.
+What makes it reliable:
+- Set-of-Marks: every clickable element gets a number ([12] Button "Sign in"); the
+  model answers with click_mark 12 instead of guessing pixel coordinates. With
+  vision on, the same numbers are drawn onto the screenshot.
+- Native tool calling with an enum of valid actions (falls back to JSON mode).
+- Verification: steps may carry "expect": "<text>"; the next observation checks it.
+- Self-correction: failed steps are reported back as FAILED, repeated failures are
+  banned, and "the screen didn't change" is detected from a screen fingerprint.
+- Abortable between every step ("stop").
 """
 import io
 import re
-from engine.actions_catalog import prompt_tool_list
+from rapidfuzz import fuzz
+from engine.actions_catalog import prompt_tool_list, plan_tool_schema, validate_plan
+from engine.ui_automation import build_marks, marks_prompt_lines, annotate_marks, screen_signature
 from utils.logger import log
 
 AGENT_SYSTEM = """You are MXB operating the user's Windows PC step by step to achieve a goal.
-Each turn you get the goal, what you already did, and the current screen.
-Respond ONLY with JSON:
-{"thought": "<one short sentence>", "done": false, "reply": "", "plan": [{"action": "...", "target": "..."}]}
-- Give at most 3 steps per turn, then look again.
-- Click elements using their listed coordinates with left_click "x,y", or click_element with the exact name.
-- To type into a field, click it first (or use type_into), then type_text.
-- When the goal is achieved (or impossible), set "done": true and put a short spoken summary in "reply".
+Each turn you get the goal, what you already did (with results), and the current screen:
+the active window, numbered UI elements, and visible text.
+Respond by calling execute_plan (or with JSON of the same shape):
+{"thought": "<one short sentence>", "done": false, "reply": "", "plan": [{"action": "...", "target": "...", "expect": "<optional text that should appear>"}]}
+Rules:
+- At most 3 steps per turn, then look again.
+- Prefer click_mark "<n>" and type_mark "<n> :: text" using the element numbers. Use left_click "x,y" only if needed.
+- Add "expect" when you know what should appear next (a page title, a button, a message).
+- If a step FAILED or the screen did not change, try a different approach. Never repeat a banned step.
+- When the goal is achieved (or impossible), set "done": true and give a short spoken summary in "reply".
 - Never use agent_task.
 Available actions:
 """
 
 MOUSE_ACTIONS = {"left_click", "right_click", "double_click", "move_mouse"}
+INPUT_ACTIONS = {"left_click", "right_click", "double_click", "click_mark", "type_mark", "type_text", "press_key",
+                 "shortcut", "click_element", "click_text", "type_into", "search_on_screen", "focus_search_box",
+                 "scroll", "drag_and_drop", "open_app", "open_url", "switch_window"}
+FAILURE_MARKERS = ("could not", "couldn't", "failed", "not found", "not supported", "cancelled", "error",
+                   "no such", "unknown", "invalid", "don't have access", "doesn't seem")
+
+
+def is_failure(result: str) -> bool:
+    low = (result or "").lower()
+    return any(m in low for m in FAILURE_MARKERS)
 
 
 def rescale_step(step: dict, scale: float) -> dict:
@@ -50,6 +65,13 @@ def rescale_step(step: dict, scale: float) -> dict:
     return step
 
 
+def expectation_met(expect: str, haystack: str) -> bool:
+    e, h = (expect or "").lower().strip(), (haystack or "").lower()
+    if not e:
+        return True
+    return e in h or fuzz.partial_ratio(e, h) >= 85
+
+
 class AgentLoop:
     def __init__(self, executor, llm, config: dict | None = None):
         cfg = (config or {}).get("agent", {}) if isinstance(config, dict) else {}
@@ -58,25 +80,33 @@ class AgentLoop:
         self.max_steps = int(cfg.get("max_steps", 8))
         self.use_vision = bool(cfg.get("use_vision", False))
         self.max_image_width = int(cfg.get("max_image_width", 1280))
+        self.max_marks = int(cfg.get("max_marks", 60))
+        self.max_stuck_turns = int(cfg.get("max_stuck_turns", 3))
 
     # ------------------------------------------------------------------ observation
     def observe(self) -> dict:
-        obs = {"window": "", "elements": [], "text": "", "image": None, "scale": 1.0}
+        obs = {"window": "", "marks": {}, "text": "", "image": None, "scale": 1.0, "signature": ""}
         uia = getattr(self.executor, "uia", None)
         try:
-            if uia is not None:
+            if uia is not None and uia.available():
                 obs["window"] = uia.foreground_title()
-                obs["elements"] = uia.summarize(limit=45)
+                elements, _ = uia.collect()
+                obs["marks"] = build_marks(elements, self.max_marks)
         except Exception as e:
             log.warning(f"Agent: UIA observation failed: {e}")
+        if hasattr(self.executor, "set_marks"):
+            self.executor.set_marks(obs["marks"])
         try:
             obs["text"] = (self.executor.screen.read_active_window_text() or "")[:1500]
         except Exception as e:
             log.warning(f"Agent: OCR observation failed: {e}")
+        obs["signature"] = screen_signature(obs["window"], obs["marks"])
         if self.use_vision:
             try:
                 img = self.executor.screen.capture_screen_image()
                 if img is not None:
+                    if obs["marks"]:
+                        img = annotate_marks(img, obs["marks"])
                     w, h = img.size
                     if w > self.max_image_width:
                         ratio = self.max_image_width / float(w)
@@ -90,53 +120,114 @@ class AgentLoop:
         return obs
 
     @staticmethod
-    def build_prompt(goal: str, history: list[dict], obs: dict) -> str:
+    def haystack(obs: dict) -> str:
+        names = " ".join(el.label() for el in obs.get("marks", {}).values())
+        return f"{obs.get('window', '')} {names} {obs.get('text', '')}"
+
+    @staticmethod
+    def build_prompt(goal: str, history: list[dict], obs: dict, banned: list[str], stuck_note: str = "") -> str:
         lines = [f"GOAL: {goal}", ""]
         if history:
             lines.append("DONE SO FAR:")
-            for i, h in enumerate(history[-8:], 1):
-                lines.append(f"{i}. {h['action']} {h['target']!r} -> {h['result'][:160]}")
+            for i, h in enumerate(history[-10:], 1):
+                extra = f" [{h['check']}]" if h.get("check") else ""
+                lines.append(f"{i}. {h['action']} {h['target']!r} -> {h['status']}: {h['result'][:150]}{extra}")
             lines.append("")
+        if stuck_note:
+            lines.append(f"NOTE: {stuck_note}")
+        if banned:
+            lines.append("BANNED (already failed twice, do not repeat): " + "; ".join(banned))
         lines.append(f"ACTIVE WINDOW: {obs.get('window') or 'unknown'}")
-        if obs.get("elements"):
-            lines.append("CLICKABLE ELEMENTS (type | name | x,y):")
-            for el in obs["elements"]:
-                lines.append(f"- {el['type']} | {el['name']} | {el['x']},{el['y']}")
+        if obs.get("marks"):
+            lines.append("ELEMENTS:")
+            lines.extend(marks_prompt_lines(obs["marks"]))
+        else:
+            lines.append("ELEMENTS: none detected (use visible text, shortcuts, or coordinates)")
         if obs.get("text"):
             lines.append("VISIBLE TEXT: " + obs["text"].replace("\n", " "))
         if obs.get("image") is not None:
-            lines.append("A screenshot is attached. Coordinates you give must be in the screenshot's pixel space.")
+            lines.append("A screenshot with the same numbers drawn on it is attached; pixel coordinates refer to the screenshot.")
         return "\n".join(lines)
+
+    def _think(self, system: str, prompt: str, image: bytes | None) -> dict | None:
+        data = None
+        try:
+            data = self.llm.plan_with_tools(system, prompt, plan_tool_schema(agent=True), image_png=image)
+        except Exception as e:
+            log.warning(f"Agent: tool-calling error: {e}")
+        if not data:
+            data = self.llm.chat_json(system, prompt, image_png=image)
+        return data
 
     # ------------------------------------------------------------------ run
     def run(self, goal: str, feedback=None) -> str:
         planner = self.executor.planner
         planner.reset()
         history: list[dict] = []
+        failures: dict[str, int] = {}
+        pending_checks: list[dict] = []
+        last_signature = None
+        last_had_input = False
+        stuck_turns = 0
         system = AGENT_SYSTEM + prompt_tool_list(exclude=("agent_task",))
+
         for turn in range(1, self.max_steps + 1):
             if planner.is_aborted:
                 return "Agent task stopped."
             if feedback:
                 feedback(f"Agent step {turn}/{self.max_steps}: looking at the screen...")
             obs = self.observe()
-            data = self.llm.chat_json(system, self.build_prompt(goal, history, obs), image_png=obs.get("image"))
+
+            # Verify expectations from the previous turn against what's on screen now.
+            hay = self.haystack(obs)
+            for item in pending_checks:
+                item["check"] = "verified" if expectation_met(item["expect"], hay) else f"EXPECTED '{item['expect']}' NOT FOUND"
+            pending_checks = []
+
+            stuck_note = ""
+            if last_signature is not None and last_had_input and obs["signature"] == last_signature:
+                stuck_turns += 1
+                stuck_note = "The screen did not change after your last steps. Try something different."
+                if stuck_turns >= self.max_stuck_turns:
+                    return "I seem to be stuck: the screen isn't changing. Can you tell me what to do next?"
+            else:
+                stuck_turns = 0
+            last_signature = obs["signature"]
+
+            banned = [k for k, v in failures.items() if v >= 2]
+            data = self._think(system, self.build_prompt(goal, history, obs, banned, stuck_note), obs.get("image"))
             if planner.is_aborted:
                 return "Agent task stopped."
             if not data:
                 return "I couldn't reach my reasoning engine to continue that task."
             if data.get("done"):
                 return data.get("reply") or "Task complete."
-            steps = [s for s in (data.get("plan") or []) if isinstance(s, dict)]
-            steps = [rescale_step(s, obs.get("scale", 1.0)) for s in steps if s.get("action") != "agent_task"][:3]
+
+            steps, dropped = validate_plan(data.get("plan"), max_steps=3)
+            steps = [rescale_step(s, obs.get("scale", 1.0)) for s in steps if s["action"] != "agent_task"]
+            steps = [s for s in steps if f"{s['action']} {s['target']}" not in banned]
+            if dropped:
+                log.warning(f"Agent: dropped unknown actions {dropped}")
             if not steps:
                 return data.get("reply") or "I'm not sure what to do next on this screen."
             if feedback and data.get("thought"):
                 feedback(f"Agent: {data['thought']}")
+
             results = planner.execute_plan(steps, feedback_callback=feedback, reset=False)
+            last_had_input = any(s["action"] in INPUT_ACTIONS for s in steps)
             for step, res in zip(steps, results):
-                history.append({"action": step.get("action", ""), "target": str(step.get("target", "")), "result": str(res)})
+                failed = is_failure(str(res))
+                entry = {"action": step["action"], "target": step["target"], "result": str(res),
+                         "status": "FAILED" if failed else "ok"}
+                if failed:
+                    key = f"{step['action']} {step['target']}"
+                    failures[key] = failures.get(key, 0) + 1
+                elif step.get("expect"):
+                    entry["expect"] = step["expect"]
+                    pending_checks.append(entry)
+                history.append(entry)
             if planner.is_aborted:
                 return "Agent task stopped."
-        summary = "; ".join(f"{h['action']} -> {h['result'][:60]}" for h in history[-3:])
+
+        summary = "; ".join(f"{h['action']} -> {h['status']}" for h in history[-3:])
         return f"I stopped after {self.max_steps} steps without confirming the goal. Last steps: {summary}"

@@ -1,13 +1,29 @@
-# 🧠 MXB (Machine eXecutive Brain) v3.0 — AI Desktop Companion
-> Talk or type to it. It listens while it works, operates your apps, mouse, keyboard, files and hardware, and asks before anything destructive.
+# 🧠 MXB (Machine eXecutive Brain) v4.0 — Advanced AI Desktop Companion
+> Talk, type, or use your phone. It listens while it works, sees the screen as numbered elements, remembers you, answers from your documents, runs your routines on a schedule — and asks before anything destructive.
 
-[![MXB Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/Madhu-36/MXB)
+[![MXB Version](https://img.shields.io/badge/version-4.0.0-blue.svg)](https://github.com/Madhu-36/MXB)
 [![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)](https://github.com/Madhu-36/MXB)
-[![Tests](https://img.shields.io/badge/tests-32%20suites-brightgreen.svg)](https://github.com/Madhu-36/MXB)
+[![Tests](https://img.shields.io/badge/tests-36%20suites-brightgreen.svg)](https://github.com/Madhu-36/MXB)
 [![AI Architecture](https://img.shields.io/badge/architecture-5--Stage%20Parallel%20Pipelines-cyan.svg)](https://github.com/Madhu-36/MXB)
 [![LLM Planner](https://img.shields.io/badge/LLM-llama3.2:1b%20%7C%20NVIDIA%20Cloud-orange.svg)](https://github.com/Madhu-36/MXB)
 
 **MXB** is an autonomous desktop companion for Windows. It listens continuously, understands voice **or** typed chat, and operates your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen, apps, files, Bluetooth, Wi-Fi, audio, display) while you keep talking to it.
+
+---
+
+## 🚀 What's new in v4.0 — Advanced
+
+| Area | What you can do | How it works |
+| :--- | :--- | :--- |
+| **Smarter agent** | *"show numbers"* → *"click 12"* / *"type hello in 3"*; *"agent: log into the portal and download my marksheet"* | Set-of-Marks numbering of every clickable element (`ui/marks_overlay.py`), native tool calling with an enum of valid actions, step verification (`expect`), stuck detection, banned repeated failures (`engine/agent_loop.py`) |
+| **Undo** | *"undo the move"*, *"undo that"* | Journal of every file move/rename/copy/create/delete/overwrite with backups and Recycle Bin restore (`engine/undo.py`) |
+| **Real-time voice** | Talk over MXB to interrupt it; replies start ~1 s after you stop speaking; natural Indian-English neural voice | Streams the LLM plan and speaks the `reply` sentence by sentence (`engine/streaming.py`); edge-tts / Piper / SAPI with gap-free prefetch (`engine/tts.py`); barge-in with echo filter (`engine/barge_in.py`); offline openWakeWord engine (`engine/wake_engine.py`) |
+| **Memory** | *"I prefer short answers"* (learned automatically), *"what do you remember about me"*, *"forget my old address"* | SQLite + embeddings (Ollama / NVIDIA / local fallback), never stores secrets (`engine/semantic_memory.py`) |
+| **Your documents** | *"index my Notes folder"* → *"what do my notes say about the SIH deadline?"* | Incremental indexing of TXT/MD/code/PDF/DOCX, hybrid retrieval, cited answers, permission-aware (`engine/knowledge.py`) |
+| **Phone remote** | *"turn on phone remote"* → scan QR → chat, Stop, Yes/No and live screen peek from your phone | Token-secured LAN web app, private-network only, lockout on bad tokens (`engine/remote_server.py`) |
+| **Reminders & schedules** | *"remind me at 5 pm to call mom"*, *"every weekday at 9 am open outlook"* | Natural-language times, persistent jobs, scheduled commands still need "yes" for risky actions (`engine/scheduler.py`) |
+| **Routines & recording** | *"create a routine called work mode: open vs code; open chrome"*, *"start recording expense report"* … *"stop recording"* → *"run expense report"* | Replays clicks by element name with coordinate fallback; password fields never recorded (`engine/routines.py`) |
+| **Plugins** | Drop a `.py` into `plugins/` (examples: quick notes, play on YouTube) | `@skill` decorator: regex fast-path + automatically added to the LLM's tool list (`engine/skills.py`) |
 
 ---
 
@@ -115,9 +131,9 @@ Measured on native 64-bit Windows via `scripts/benchmark_suite.py`:
 
 ---
 
-## 🧪 Comprehensive Verification Suite (32 Suites)
+## 🧪 Comprehensive Verification Suite (36 Suites)
 
-MXB includes 32 automated test suites. The 8 v3 suites (safety, permissions, wake word, command bus, router, UI/hardware logic, chat window, end-to-end flow) also run on Linux/macOS CI via `tests/_stubs.py`:
+MXB includes 36 automated test suites. The 12 v3/v4 suites (safety, permissions, wake word, command bus, router, UI/hardware logic, chat window, end-to-end flow, agent, voice, memory, automation) also run on Linux/macOS CI via `tests/_stubs.py`:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/verify_all.py
@@ -176,3 +192,4 @@ python -u main.py
 - Say **"MXB, …"** before voice commands (change the name in `config.json → listening.wake_words`, or set `listening.mode` to `"always"`). After a reply MXB stays engaged for 15 s, so follow-ups need no wake word.
 - `Ctrl+Alt+Space` opens the chat window, `Ctrl+Space` toggles the mic, `Ctrl+Alt+K` is the global kill-switch, and **"stop"** halts everything at any time.
 - Optional: `pip install pypdf python-docx` to read PDFs and Word files, and set `NVIDIA_API_KEY` (or run Ollama) for the LLM planner.
+- v4 optional: `ollama pull nomic-embed-text` for private semantic memory, `pip install openwakeword` for the offline wake word, Piper for a fully offline neural voice. See [docs/COMPANION_GUIDE.md](docs/COMPANION_GUIDE.md).

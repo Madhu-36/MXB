@@ -16,6 +16,7 @@ class FakeBus(QObject):
     confirmation_requested = Signal(str)
     confirmation_resolved = Signal(bool)
     open_chat_requested = Signal()
+    qr_ready = Signal(str, bytes)
 
     def __init__(self):
         super().__init__()

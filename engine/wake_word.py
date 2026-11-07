@@ -34,6 +34,12 @@ class WakeWordGate:
         self._clock = clock
         self._engaged_until = 0.0
 
+    def add_wake_word(self, phrase: str):
+        key = re.sub(r"[^a-z0-9]", "", (phrase or "").lower())
+        if key:
+            self.wake_keys.add(key)
+            self.max_tokens = max(self.max_tokens, len(phrase.split()) + 2)
+
     def engage(self, seconds: float | None = None):
         self._engaged_until = self._clock() + (self.follow_up_seconds if seconds is None else seconds)
 

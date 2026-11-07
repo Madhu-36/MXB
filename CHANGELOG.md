@@ -1,3 +1,29 @@
+## v4.0.0 — Advanced Companion
+**Smarter agent**
+- Set-of-Marks: numbered clickable elements for the agent and for voice ("show numbers", "click 12", "type hello in 3") with a click-through on-screen overlay.
+- Native tool calling (OpenAI-style `tools`, schema with an enum of valid actions) on NVIDIA NIM and Ollama, with automatic JSON-mode fallback.
+- Plan validation (aliases, unknown actions dropped, length cap) for every LLM plan.
+- Agent verification (`expect`), stuck detection via screen fingerprints, banning of repeated failing steps; vision screenshots carry the same numbers.
+- Undo journal for file actions with backups before overwrite and Recycle Bin restore.
+
+**Real-time voice**
+- Streams the LLM response and speaks the reply sentence by sentence while the plan is still generating.
+- Neural TTS backends: edge-tts (e.g. en-IN-NeerjaNeural), Piper (offline), SAPI fallback; interruptible chunked playback; next sentence synthesized while the current one plays.
+- Barge-in: headset mode interrupts instantly; speaker mode filters MXB's own echo by comparing transcripts with what it just said.
+- Offline audio wake word via openWakeWord; nothing is transcribed until the wake word is heard.
+
+**Memory & documents**
+- Semantic memory in SQLite with embeddings (Ollama / NVIDIA / dependency-free hashing), legacy import, automatic preference learning that never stores secrets or swallows commands.
+- Knowledge base: incremental folder indexing (TXT/MD/code/PDF/DOCX), hybrid retrieval, cited answers, respects file permissions.
+
+**Phone remote & automation**
+- Token-secured LAN web app with chat, live progress, Stop, Yes/No confirmations and screen peek; private-network only; lockout after bad tokens; QR code in the chat window.
+- Reminders and scheduled commands with natural-language times (relative, absolute, daily, weekday, weekly, intervals), persisted across restarts.
+- Spoken routines and record-and-replay workflows (element-name clicks with coordinate fallback, password keystrokes excluded).
+- Plugin skills (`plugins/*.py`, `@skill` decorator) with two examples; skills join the fast path and the LLM tool list.
+
+**Tests**: 4 new suites (79 tests) + 2 new end-to-end flows; 190 cross-platform tests pass.
+
 ## v3.0.0 — AI Desktop Companion
 **New**
 - Text chat window (`ui/chat.py`) sharing one conversation with voice; Stop / Mic / Yes / No buttons; `Ctrl+Alt+Space`.

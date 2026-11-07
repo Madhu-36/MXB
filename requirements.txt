@@ -1,4 +1,4 @@
-# MXB v3.0 Dependencies
+# MXB v4.0 Dependencies
 # Core Audio & Speech
 PySide6>=6.5.0
 faster-whisper>=0.10.0
@@ -54,3 +54,13 @@ python-docx>=1.1.0
 
 # Silero VAD
 onnxruntime>=1.15.0
+
+# v4: Natural voice (neural TTS + decoding), phone remote QR code
+edge-tts>=7.0.0
+miniaudio>=1.59
+qrcode[pil]>=7.4
+
+# v4 optional (install if you want them):
+#   openwakeword>=0.6.0        offline audio wake word ("hey jarvis", or a custom trained model)
+#   Piper TTS (offline neural voice): download piper.exe + a voice .onnx and set voice.piper_exe / voice.piper_model
+#   ollama pull nomic-embed-text   private semantic embeddings for memory & document search

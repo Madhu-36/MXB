@@ -297,6 +297,26 @@ class UIAutomation:
         elements, _ = self.collect()
         return summarize_elements(elements, limit)
 
+    def element_at(self, x: int, y: int) -> tuple[str, bool]:
+        """(accessible name, is_password_field) of the element under a screen point (used by the recorder)."""
+        if not self.available():
+            return "", False
+        self._ensure_com()
+        from pywinauto.uia_element_info import UIAElementInfo
+        info = UIAElementInfo.from_point(int(x), int(y))
+        is_password = False
+        try:
+            is_password = bool(info.element.CurrentIsPassword)
+        except Exception:
+            pass
+        label = (info.name or "").strip()
+        if not label:
+            try:
+                label = (info.element.CurrentHelpText or "").strip()
+            except Exception:
+                pass
+        return label, is_password
+
 
 BROWSER_PROCESS_HINTS = ("chrome", "edge", "firefox", "brave", "opera", "vivaldi", "arc")
 
@@ -314,3 +334,63 @@ def fallback_search_shortcut(window_title: str) -> tuple[str, list[str]]:
     if not title or title in {"program manager", "desktop"}:
         return "Windows Search (Win+S)", ["win", "s"]
     return "the app's find bar (Ctrl+F)", ["ctrl", "f"]
+
+
+# ---------------------------------------------------------------------------
+# Set-of-Marks: numbered labels for clickable elements (agent + "click 12" voice control)
+# ---------------------------------------------------------------------------
+def build_marks(elements: list[UIElement], limit: int = 60) -> dict[int, UIElement]:
+    """
+    Picks interactive, visible elements, removes near-duplicates (same name, overlapping
+    boxes), orders them top-to-bottom / left-to-right and numbers them from 1.
+    """
+    picked: list[UIElement] = []
+    for el in elements:
+        if el.control_type not in INTERACTIVE_TYPES or el.width < 6 or el.height < 6:
+            continue
+        if not el.label().strip() and el.control_type not in TEXT_INPUT_TYPES:
+            continue
+        cx, cy = el.center
+        duplicate = False
+        for other in picked:
+            ox, oy = other.center
+            if abs(cx - ox) <= 6 and abs(cy - oy) <= 6:
+                duplicate = True
+                break
+        if not duplicate:
+            picked.append(el)
+    picked.sort(key=lambda e: (e.rect[1] // 12, e.rect[0]))
+    return {i: el for i, el in enumerate(picked[:limit], 1)}
+
+
+def marks_prompt_lines(marks: dict[int, UIElement]) -> list[str]:
+    lines = []
+    for n, el in marks.items():
+        cx, cy = el.center
+        label = el.label().strip()[:60] or "(unnamed field)"
+        lines.append(f"[{n}] {el.control_type} \"{label}\" @ {cx},{cy}")
+    return lines
+
+
+def annotate_marks(image, marks: dict[int, UIElement], offset: tuple[int, int] = (0, 0)):
+    """Draws numbered boxes onto a PIL screenshot (for vision models). Returns a new image."""
+    from PIL import ImageDraw
+    img = image.convert("RGB").copy()
+    draw = ImageDraw.Draw(img)
+    ox, oy = offset
+    for n, el in marks.items():
+        l, t, r, b = el.rect
+        l, t, r, b = l - ox, t - oy, r - ox, b - oy
+        draw.rectangle([l, t, r, b], outline=(255, 42, 95), width=2)
+        tag = str(n)
+        tw = 8 * len(tag) + 6
+        draw.rectangle([l, max(0, t - 16), l + tw, max(16, t)], fill=(255, 42, 95))
+        draw.text((l + 3, max(0, t - 15)), tag, fill=(255, 255, 255))
+    return img
+
+
+def screen_signature(title: str, marks: dict[int, UIElement]) -> str:
+    """Cheap fingerprint of what's on screen, used to detect 'nothing changed'."""
+    import hashlib
+    names = "|".join(f"{el.control_type}:{el.label()}" for el in marks.values())
+    return hashlib.sha1(f"{title}#{names}".encode("utf-8", "ignore")).hexdigest()[:16]

@@ -18,7 +18,9 @@
     "vision_model": "meta/llama-3.2-11b-vision-instruct",
     "local_vision_model": "llama3.2-vision",
     "ollama_url": "http://localhost:11434/api/chat",
-    "max_tokens": 500
+    "max_tokens": 500,
+    "streaming": true,
+    "use_tool_calling": true
   },
   "engine": {
     "whisper_model": "base.en",
@@ -35,10 +37,19 @@
       "mx b",
       "max b"
     ],
-    "follow_up_seconds": 15
+    "follow_up_seconds": 15,
+    "engine": "transcript",
+    "openwakeword_model": "hey_jarvis",
+    "openwakeword_threshold": 0.5
   },
   "voice": {
-    "speak_text_replies": false
+    "speak_text_replies": false,
+    "tts_engine": "auto",
+    "edge_voice": "en-IN-NeerjaNeural",
+    "edge_rate": "+5%",
+    "piper_exe": "",
+    "piper_model": "",
+    "barge_in": "auto"
   },
   "safety": {
     "confirm_destructive": true,
@@ -50,9 +61,25 @@
   "agent": {
     "max_steps": 8,
     "use_vision": false,
-    "max_image_width": 1280
+    "max_image_width": 1280,
+    "max_marks": 60,
+    "max_stuck_turns": 3
   },
   "ui": {
     "open_chat_on_start": true
+  },
+  "memory": {
+    "embedding_provider": "auto",
+    "ollama_embedding_model": "nomic-embed-text",
+    "nvidia_embedding_model": "nvidia/nv-embedqa-e5-v5"
+  },
+  "remote": {
+    "enabled": false,
+    "port": 8765,
+    "allow_screen": true
+  },
+  "skills": {
+    "enabled": true,
+    "disabled": []
   }
 }

@@ -11,6 +11,7 @@ import sounddevice as sd
 from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
+from engine.barge_in import BargeInDetector, is_probable_echo, resolve_mode
 from utils.credentials import CredentialsManager
 from utils.logger import log
 
@@ -72,6 +73,20 @@ class VoicePipeline(QThread):
         # Worker threads
         self._asr_thread = None
 
+        # v4: barge-in (talk over MXB) and offline audio wake word
+        voice_cfg = config.get("voice", {}) if isinstance(config, dict) else {}
+        self.barge_in_setting = voice_cfg.get("barge_in", "auto")
+        self.barge_in_mode = "off"            # resolved once the microphone is known
+        self.barge_detector = BargeInDetector()
+        listen_cfg = config.get("listening", {}) if isinstance(config, dict) else {}
+        self.wake_engine = None
+        if listen_cfg.get("engine", "transcript") == "openwakeword":
+            from engine.wake_engine import OpenWakeWordEngine, wake_phrase_words
+            model = listen_cfg.get("openwakeword_model", "hey_jarvis")
+            self.wake_engine = OpenWakeWordEngine(model, float(listen_cfg.get("openwakeword_threshold", 0.5)))
+            for phrase in wake_phrase_words(model):
+                self.bus.wake.add_wake_word(phrase)
+
     def _get_vad_model(self):
         if self._vad_model is None:
             try:
@@ -85,21 +100,25 @@ class VoicePipeline(QThread):
 
     def _on_tts_started(self):
         self.is_tts_speaking = True
-        with self.raw_audio_queue.mutex:
-            self.raw_audio_queue.queue.clear()
+        self.barge_detector.reset()
+        if self.barge_in_mode == "off":
+            with self.raw_audio_queue.mutex:
+                self.raw_audio_queue.queue.clear()
 
     def _on_tts_finished(self):
         self.tts_finish_time = time.time()
         self.is_tts_speaking = False
-        with self.raw_audio_queue.mutex:
-            self.raw_audio_queue.queue.clear()
+        if self.barge_in_mode == "off":
+            with self.raw_audio_queue.mutex:
+                self.raw_audio_queue.queue.clear()
 
     def audio_callback(self, indata, frames, time_info, status):
         """Non-blocking low-latency sounddevice capture callback."""
-        if not self.is_listening or self.is_tts_speaking:
+        if not self.is_listening:
             return
-        if (time.time() - self.tts_finish_time) < 0.35:
-            return
+        if self.barge_in_mode == "off":
+            if self.is_tts_speaking or (time.time() - self.tts_finish_time) < 0.35:
+                return
 
         try:
             self.raw_audio_queue.put_nowait(indata.copy())
@@ -193,10 +212,19 @@ class VoicePipeline(QThread):
             if utterance_item is None:
                 break
 
-            audio_data, agc_target, max_gain = utterance_item
+            audio_data, agc_target, max_gain, during_tts = (tuple(utterance_item) + (False,))[:4]
 
             try:
                 text = self._transcribe_audio(audio_data, agc_target, max_gain)
+                if text and during_tts:
+                    tts = self.router.tts
+                    spoken = tts.recent_spoken() if callable(getattr(tts, "recent_spoken", None)) else []
+                    if is_probable_echo(text, spoken):
+                        log.info(f"Pipeline: dropped echo of MXB's own voice: '{text}'")
+                        self.vad_status_changed.emit("Idle")
+                        continue
+                    log.info("Pipeline: barge-in — user spoke over MXB, interrupting speech.")
+                    tts.interrupt()
                 if text:
                     log.info(f"Pipeline [Parallel ASR] -> '{text}'")
                     self.transcription_ready.emit(text)
@@ -352,6 +380,11 @@ class VoicePipeline(QThread):
             self.vad_status_changed.emit(error_msg)
             return
 
+        self.barge_in_mode = resolve_mode(self.barge_in_setting, device_info.get("name", ""))
+        log.info(f"Pipeline: barge-in mode = {self.barge_in_mode} (mic: {device_info.get('name', '?')})")
+        if self.wake_engine is not None and not self.wake_engine.load():
+            self.wake_engine = None
+
         use_software_resample = False
         stream_rate = 16000
         stream_channels = 1
@@ -374,6 +407,7 @@ class VoicePipeline(QThread):
 
         buffer = []
         is_speaking = False
+        started_during_tts = False
         silence_frames = 0
         speech_frames_count = 0
 
@@ -440,11 +474,27 @@ class VoicePipeline(QThread):
                         else:
                             speech_prob = 1.0 if rms_volume > 0.0006 else 0.0
 
-                        has_speech = (speech_prob >= vad_speech_prob_threshold) or (rms_volume > 0.0025)
+                        # Offline wake word: runs on raw audio, before any transcription.
+                        if self.wake_engine is not None and self.wake_engine.process(chunk):
+                            self.bus.wake.engage()
+                            self.vad_status_changed.emit("Active (Listening...)")
+                            self.action_feedback.emit("Wake word heard — listening.")
+
+                        speaking_now = self.is_tts_speaking or (time.time() - self.tts_finish_time) < 0.35
+                        if speaking_now and self.barge_in_mode != "off":
+                            # Stricter detection while MXB talks, so its own voice doesn't count as speech.
+                            barge = self.barge_detector.update(speech_prob, rms_volume)
+                            if barge and self.barge_in_mode == "headset" and self.is_tts_speaking:
+                                log.info("Pipeline: barge-in (headset) — interrupting speech immediately.")
+                                self.router.tts.interrupt()
+                            has_speech = barge or (is_speaking and speech_prob >= 0.6)
+                        else:
+                            has_speech = (speech_prob >= vad_speech_prob_threshold) or (rms_volume > 0.0025)
 
                         if has_speech:
                             if not is_speaking:
                                 is_speaking = True
+                                started_during_tts = speaking_now
                                 speech_frames_count = 0
                                 self.vad_status_changed.emit("Active (Listening...)")
                                 log.info(f"Speech Detected (Prob: {speech_prob:.3f}, RMS: {rms_volume:.6f})")
@@ -474,9 +524,19 @@ class VoicePipeline(QThread):
                                         self.vad_status_changed.emit("Idle")
                                         continue
 
+                                    # With the offline wake engine, nothing is transcribed until the wake
+                                    # word is heard (except while MXB is busy/speaking, so "stop" still works).
+                                    if (self.wake_engine is not None and not self.bus.wake.engaged
+                                            and not self.bus.busy and not self.is_tts_speaking):
+                                        buffer = []
+                                        self.preroll_buffer.clear()
+                                        self.vad_status_changed.emit("Idle")
+                                        continue
+
                                     # Hand off utterance to ASR Worker WITHOUT BLOCKING AUDIO STREAM
                                     audio_utterance = np.concatenate(buffer).flatten()
-                                    self.utterance_queue.put((audio_utterance, agc_target_level, agc_max_gain))
+                                    during_tts = started_during_tts and self.barge_in_mode == "speaker"
+                                    self.utterance_queue.put((audio_utterance, agc_target_level, agc_max_gain, during_tts))
                                     self.vad_status_changed.emit("Transcribing...")
                                     log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames). Mic stays listening!")
 
