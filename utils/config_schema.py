@@ -106,6 +106,17 @@ class ConfigSchema:
             "max_gain": max_gain
         }
 
+        # 6. MXB v3 blocks and any extra keys pass through untouched (validated blocks win),
+        #    so exporting/importing settings never silently drops companion settings.
+        for key, value in config.items():
+            if key not in validated:
+                validated[key] = value
+        for block in ("hotkeys", "llm", "speech_recognition", "engine"):
+            extra = config.get(block)
+            if isinstance(extra, dict):
+                for k, v in extra.items():
+                    validated[block].setdefault(k, v)
+
         return len(warnings) == 0, validated, warnings
 
     @classmethod

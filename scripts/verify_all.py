@@ -37,7 +37,15 @@ def run_all_verifications():
         "tests.test_color_picker",
         "tests.test_timer_manager",
         "tests.test_lock_and_trash",
-        "tests.test_router_extensions"
+        "tests.test_router_extensions",
+        "tests.test_safety_policy",
+        "tests.test_file_permissions",
+        "tests.test_wake_word",
+        "tests.test_command_bus",
+        "tests.test_companion_router",
+        "tests.test_ui_and_hardware_logic",
+        "tests.test_chat_window",
+        "tests.test_end_to_end_flow"
     ]
 
     total_tests = 0

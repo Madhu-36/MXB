@@ -11,7 +11,6 @@ import sounddevice as sd
 from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
-from engine.router import IntentRouter
 from utils.credentials import CredentialsManager
 from utils.logger import log
 
@@ -24,6 +23,10 @@ class VoicePipeline(QThread):
     3. Asynchronous ASR Worker: Transcribes speech utterances without blocking audio capture.
     4. Asynchronous Action Worker: Dispatches and executes desktop actions in parallel.
     5. Live Voice Interruption: Intercepts 'stop' / 'cancel' immediately during active actions.
+
+    v3: transcripts are handed to the shared CommandBus (same path as typed chat),
+    which owns the wake-word gate, confirmations, stop handling and the parallel
+    action/info lanes. The microphone never stops listening while MXB works.
     """
 
     vad_status_changed = Signal(str)
@@ -31,7 +34,7 @@ class VoicePipeline(QThread):
     action_feedback = Signal(str)
     mic_level_signal = Signal(float)
 
-    def __init__(self, config):
+    def __init__(self, config, bus=None):
         super().__init__()
         self.config = config
         self.is_running = True
@@ -39,7 +42,13 @@ class VoicePipeline(QThread):
         self.is_tts_speaking = False
         self.tts_finish_time = 0.0
 
-        self.router = IntentRouter()
+        if bus is None:
+            from engine.command_bus import CommandBus
+            bus = CommandBus(config)
+        self.bus = bus
+        self.router = bus.router
+        # Live step feedback from the bus also drives the HUD action line.
+        self.bus.feedback.connect(self.action_feedback.emit)
 
         # Connect TTS signals for echo suppression
         self.router.tts.started_speaking.connect(self._on_tts_started)
@@ -51,7 +60,7 @@ class VoicePipeline(QThread):
         # Thread-safe queues connecting the concurrent pipeline stages
         self.raw_audio_queue = queue.Queue(maxsize=150)
         self.utterance_queue = queue.Queue(maxsize=10)
-        self.action_task_queue = queue.Queue(maxsize=15)
+        self.action_task_queue = self.bus.action_queue  # kept for backward compatibility
 
         # 800ms pre-roll audio ring buffer to preserve leading syllables
         self.preroll_buffer = collections.deque(maxlen=25)
@@ -62,7 +71,6 @@ class VoicePipeline(QThread):
 
         # Worker threads
         self._asr_thread = None
-        self._action_thread = None
 
     def _get_vad_model(self):
         if self._vad_model is None:
@@ -192,21 +200,11 @@ class VoicePipeline(QThread):
                 if text:
                     log.info(f"Pipeline [Parallel ASR] -> '{text}'")
                     self.transcription_ready.emit(text)
-
-                    # Check for immediate emergency voice interruption
-                    clean_lower = text.lower().strip()
-                    if clean_lower in ["stop", "cancel", "halt", "pause", "abort", "freeze"]:
-                        log.warning("Pipeline: Immediate Voice Interruption detected in ASR thread!")
-                        self.router.executor.abort_current_action()
-                        self.action_feedback.emit("INTERRUPTED: Actions aborted.")
-                        self.router.tts.speak("Stopped.")
-                        # Drain any pending queued actions
-                        with self.action_task_queue.mutex:
-                            self.action_task_queue.queue.clear()
-                        continue
-
-                    # Put recognized command into Action Execution Queue
-                    self.action_task_queue.put(text)
+                    # Stop words, confirmations and the wake word are handled instantly
+                    # in the bus; real commands are queued without blocking this thread.
+                    outcome = self.bus.submit(text, source="voice")
+                    if outcome == "ignored":
+                        self.vad_status_changed.emit("Idle")
                 else:
                     log.info("Pipeline: No recognizable speech in utterance.")
                     self.vad_status_changed.emit("Idle")
@@ -214,32 +212,6 @@ class VoicePipeline(QThread):
                 log.error(f"Pipeline: ASR Worker Exception: {e}")
             finally:
                 self.utterance_queue.task_done()
-
-    # =========================================================================
-    # WORKER 2: ASYNCHRONOUS ACTION EXECUTION THREAD (PARALLEL TO AUDIO)
-    # =========================================================================
-    def _action_worker_loop(self):
-        log.info("Pipeline: Action Execution Worker Thread started (Parallel).")
-        while self.is_running:
-            try:
-                text_cmd = self.action_task_queue.get(timeout=0.2)
-            except queue.Empty:
-                continue
-
-            if text_cmd is None:
-                break
-
-            try:
-                self.action_feedback.emit("Reasoning & Planning...")
-                action_result = self.router.route(text_cmd, feedback_callback=self.action_feedback.emit)
-                log.info(f"Pipeline [Parallel Action Result] -> {action_result}")
-                self.action_feedback.emit(action_result)
-                self.vad_status_changed.emit("Idle")
-            except Exception as e:
-                log.error(f"Pipeline: Action Worker Exception: {e}")
-                self.action_feedback.emit(f"Execution Error: {e}")
-            finally:
-                self.action_task_queue.task_done()
 
     def _audio_to_wav_bytes(self, audio_data: np.ndarray, sample_rate=16000) -> bytes:
         int16_data = (audio_data * 32767).clip(-32768, 32767).astype(np.int16)
@@ -368,9 +340,7 @@ class VoicePipeline(QThread):
 
         # Start Parallel Worker Threads
         self._asr_thread = threading.Thread(target=self._asr_worker_loop, name="MXB-Parallel-ASR", daemon=True)
-        self._action_thread = threading.Thread(target=self._action_worker_loop, name="MXB-Parallel-Action", daemon=True)
         self._asr_thread.start()
-        self._action_thread.start()
 
         self.vad_status_changed.emit("Idle")
 
@@ -529,12 +499,14 @@ class VoicePipeline(QThread):
     def resume_listening(self):
         self.is_listening = True
         self.vad_status_changed.emit("Idle")
+        # Unmuting is an explicit "I'm talking to you" signal: no wake word needed next.
+        self.bus.wake.engage()
         log.info("Voice Pipeline Listening Resumed.")
 
     def stop(self):
         self.is_running = False
         self.utterance_queue.put(None)
-        self.action_task_queue.put(None)
+        self.bus.shutdown()
         if hasattr(self, 'router') and hasattr(self.router, 'tts'):
             self.router.tts.stop()
         self.wait(1500)

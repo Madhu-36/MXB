@@ -76,11 +76,22 @@ class ScreenVision:
                 return img
         return self.capture_screen_image()
 
-    def capture_screen_image(self) -> Image.Image | None:
+    @staticmethod
+    def _grab_pil() -> Image.Image | None:
         """
-        Captures the primary screen as a PIL Image.
-        Uses Qt's primary screen grabber (always active and hardware-accelerated).
+        Thread-safe capture via PIL.ImageGrab (GDI). Actions run on worker threads,
+        where Qt's QScreen.grabWindow is not safe to call. Captures the primary
+        display in physical pixels, matching the DPI-aware mouse coordinates.
         """
+        try:
+            from PIL import ImageGrab
+            return ImageGrab.grab()
+        except Exception as e:
+            log.warning(f"ScreenVision: ImageGrab failed ({e}); trying Qt.")
+            return None
+
+    @staticmethod
+    def _grab_qt() -> Image.Image | None:
         try:
             app = QApplication.instance()
             if not app:
@@ -88,46 +99,35 @@ class ScreenVision:
             screen = QGuiApplication.primaryScreen()
             if not screen:
                 return None
-
             pix = screen.grabWindow(0)
             if pix.isNull():
                 return None
-
             qimg = pix.toImage()
             buf = QBuffer()
             buf.open(QIODevice.WriteOnly)
             qimg.save(buf, "PNG")
             png_bytes = bytes(buf.data())
             buf.close()
-
             return Image.open(io.BytesIO(png_bytes))
         except Exception as e:
-            log.error(f"ScreenVision: Screen capture failed: {e}")
+            log.error(f"ScreenVision: Qt screen capture failed: {e}")
             return None
+
+    def capture_screen_image(self) -> Image.Image | None:
+        """Captures the primary screen as a PIL Image."""
+        return self._grab_pil() or self._grab_qt()
 
     def capture_screen_png_bytes(self) -> bytes | None:
         """Returns PNG bytes of the current desktop screen."""
+        img = self.capture_screen_image()
+        if img is None:
+            return None
         try:
-            app = QApplication.instance()
-            if not app:
-                return None
-            screen = QGuiApplication.primaryScreen()
-            if not screen:
-                return None
-
-            pix = screen.grabWindow(0)
-            if pix.isNull():
-                return None
-
-            qimg = pix.toImage()
-            buf = QBuffer()
-            buf.open(QIODevice.WriteOnly)
-            qimg.save(buf, "PNG")
-            data = bytes(buf.data())
-            buf.close()
-            return data
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            return buf.getvalue()
         except Exception as e:
-            log.error(f"ScreenVision: PNG bytes capture failed: {e}")
+            log.error(f"ScreenVision: PNG encoding failed: {e}")
             return None
 
     def capture_roi(self, x: int, y: int, width: int, height: int) -> Image.Image | None:

@@ -22,10 +22,40 @@ class FileOperationsManager:
         "projects": Path.home() / "OneDrive" / "Desktop" / "PROJECTS"
     }
 
+    SKIP_DIRS = {
+        "node_modules", ".git", "__pycache__", ".venv", "venv", "$recycle.bin", "system volume information",
+        "windows", "appdata", "program files", "program files (x86)", "programdata", ".cache", "site-packages",
+    }
+    TEXT_EXTENSIONS = {
+        ".txt", ".md", ".py", ".js", ".ts", ".tsx", ".jsx", ".json", ".csv", ".log", ".ini", ".cfg", ".toml",
+        ".yaml", ".yml", ".html", ".css", ".xml", ".java", ".c", ".cpp", ".h", ".cs", ".go", ".rs", ".sql",
+        ".sh", ".bat", ".ps1", ".tex", ".rtf",
+    }
+
+    def __init__(self, access=None):
+        """
+        access: a safety.permissions.FileAccessManager. When given (as the executor
+        does), every operation is checked against the user's granted folders.
+        When None (direct library use / unit tests), no permission checks run.
+        """
+        self.access = access
+
+    def _guard(self, path, write: bool = False) -> str | None:
+        if self.access is None:
+            return None
+        ok, reason = self.access.check(path, write=write)
+        return None if ok else reason
+
     def resolve_path(self, path_str: str) -> Path:
         """Resolves friendly folder names (e.g. 'desktop/test') to absolute Path objects."""
-        clean = path_str.strip().strip('"').strip("'")
+        clean = str(path_str).strip().strip('"').strip("'")
         lower = clean.lower()
+
+        # Spoken drive names: "d drive", "drive d", "D:" -> D:\
+        from safety.permissions import parse_location
+        spoken = parse_location(clean)
+        if spoken != clean and len(spoken) == 3 and spoken[1:] == ":\\":
+            return Path(spoken)
 
         for alias, resolved in self.FOLDER_ALIASES.items():
             if lower == alias:
@@ -50,6 +80,9 @@ class FileOperationsManager:
     def create_folder(self, folder_path: str) -> str:
         """Creates a directory at the given path."""
         target = self.resolve_path(folder_path)
+        denied = self._guard(target, write=True)
+        if denied:
+            return denied
         try:
             target.mkdir(parents=True, exist_ok=True)
             log.info(f"FileOps: Created directory '{target}'")
@@ -61,6 +94,9 @@ class FileOperationsManager:
     def create_file(self, file_path: str, content: str = "") -> str:
         """Creates or overwrites a text file with content."""
         target = self.resolve_path(file_path)
+        denied = self._guard(target, write=True)
+        if denied:
+            return denied
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             with open(target, "w", encoding="utf-8") as f:
@@ -75,7 +111,13 @@ class FileOperationsManager:
         """Opens a file or directory in the default Windows application or File Explorer."""
         target = self.resolve_path(target_path)
         if not target.exists():
-            return f"Path does not exist: {target_path}"
+            matches = self.find_files(Path(str(target_path)).name, max_results=1)
+            if not matches:
+                return f"Path does not exist: {target_path}"
+            target = Path(matches[0])
+        denied = self._guard(target)
+        if denied:
+            return denied
 
         try:
             os.startfile(str(target))
@@ -90,6 +132,9 @@ class FileOperationsManager:
         target = self.resolve_path(folder_name)
         if not target.exists() or not target.is_dir():
             return f"Folder not found: {folder_name}"
+        denied = self._guard(target)
+        if denied:
+            return denied
 
         try:
             items = list(target.iterdir())
@@ -110,29 +155,248 @@ class FileOperationsManager:
             log.error(f"FileOps: Failed to list directory '{target}': {e}")
             return f"Failed to list folder: {e}"
 
-    def delete_file(self, target_path: str) -> str:
-        """Safely removes a file."""
+    def delete_file(self, target_path: str, permanent: bool = False) -> str:
+        """Deletes a file or folder. Default: send to the Recycle Bin so it can be restored."""
         target = self.resolve_path(target_path)
         if not target.exists():
             return f"File does not exist: {target_path}"
+        denied = self._guard(target, write=True)
+        if denied:
+            return denied
 
         try:
+            if not permanent:
+                if self._send_to_recycle_bin(target):
+                    log.info(f"FileOps: Recycled '{target}'")
+                    return f"Moved {target.name} to the Recycle Bin."
+                return (f"I couldn't use the Recycle Bin for {target.name}, so I didn't delete it. "
+                        "Say 'permanently delete' if you really want it gone.")
             if target.is_dir():
                 shutil.rmtree(target)
-                log.info(f"FileOps: Removed directory '{target}'")
-                return f"Deleted folder: {target.name}"
-            else:
-                target.unlink()
-                log.info(f"FileOps: Removed file '{target}'")
-                return f"Deleted file: {target.name}"
+                log.info(f"FileOps: Permanently removed directory '{target}'")
+                return f"Permanently deleted folder: {target.name}"
+            target.unlink()
+            log.info(f"FileOps: Permanently removed file '{target}'")
+            return f"Permanently deleted file: {target.name}"
         except Exception as e:
             log.error(f"FileOps: Failed to delete '{target}': {e}")
             return f"Failed to delete {target.name}: {e}"
 
+    @staticmethod
+    def _send_to_recycle_bin(target: Path) -> bool:
+        try:
+            from send2trash import send2trash
+            send2trash(str(target))
+            return True
+        except ImportError:
+            pass
+        except Exception as e:
+            log.warning(f"FileOps: send2trash failed: {e}")
+            return False
+        # Native Windows fallback: SHFileOperationW with FOF_ALLOWUNDO
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class SHFILEOPSTRUCTW(ctypes.Structure):
+                _fields_ = [("hwnd", wintypes.HWND), ("wFunc", wintypes.UINT), ("pFrom", wintypes.LPCWSTR),
+                            ("pTo", wintypes.LPCWSTR), ("fFlags", ctypes.c_ushort), ("fAnyOperationsAborted", wintypes.BOOL),
+                            ("hNameMappings", ctypes.c_void_p), ("lpszProgressTitle", wintypes.LPCWSTR)]
+
+            FO_DELETE, FOF_SILENT, FOF_NOCONFIRMATION, FOF_ALLOWUNDO, FOF_NOERRORUI = 3, 0x4, 0x10, 0x40, 0x400
+            op = SHFILEOPSTRUCTW()
+            op.wFunc = FO_DELETE
+            op.pFrom = str(target) + "\0"
+            op.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI
+            return ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op)) == 0 and not target.exists()
+        except Exception as e:
+            log.warning(f"FileOps: native recycle failed: {e}")
+            return False
+
+    # ------------------------------------------------------------------ copy / move / rename
+    def _resolve_destination(self, src: Path, dest_str: str) -> Path:
+        dest = self.resolve_path(dest_str)
+        if dest.exists() and dest.is_dir():
+            return dest / src.name
+        return dest
+
+    def copy_path(self, source: str, destination: str) -> str:
+        src = self.resolve_path(source)
+        if not src.exists():
+            return f"Source not found: {source}"
+        dest = self._resolve_destination(src, destination)
+        for p, w in ((src, False), (dest, True)):
+            denied = self._guard(p, write=w)
+            if denied:
+                return denied
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if src.is_dir():
+                shutil.copytree(src, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dest)
+            log.info(f"FileOps: Copied '{src}' -> '{dest}'")
+            return f"Copied {src.name} to {dest.parent}."
+        except Exception as e:
+            return f"Failed to copy {src.name}: {e}"
+
+    def move_path(self, source: str, destination: str) -> str:
+        src = self.resolve_path(source)
+        if not src.exists():
+            return f"Source not found: {source}"
+        dest = self._resolve_destination(src, destination)
+        for p in (src, dest):
+            denied = self._guard(p, write=True)
+            if denied:
+                return denied
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(dest))
+            log.info(f"FileOps: Moved '{src}' -> '{dest}'")
+            return f"Moved {src.name} to {dest.parent}."
+        except Exception as e:
+            return f"Failed to move {src.name}: {e}"
+
+    def rename_path(self, source: str, new_name: str) -> str:
+        src = self.resolve_path(source)
+        if not src.exists():
+            return f"Not found: {source}"
+        new_name = Path(new_name.strip().strip('"')).name
+        if not Path(new_name).suffix and src.suffix:
+            new_name += src.suffix  # "rename report to final" keeps .docx
+        dest = src.with_name(new_name)
+        denied = self._guard(src, write=True)
+        if denied:
+            return denied
+        if dest.exists():
+            return f"{dest.name} already exists in that folder."
+        try:
+            src.rename(dest)
+            return f"Renamed {src.name} to {dest.name}."
+        except Exception as e:
+            return f"Failed to rename {src.name}: {e}"
+
+    def destination_exists(self, source: str, destination: str) -> tuple[bool, str]:
+        src = self.resolve_path(source)
+        dest = self._resolve_destination(src, destination)
+        return dest.exists(), str(dest)
+
+    # ------------------------------------------------------------------ find & read
+    def search_roots(self) -> list[Path]:
+        if self.access is not None:
+            if self.access.full_access and os.name == "nt":
+                import string
+                drives = [Path(f"{d}:\\") for d in string.ascii_uppercase if Path(f"{d}:\\").exists()]
+                return drives
+            roots = [Path(r) for r in self.access.allowed_roots()]
+        else:
+            roots = [p for p in self.FOLDER_ALIASES.values()]
+        seen, out = set(), []
+        for r in roots:
+            key = os.path.normcase(str(r))
+            if key not in seen and r.exists():
+                seen.add(key)
+                out.append(r)
+        return out
+
+    def find_files(self, query: str, root: str | None = None, max_results: int = 20,
+                   time_budget: float = 6.0) -> list[str]:
+        """
+        Finds files/folders whose name matches query (substring, all words, or glob).
+        Walks granted roots (or `root`) breadth-first with a time budget, skipping
+        system/vendor folders. Exact-name matches are returned first.
+        """
+        import fnmatch
+        import time as _time
+        q = (query or "").strip().strip('"').lower()
+        if not q:
+            return []
+        is_glob = any(ch in q for ch in "*?[")
+        words = [w for w in q.replace("_", " ").replace("-", " ").split() if w]
+        roots = [self.resolve_path(root)] if root else self.search_roots()
+        if root:
+            denied = self._guard(roots[0])
+            if denied:
+                return []
+        deadline = _time.time() + time_budget
+        exact, partial = [], []
+        for base in roots:
+            if not base.exists():
+                continue
+            for dirpath, dirnames, filenames in os.walk(base):
+                if _time.time() > deadline:
+                    break
+                dirnames[:] = [d for d in dirnames if d.lower() not in self.SKIP_DIRS and not d.startswith(".")]
+                for name in dirnames + filenames:
+                    low = name.lower()
+                    stem = os.path.splitext(low)[0]
+                    hit = fnmatch.fnmatch(low, q) if is_glob else (
+                        q in low or (words and all(w in low.replace("_", " ").replace("-", " ") for w in words)))
+                    if not hit:
+                        continue
+                    full = os.path.join(dirpath, name)
+                    (exact if (low == q or stem == q) else partial).append(full)
+                if len(exact) >= max_results:
+                    break
+            if len(exact) >= max_results or _time.time() > deadline:
+                break
+        partial.sort(key=lambda p: (len(os.path.basename(p)), p))
+        return (exact + partial)[:max_results]
+
+    def locate(self, path_or_name: str) -> Path | None:
+        """Resolves a path, or finds a file by name if the path doesn't exist."""
+        target = self.resolve_path(path_or_name)
+        if target.exists():
+            return target
+        matches = self.find_files(Path(str(path_or_name)).name, max_results=1, time_budget=4.0)
+        return Path(matches[0]) if matches else None
+
+    def read_file_text(self, file_path: str, max_chars: int = 6000) -> dict:
+        """Extracts readable text from text/code, PDF (pypdf) and DOCX (python-docx) files."""
+        target = self.locate(file_path)
+        if target is None or not target.is_file():
+            return {"error": f"File not found: {file_path}"}
+        denied = self._guard(target)
+        if denied:
+            return {"error": denied}
+        ext = target.suffix.lower()
+        try:
+            if ext == ".pdf":
+                try:
+                    from pypdf import PdfReader
+                except ImportError:
+                    return {"error": "Reading PDFs needs the 'pypdf' package (pip install pypdf)."}
+                reader = PdfReader(str(target))
+                parts, total = [], 0
+                for page in reader.pages:
+                    t = page.extract_text() or ""
+                    parts.append(t)
+                    total += len(t)
+                    if total >= max_chars:
+                        break
+                text = "\n".join(parts)
+            elif ext == ".docx":
+                try:
+                    import docx
+                except ImportError:
+                    return {"error": "Reading Word files needs the 'python-docx' package (pip install python-docx)."}
+                text = "\n".join(p.text for p in docx.Document(str(target)).paragraphs)
+            else:
+                preview = self.preview_file(str(target), max_lines=100000, max_bytes=max_chars * 2)
+                if preview.get("error"):
+                    return {"error": preview["error"]}
+                if preview.get("is_binary"):
+                    return {"error": f"{target.name} is a binary file, so I can't read it as text."}
+                text = preview.get("content", "")
+            return {"path": str(target), "name": target.name, "text": text[:max_chars],
+                    "truncated": len(text) > max_chars}
+        except Exception as e:
+            return {"error": f"Could not read {target.name}: {e}"}
+
     def search_files(self, pattern: str, root_path: str = "desktop", max_results: int = 15) -> list[str]:
         """Searches for files matching a glob pattern starting from root_path."""
         base = self.resolve_path(root_path)
-        if not base.exists() or not base.is_dir():
+        if not base.exists() or not base.is_dir() or self._guard(base):
             return []
         try:
             matches = []
@@ -167,6 +431,9 @@ class FileOperationsManager:
         Detects binary files automatically to prevent terminal corruption.
         """
         target = self.resolve_path(file_path)
+        denied = self._guard(target)
+        if denied:
+            return {"error": denied, "path": str(target), "is_binary": False, "content": ""}
         if not target.exists() or not target.is_file():
             return {
                 "error": f"File does not exist: {file_path}",
@@ -227,6 +494,9 @@ class FileOperationsManager:
         target = self.resolve_path(folder_path)
         if not target.exists() or not target.is_dir():
             return f"Directory not found: {folder_path}"
+        denied = self._guard(target)
+        if denied:
+            return denied
 
         tree_lines = [f"[DIR] {target.name}/"]
 

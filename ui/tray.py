@@ -4,10 +4,11 @@ from PySide6.QtWidgets import QStyle
 from ui.settings import SettingsDashboard
 
 class MXBTray(QSystemTrayIcon):
-    def __init__(self, hud, engine, parent=None):
+    def __init__(self, hud, engine, parent=None, chat=None):
         super().__init__(parent)
         self.hud = hud
         self.engine = engine
+        self.chat = chat
         self.settings_window = None
         
         # Use a default system icon for the tray
@@ -43,6 +44,17 @@ class MXBTray(QSystemTrayIcon):
             }
         """)
         
+        # Chat window (text conversation)
+        if self.chat is not None:
+            self.chat_action = QAction("Open Chat")
+            self.chat_action.triggered.connect(self.chat.show_and_focus)
+            self.menu.addAction(self.chat_action)
+
+            self.stop_action = QAction("Stop All Actions")
+            self.stop_action.triggered.connect(lambda: self.chat.bus.submit("stop", "text"))
+            self.menu.addAction(self.stop_action)
+            self.menu.addSeparator()
+
         # Toggle HUD Action
         self.toggle_hud_action = QAction("Hide HUD")
         self.toggle_hud_action.triggered.connect(self.toggle_hud)
@@ -86,6 +98,12 @@ class MXBTray(QSystemTrayIcon):
         self.menu.addAction(self.exit_action)
 
         self.setContextMenu(self.menu)
+        if self.chat is not None:
+            self.activated.connect(self._on_activated)
+
+    def _on_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.chat.toggle_visible()
 
     def toggle_hud(self):
         if self.hud.isVisible():

@@ -215,7 +215,9 @@ class KeyboardExtended:
             pyperclip.copy(text)
             time.sleep(0.05)
             self.shortcut("ctrl", "v")
-            time.sleep(0.05)
+            # Many apps (browsers, Electron) read the clipboard asynchronously after Ctrl+V;
+            # restoring too early pastes the user's OLD clipboard instead of our text.
+            time.sleep(0.3)
 
             # Restore original clipboard asynchronously if needed
             if old_clip:

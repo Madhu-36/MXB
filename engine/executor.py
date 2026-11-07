@@ -1,9 +1,11 @@
-import os
+import json
+import time
+import threading
 import subprocess
 import webbrowser
 import traceback
+from pathlib import Path
 import pyperclip
-import requests
 import pygetwindow as gw
 import psutil
 from engine.memory import memory_bank
@@ -13,7 +15,25 @@ from engine.keyboard_ext import KeyboardExtended
 from engine.screen import ScreenVision
 from engine.file_ops import FileOperationsManager
 from engine.planner import ActionPlanner
+from engine.actions_catalog import uses_input
+from engine.ui_automation import fallback_search_shortcut
+from safety.policy import SafetyPolicy
+from safety.permissions import get_file_access
 from utils.logger import log
+
+# Alias action names that also drive the mouse/keyboard (catalog names are covered by uses_input()).
+INPUT_ALIASES = {
+    "click", "context_menu", "page_down", "page_up", "scroll_down", "scroll_up", "drag", "click_button",
+    "press_enter", "enter", "press_tab", "tab", "press_escape", "escape", "press_esc", "tap_key", "hotkey",
+    "kill_app", "snap_window", "aero_shake", "minimize_others", "open_folder", "open_file",
+}
+
+
+def _split_target(target, parts: int = 2) -> list[str]:
+    pieces = [p.strip() for p in str(target or "").split("::")]
+    while len(pieces) < parts:
+        pieces.append("")
+    return pieces
 
 class OSExecutionManager:
     """
@@ -26,14 +46,61 @@ class OSExecutionManager:
     - Application lifecycle and Start Menu index execution
     """
 
-    def __init__(self):
+    def __init__(self, config: dict | None = None):
+        self.config = config if config is not None else self._load_config()
         self.mouse = MouseController()
         self.keyboard = KeyboardExtended()
         self.screen = ScreenVision()
-        self.file_ops = FileOperationsManager()
+        self.file_ops = FileOperationsManager(access=get_file_access())
         self.app_launcher = SmartAppLauncher()
         self.memory = memory_bank
         self.planner = ActionPlanner(self)
+        self.policy = SafetyPolicy(self.config)
+        # Set by CommandBus: blocks until the user answers yes/no. None = deny risky actions.
+        self.confirm_callback = None
+        self.feedback_callback = None
+        # Held for whole plans and single input actions so parallel work never interleaves keystrokes.
+        self.input_lock = threading.RLock()
+        self._uia = None
+        self._hardware = None
+        self._llm = None
+        self._agent = None
+
+    @staticmethod
+    def _load_config() -> dict:
+        try:
+            return json.loads((Path(__file__).parent.parent / "config.json").read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    # ------------------------------------------------------------------ lazy subsystems
+    @property
+    def uia(self):
+        if self._uia is None:
+            from engine.ui_automation import UIAutomation
+            self._uia = UIAutomation()
+        return self._uia
+
+    @property
+    def hardware(self):
+        if self._hardware is None:
+            from engine.hardware import HardwareManager
+            self._hardware = HardwareManager()
+        return self._hardware
+
+    @property
+    def llm(self):
+        if self._llm is None:
+            from engine.llm_client import LLMClient
+            self._llm = LLMClient(self.config)
+        return self._llm
+
+    @property
+    def agent(self):
+        if self._agent is None:
+            from engine.agent_loop import AgentLoop
+            self._agent = AgentLoop(self, self.llm, self.config)
+        return self._agent
 
     def abort_current_action(self):
         log.warning("OSExecution: Aborting current action pipeline!")
@@ -55,6 +122,65 @@ class OSExecutionManager:
 
         log.info(f"OSExecution: Executing -> Action: '{action}', Target: '{target}'")
 
+        # File actions given just a name ("delete old_notes.txt") are resolved to the real
+        # file first, so the confirmation question shows exactly which file will be touched.
+        target = self._resolve_file_target(action, target)
+
+        # Safety gate: destructive / privacy-sensitive actions need an explicit "yes".
+        reason = self.policy.confirmation_reason(action, target, self._risk_context(action, target))
+        if reason and not self._confirm(reason):
+            log.info(f"OSExecution: '{action}' not confirmed by user.")
+            return f"Cancelled — {reason}"
+
+        if uses_input(action) or action in INPUT_ALIASES:
+            with self.input_lock:
+                return self._dispatch(action, target)
+        return self._dispatch(action, target)
+
+    def _confirm(self, question: str) -> bool:
+        if self.confirm_callback is None:
+            log.warning("OSExecution: confirmation required but no confirmation channel is connected; denying.")
+            return False
+        try:
+            return bool(self.confirm_callback(question))
+        except Exception as e:
+            log.error(f"OSExecution: confirmation channel failed: {e}")
+            return False
+
+    def _resolve_file_target(self, action: str, target):
+        if action not in ("delete_file", "move_file", "copy_file", "rename_file"):
+            return target
+        try:
+            parts = _split_target(target)
+            source = parts[0]
+            if not source or self.file_ops.resolve_path(source).exists():
+                return target
+            found = self.file_ops.locate(source)
+            if found is None:
+                return target
+            rest = [p for p in str(target).split("::")[1:]]
+            return " :: ".join([str(found)] + [r.strip() for r in rest])
+        except Exception:
+            return target
+
+    def _risk_context(self, action: str, target) -> dict:
+        """Detects conditional risks such as overwriting an existing file."""
+        try:
+            if action == "create_file":
+                path = self.file_ops.resolve_path(_split_target(target)[0])
+                if path.exists():
+                    return {"overwrite": True, "path": path.name}
+            elif action in ("copy_file", "move_file"):
+                src, dst = _split_target(target)
+                if src and dst:
+                    exists, dest_path = self.file_ops.destination_exists(src, dst)
+                    if exists:
+                        return {"overwrite": True, "path": dest_path}
+        except Exception:
+            pass
+        return {}
+
+    def _dispatch(self, action: str, target) -> str:
         try:
             # 1. Mouse Operations
             if action in ["left_click", "click"]:
@@ -113,13 +239,28 @@ class OSExecutionManager:
                 return "Invalid coordinates for drag and drop."
 
             # 2. Vision & Screen OCR Click
-            elif action in ["click_text", "click_element", "click_button"]:
+            elif action in ["click_text", "click_button"]:
                 coords = self.screen.find_text_coordinates(str(target))
                 if coords:
                     cx, cy = coords
                     self.mouse.left_click(cx, cy)
                     return f"Located and clicked '{target}' at ({cx}, {cy})"
-                return f"Could not find '{target}' on screen to click."
+                return self.click_element(str(target), try_ocr=False)
+
+            elif action == "click_element":
+                return self.click_element(str(target))
+
+            elif action == "focus_search_box":
+                return self.focus_search_box(str(target or ""))
+
+            elif action == "search_on_screen":
+                return self.search_on_screen(str(target or ""))
+
+            elif action == "type_into":
+                return self.type_into(str(target or ""))
+
+            elif action in ["list_ui_elements", "ui_elements"]:
+                return self.list_ui_elements()
 
             elif action in ["read_screen", "screen_text", "ocr_screen"]:
                 text = self.screen.read_screen_text()
@@ -193,16 +334,11 @@ class OSExecutionManager:
             elif action == "open_app":
                 return self.app_launcher.launch(str(target))
 
-            elif action in ["close_app", "kill_app"]:
-                clean_target = str(target).replace(".exe", "").strip()
-                # Safe process termination without shell injection
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", f"{clean_target}.exe"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
-                log.info(f"OSExecution: Terminated application '{clean_target}'")
-                return f"Closed {clean_target}"
+            elif action == "close_app":
+                return self.close_app(str(target), force=False)
+
+            elif action in ["force_close_app", "kill_app"]:
+                return self.close_app(str(target), force=True)
 
             elif action in ["kill_process", "terminate_process"]:
                 from utils.process_manager import ProcessManager
@@ -255,7 +391,7 @@ class OSExecutionManager:
             elif action in ["list_files", "list_directory"]:
                 return self.file_ops.list_directory(str(target) if target else "desktop")
 
-            elif action in ["preview_file", "view_file", "read_file"]:
+            elif action in ["preview_file", "view_file"]:
                 res = self.file_ops.preview_file(str(target))
                 if res.get("error"):
                     return f"File preview failed: {res['error']}"
@@ -268,7 +404,67 @@ class OSExecutionManager:
                 return self.file_ops.get_directory_tree(folder)
 
             elif action == "delete_file":
-                return self.file_ops.delete_file(str(target))
+                path, mode = _split_target(target)
+                return self.file_ops.delete_file(path, permanent=mode.lower() == "permanent")
+
+            elif action in ["find_files", "find_file", "search_files"]:
+                return self.find_files(str(target))
+
+            elif action in ["read_file", "read_document"]:
+                return self.read_file(str(target))
+
+            elif action == "copy_file":
+                src, dst = _split_target(target)
+                return self.file_ops.copy_path(src, dst) if src and dst else "Tell me what to copy and where, like 'report.pdf :: D:\\Backup'."
+
+            elif action == "move_file":
+                src, dst = _split_target(target)
+                return self.file_ops.move_path(src, dst) if src and dst else "Tell me what to move and where."
+
+            elif action == "rename_file":
+                src, dst = _split_target(target)
+                return self.file_ops.rename_path(src, dst) if src and dst else "Tell me the file and its new name."
+
+            elif action == "grant_file_access":
+                return self.file_ops.access.grant(str(target)) if self.file_ops.access else "File permissions are not enabled."
+
+            elif action == "revoke_file_access":
+                return self.file_ops.access.revoke(str(target) or "all") if self.file_ops.access else "File permissions are not enabled."
+
+            elif action == "list_file_access":
+                return self.file_ops.access.describe() if self.file_ops.access else "No file restrictions are active."
+
+            # 6b. Hardware
+            elif action == "bluetooth_power":
+                return self.hardware.bluetooth_power(str(target))
+            elif action == "bluetooth_devices":
+                return self.hardware.bluetooth_devices()
+            elif action == "bluetooth_connect":
+                return self.hardware.bluetooth_connect(str(target))
+            elif action == "bluetooth_disconnect":
+                return self.hardware.bluetooth_disconnect(str(target))
+            elif action == "wifi_power":
+                return self.hardware.wifi_power(str(target))
+            elif action == "wifi_networks":
+                return self.hardware.wifi_networks()
+            elif action == "wifi_connect":
+                return self.hardware.wifi_connect(str(target))
+            elif action == "wifi_disconnect":
+                return self.hardware.wifi_disconnect()
+            elif action == "set_volume":
+                return self.hardware.set_volume(str(target), keyboard=self.keyboard)
+            elif action == "mic_mute":
+                return self.hardware.mic_mute(str(target))
+            elif action == "set_brightness":
+                return self.hardware.set_brightness(str(target))
+            elif action == "list_devices":
+                return self.hardware.list_devices(str(target or ""))
+            elif action == "audio_devices":
+                return self.hardware.audio_devices()
+            elif action == "open_settings":
+                return self.hardware.open_settings(str(target))
+            elif action == "power_action":
+                return self.hardware.power_action(str(target))
 
             # 7. Media & Volume Controls
             elif action == "media_control":
@@ -412,6 +608,14 @@ class OSExecutionManager:
                 usage = self.get_app_resource_usage(str(target))
                 return f"{target} ({usage['instances']} inst): {usage['memory_mb']} MB RAM, {usage['cpu_percent']}% CPU"
 
+            elif action == "agent_task":
+                if not str(target).strip():
+                    return "What should I do?"
+                return self.agent.run(str(target), feedback=self.feedback_callback)
+
+            elif action in ["conversation", "none", "answer"]:
+                return ""
+
             elif action == "notify":
                 from utils.notifications import Notifier
                 Notifier.show_notification("MXB Executive Brain", str(target))
@@ -502,44 +706,15 @@ class OSExecutionManager:
             if not clipboard_content or not clipboard_content.strip():
                 return "Your clipboard is currently empty."
 
-            # Use NVIDIA Cloud LLM if available, else Ollama
-            from utils.credentials import CredentialsManager
-            nv_key = CredentialsManager.get_nvidia_api_key()
-
             prompt = (
-                f"You are MXB, acting as the user's Second Brain.\n\n"
                 f"Here is the text currently copied to their system clipboard:\n"
                 f"\"\"\"{clipboard_content[:3000]}\"\"\"\n\n"
                 f"User Instruction: {instruction}\n"
                 f"Provide your answer concisely in 1 or 2 spoken sentences without markdown formatting."
             )
-
-            if nv_key:
-                try:
-                    url = "https://integrate.api.nvidia.com/v1/chat/completions"
-                    headers = {"Authorization": f"Bearer {nv_key}", "Content-Type": "application/json"}
-                    payload = {
-                        "model": "meta/llama-3.1-8b-instruct",
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.2,
-                        "max_tokens": 150
-                    }
-                    r = requests.post(url, headers=headers, json=payload, timeout=8)
-                    if r.status_code == 200:
-                        return r.json()["choices"][0]["message"]["content"].strip()
-                except Exception as nv_err:
-                    log.warning(f"NVIDIA Clipboard analysis failed: {nv_err}")
-
-            # Local Ollama fallback
-            payload = {
-                "model": "llama3.1",
-                "prompt": prompt,
-                "stream": False
-            }
-            resp = requests.post("http://localhost:11434/api/generate", json=payload, timeout=35)
-            if resp.status_code == 200:
-                return resp.json().get("response", "Clipboard processed.")
-            return "Unable to analyze clipboard content."
+            answer = self.llm.chat("You are MXB, acting as the user's Second Brain.", prompt,
+                                   max_tokens=200, json_mode=False)
+            return answer.strip() if answer else "Unable to analyze clipboard content."
         except Exception as e:
             return f"Failed to analyze clipboard: {e}"
 
@@ -568,22 +743,193 @@ class OSExecutionManager:
         return f"Unknown volume action: {action}"
 
     def capture_screen(self) -> str:
+        """Saves a full-screen PNG to Pictures/MXB Screenshots (no keystrokes sent)."""
         try:
-            self.keyboard.tap_key("f12")  # or printscreen
-            from PySide6.QtGui import QGuiApplication
-            from PySide6.QtWidgets import QApplication
-            app = QApplication.instance()
-            if app:
-                screen = QGuiApplication.primaryScreen()
-                if screen:
-                    desktop_dir = Path.home() / "Desktop"
-                    save_path = desktop_dir / f"screenshot_{int(psutil.time.time())}.png"
-                    pix = screen.grabWindow(0)
-                    pix.save(str(save_path), "PNG")
-                    return f"Saved screenshot to Desktop: {save_path.name}"
-            return "Captured screenshot to clipboard."
+            img = self.screen.capture_screen_image()
+            if img is None:
+                return "Could not capture the screen."
+            folder = Path.home() / "Pictures" / "MXB Screenshots"
+            folder.mkdir(parents=True, exist_ok=True)
+            save_path = folder / f"screenshot_{time.strftime('%Y%m%d_%H%M%S')}.png"
+            img.save(str(save_path), "PNG")
+            log.info(f"OSExecution: Screenshot saved to {save_path}")
+            return f"Saved screenshot to Pictures/MXB Screenshots/{save_path.name}"
         except Exception as e:
             return f"Screenshot error: {e}"
+
+    # ------------------------------------------------------------------ UI automation
+    def _click_at(self, x: int, y: int):
+        self.mouse.left_click(x, y)
+        time.sleep(0.15)
+
+    def focus_search_box(self, hint: str = "") -> str:
+        """UIA search box -> OCR 'Search' placeholder -> app-specific keyboard shortcut."""
+        hint = (hint or "").strip()
+        el = None
+        try:
+            if self.uia.available():
+                el = self.uia.find_search_box(hint)
+        except Exception as e:
+            log.warning(f"OSExecution: UIA search lookup failed: {e}")
+        if el is not None:
+            self._click_at(*el.center)
+            return f"Focused the search box '{el.label()}'."
+
+        for label in ([f"search {hint}"] if hint else []) + ["search", "type here to search", "search or type"]:
+            try:
+                coords = self.screen.find_text_coordinates(label)
+            except Exception:
+                coords = None
+            if coords:
+                self._click_at(*coords)
+                return f"Clicked the '{label}' box on screen."
+
+        title = ""
+        try:
+            title = self.uia.foreground_title()
+        except Exception:
+            pass
+        desc, keys = fallback_search_shortcut(title)
+        self.keyboard.shortcut(*keys)
+        time.sleep(0.3)
+        return f"No search box was visible, so I used {desc}."
+
+    def search_on_screen(self, target: str) -> str:
+        if "::" in target:
+            hint, text = _split_target(target)
+        else:
+            hint, text = "", target.strip()
+        if not text:
+            return "What should I search for?"
+        focused = self.focus_search_box(hint)
+        self.keyboard.select_all()
+        time.sleep(0.05)
+        self.keyboard.type_text(text)
+        time.sleep(0.15)
+        self.keyboard.tap_key("enter")
+        return f"{focused} Searched for '{text}'."
+
+    def type_into(self, target: str) -> str:
+        parts = _split_target(target, 3)
+        if "::" not in target:
+            field, text, enter_flag = "", target.strip(), ""
+        else:
+            field, text, enter_flag = parts[0], parts[1], parts[2]
+        if not text:
+            return "What should I type?"
+        press_enter = enter_flag.lower() in {"enter", "submit", "yes", "true"}
+        if not field or "search" in field.lower():
+            focused = self.focus_search_box(field.lower().replace("search", "").replace("box", "").replace("bar", "").strip())
+        else:
+            el = None
+            try:
+                if self.uia.available():
+                    el = self.uia.find_text_field(field)
+            except Exception as e:
+                log.warning(f"OSExecution: UIA field lookup failed: {e}")
+            if el is not None:
+                self._click_at(*el.center)
+                focused = f"Clicked the '{el.label()}' field."
+            else:
+                coords = self.screen.find_text_coordinates(field)
+                if not coords:
+                    return f"I couldn't find a field called '{field}' on screen."
+                self._click_at(*coords)
+                focused = f"Clicked '{field}'."
+        self.keyboard.select_all()
+        time.sleep(0.05)
+        self.keyboard.type_text(text)
+        if press_enter:
+            time.sleep(0.1)
+            self.keyboard.tap_key("enter")
+        return f"{focused} Typed '{text}'" + (" and pressed Enter." if press_enter else ".")
+
+    def click_element(self, name: str, try_ocr: bool = True) -> str:
+        name = (name or "").strip()
+        if not name:
+            return "What should I click?"
+        el = None
+        try:
+            if self.uia.available():
+                el = self.uia.find_clickable(name)
+        except Exception as e:
+            log.warning(f"OSExecution: UIA click lookup failed: {e}")
+        if el is not None:
+            self._click_at(*el.center)
+            return f"Clicked {el.control_type.lower()} '{el.label()}'."
+        if try_ocr:
+            coords = self.screen.find_text_coordinates(name)
+            if coords:
+                self._click_at(*coords)
+                return f"Clicked '{name}' at {coords}."
+        return f"Could not find '{name}' on screen to click."
+
+    def list_ui_elements(self) -> str:
+        try:
+            items = self.uia.summarize(limit=25) if self.uia.available() else []
+        except Exception as e:
+            return f"Could not inspect the window: {e}"
+        if not items:
+            return "I couldn't find any named controls in the active window."
+        title = self.uia.foreground_title()
+        listing = "; ".join(f"{i['type']} '{i['name']}'" for i in items)
+        return f"In '{title}': {listing}"
+
+    # ------------------------------------------------------------------ apps & files helpers
+    def close_app(self, name: str, force: bool = False) -> str:
+        clean = name.replace(".exe", "").strip().strip('"')
+        if not clean:
+            return "Which app should I close?"
+        args = ["taskkill"] + (["/F"] if force else []) + ["/IM", f"{clean}.exe"]
+        try:
+            proc = subprocess.run(args, capture_output=True, text=True, timeout=10)
+        except Exception as e:
+            return f"Could not close {clean}: {e}"
+        out = (proc.stdout or "") + (proc.stderr or "")
+        if proc.returncode == 0:
+            log.info(f"OSExecution: {'Force-closed' if force else 'Closed'} '{clean}'")
+            return f"{'Force-closed' if force else 'Closed'} {clean}."
+        if "not found" in out.lower():
+            # Fall back to window title match (e.g. "close spotify" when the exe is Spotify.exe)
+            for w in gw.getAllWindows():
+                if w.title and clean.lower() in w.title.lower():
+                    try:
+                        w.close()
+                        return f"Closed {w.title}."
+                    except Exception:
+                        break
+            return f"{clean} doesn't seem to be running."
+        if not force:
+            return f"{clean} didn't close (it may be asking to save). Say 'force close {clean}' to kill it."
+        return f"Could not close {clean}: {out.strip()[:120]}"
+
+    def find_files(self, target: str) -> str:
+        query, root = _split_target(target)
+        if not query:
+            return "What file should I look for?"
+        results = self.file_ops.find_files(query, root or None)
+        if not results:
+            where = f" in {root}" if root else " in the folders I can access"
+            return f"No files matching '{query}'{where}. Say 'give access to D drive' (or another folder) to widen the search."
+        shown = [f"{Path(r).name} ({Path(r).parent})" for r in results[:5]]
+        more = f" and {len(results) - 5} more" if len(results) > 5 else ""
+        return f"Found {len(results)}: " + "; ".join(shown) + more + "."
+
+    def read_file(self, target: str) -> str:
+        path, question = _split_target(target)
+        res = self.file_ops.read_file_text(path)
+        if res.get("error"):
+            return res["error"]
+        text = res.get("text", "")
+        if not text.strip():
+            return f"{res['name']} has no readable text."
+        if question:
+            answer = self.llm.chat(
+                "You answer questions about a file the user owns. Be concise (2-4 sentences, no markdown).",
+                f"File: {res['name']}\n---\n{text}\n---\nQuestion: {question}", max_tokens=300, json_mode=False)
+            return answer.strip() if answer else "I read the file but couldn't reach my reasoning engine to answer."
+        suffix = " ..." if res.get("truncated") or len(text) > 700 else ""
+        return f"{res['name']}: {text[:700]}{suffix}"
 
     def list_running_apps(self, limit: int = 10) -> list[str]:
         """Returns a list of currently open visible windows/applications."""

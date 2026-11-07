@@ -1,13 +1,30 @@
-# 🧠 MXB (Machine eXecutive Brain) v2.4
-> The Decoupled Parallel AI Desktop Executive Assistant & "Two Hands" Automation Engine for Windows
+# 🧠 MXB (Machine eXecutive Brain) v3.0 — AI Desktop Companion
+> Talk or type to it. It listens while it works, operates your apps, mouse, keyboard, files and hardware, and asks before anything destructive.
 
-[![MXB Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/Madhu-36/MXB)
+[![MXB Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/Madhu-36/MXB)
 [![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)](https://github.com/Madhu-36/MXB)
-[![Tests](https://img.shields.io/badge/tests-109%20Passed%20%7C%20Green-brightgreen.svg)](https://github.com/Madhu-36/MXB)
+[![Tests](https://img.shields.io/badge/tests-32%20suites-brightgreen.svg)](https://github.com/Madhu-36/MXB)
 [![AI Architecture](https://img.shields.io/badge/architecture-5--Stage%20Parallel%20Pipelines-cyan.svg)](https://github.com/Madhu-36/MXB)
 [![LLM Planner](https://img.shields.io/badge/LLM-llama3.2:1b%20%7C%20NVIDIA%20Cloud-orange.svg)](https://github.com/Madhu-36/MXB)
 
-**MXB v2.4** is an autonomous desktop executive brain capable of listening continuously and operating your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen vision, and file operations) while you talk.
+**MXB** is an autonomous desktop companion for Windows. It listens continuously, understands voice **or** typed chat, and operates your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen, apps, files, Bluetooth, Wi-Fi, audio, display) while you keep talking to it.
+
+---
+
+## 🆕 What's new in v3.0 — Companion
+
+| Capability | What you can say or type | How it works |
+| :--- | :--- | :--- |
+| **Voice + text, one conversation** | Type in the chat window, or say *"MXB, …"* | `engine/command_bus.py` feeds both into the same brain; `ui/chat.py` shows every message, reply and live step |
+| **Works while it listens** | *"MXB, what's the weather?"* while a task is running | Action lane (ordered) + info lane (parallel); the mic never pauses; an input lock stops parallel work typing into a running plan |
+| **Search boxes & fields on any screen** | *"Go to the search box and enter cute cats and press Enter"*, *"type hi@x.com in the email field"*, *"click the Submit button"* | Windows UI Automation tree (`engine/ui_automation.py`) → OCR → app-specific shortcut (Ctrl+L / Ctrl+E / Win+S / Ctrl+F) |
+| **Hardware** | *"turn on bluetooth"*, *"connect my airdopes"*, *"turn off wifi"*, *"connect to Home_5G wifi"*, *"set volume to 40"*, *"mute the mic"*, *"brightness 70"*, *"list usb devices"* | `engine/hardware.py`: WinRT radios, Win32 Bluetooth API, netsh, Core Audio (pycaw), WMI/DDC brightness, PnP inventory |
+| **Files, with your permission** | *"find the file named resume"*, *"summarize the file report.pdf"*, *"move report.pdf to documents"*, *"give access to D drive"*, *"give full file access"* | `safety/permissions.py`: personal folders by default, more only when you grant it; Windows/Program Files are always write-protected |
+| **Asks before destructive actions** | *"delete the file old.txt"* → *"Move C:\\…\\old.txt to the Recycle Bin? Say yes or no."* | `safety/policy.py`: delete, empty bin, kill, force-close, shutdown/restart, overwrite, broad file grants, vault reads |
+| **Agent mode** | *"agent: open the latest email from Ravi and reply thanks"* | `engine/agent_loop.py`: look at the screen → plan 1–3 steps → act → repeat (optional vision model) |
+| **Instant stop** | *"stop"* (no wake word needed), Stop button, `Ctrl+Alt+K` | Aborts the plan, clears queued commands, cancels pending questions, cuts speech mid-sentence |
+
+Full command list, settings and the safety model: **[docs/COMPANION_GUIDE.md](docs/COMPANION_GUIDE.md)**.
 
 ---
 
@@ -98,9 +115,9 @@ Measured on native 64-bit Windows via `scripts/benchmark_suite.py`:
 
 ---
 
-## 🧪 Comprehensive Verification Suite (109 Tests Across 24 Suites)
+## 🧪 Comprehensive Verification Suite (32 Suites)
 
-MXB includes 24 automated test suites verifying all subsystems:
+MXB includes 32 automated test suites. The 8 v3 suites (safety, permissions, wake word, command bus, router, UI/hardware logic, chat window, end-to-end flow) also run on Linux/macOS CI via `tests/_stubs.py`:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/verify_all.py
@@ -156,4 +173,6 @@ python scripts/verify_all.py
 python -u main.py
 ```
 
-Press `Ctrl+Alt+K` for global kill-switch, `Ctrl+Space` to toggle mute, or simply say **"stop"** at any time to halt running actions.
+- Say **"MXB, …"** before voice commands (change the name in `config.json → listening.wake_words`, or set `listening.mode` to `"always"`). After a reply MXB stays engaged for 15 s, so follow-ups need no wake word.
+- `Ctrl+Alt+Space` opens the chat window, `Ctrl+Space` toggles the mic, `Ctrl+Alt+K` is the global kill-switch, and **"stop"** halts everything at any time.
+- Optional: `pip install pypdf python-docx` to read PDFs and Word files, and set `NVIDIA_API_KEY` (or run Ollama) for the LLM planner.

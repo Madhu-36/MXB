@@ -2,7 +2,8 @@
   "audio_input_device": "auto",
   "hotkeys": {
     "push_to_talk": "ctrl+space",
-    "kill_switch": "ctrl+alt+k"
+    "kill_switch": "ctrl+alt+k",
+    "open_chat": "ctrl+alt+space"
   },
   "speech_recognition": {
     "provider": "nvidia",
@@ -13,7 +14,11 @@
     "provider": "nvidia",
     "model": "meta/llama-3.1-8b-instruct",
     "api_url": "https://integrate.api.nvidia.com/v1/chat/completions",
-    "local_model": "llama3.2:1b"
+    "local_model": "llama3.2:1b",
+    "vision_model": "meta/llama-3.2-11b-vision-instruct",
+    "local_vision_model": "llama3.2-vision",
+    "ollama_url": "http://localhost:11434/api/chat",
+    "max_tokens": 500
   },
   "engine": {
     "whisper_model": "base.en",
@@ -21,5 +26,33 @@
     "vad_speech_prob_threshold": 0.35,
     "agc_target_level": 0.85,
     "max_gain": 60.0
+  },
+  "listening": {
+    "mode": "wake_word",
+    "wake_words": [
+      "mxb",
+      "m x b",
+      "mx b",
+      "max b"
+    ],
+    "follow_up_seconds": 15
+  },
+  "voice": {
+    "speak_text_replies": false
+  },
+  "safety": {
+    "confirm_destructive": true,
+    "confirmation_timeout_sec": 30
+  },
+  "files": {
+    "extra_allowed_folders": []
+  },
+  "agent": {
+    "max_steps": 8,
+    "use_vision": false,
+    "max_image_width": 1280
+  },
+  "ui": {
+    "open_chat_on_start": true
   }
 }

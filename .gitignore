@@ -9,3 +9,6 @@ llm/.modelfile_hash
 make_commits.py
 config/*.enc
 *.enc
+permissions.json
+memory_bank.export.json
+tests/_test_temp_files/
