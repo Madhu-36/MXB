@@ -256,6 +256,39 @@ class TestBusWiring(unittest.TestCase):
         self.assertEqual(ex._coach.calls[0][0], "shutdown")
 
 
+class TestWindowsCheck(unittest.TestCase):
+    def test_checks_report_instead_of_crashing(self):
+        import sys as _sys
+        from utils import windows_check as wc
+        wc.RESULTS.clear()
+
+        @wc.check("passes")
+        def ok():
+            return "fine"
+
+        @wc.check("breaks")
+        def broken():
+            raise ValueError("nope")
+
+        @wc.check("windows only", windows_only=True)
+        def win():
+            return "ran"
+
+        ok(), broken(), win()
+        statuses = {name: status for status, name, _ in wc.RESULTS}
+        self.assertEqual(statuses["passes"], "PASS")
+        self.assertEqual(statuses["breaks"], "FAIL")
+        self.assertIn("ValueError: nope", next(d for s, n, d in wc.RESULTS if n == "breaks"))
+        self.assertEqual(statuses["windows only"], "PASS" if _sys.platform == "win32" else "SKIP")
+        if _sys.platform != "win32":           # on Windows the real check touches devices; CI runs it separately
+            wc.RESULTS.clear()
+            fails = wc.main()
+            self.assertEqual(len(wc.RESULTS), 12)
+            self.assertTrue(all(status in ("PASS", "FAIL", "SKIP") for status, _, _ in wc.RESULTS))
+            self.assertEqual(fails, sum(1 for status, _, _ in wc.RESULTS if status == "FAIL"))
+        wc.RESULTS.clear()
+
+
 class TestThreadHygiene(unittest.TestCase):
     def test_no_stray_threads_after_a_focus_session(self):
         before = {t.name for t in threading.enumerate()}
