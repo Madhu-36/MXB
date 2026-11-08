@@ -10,10 +10,17 @@ Three calling styles:
 - stream_chat           : token streaming (SSE / NDJSON) so MXB can start speaking the
                           reply while the rest of the plan is still being generated
 Optional screenshots for vision models (NVIDIA image_url parts / Ollama "images").
+
+v4.3.1 (measured on a laptop running llama3.2:1b on the CPU): the router's three planning attempts
+each waited the full 40 s timeout, so one request took 136 s and still failed. Now one timeout or
+connection failure pauses Ollama for local_retry_after_sec, so the remaining attempts fail at once;
+every Ollama call uses the same num_ctx (changing it makes Ollama reload the model); and warm_up()
+loads the model in the background at startup instead of during the user's first command.
 """
 import base64
 import json
 import re
+import time
 import requests
 from utils.credentials import CredentialsManager
 from utils.logger import log
@@ -71,6 +78,15 @@ def parse_json_reply(raw: str) -> dict | None:
     return None
 
 
+def estimate_tokens(*texts) -> int:
+    """Rough prompt size for English/JSON text (about 4 characters per token)."""
+    return sum(len(t or "") for t in texts) // 4 + 1
+
+
+class LocalModelPaused(RuntimeError):
+    """Ollama failed moments ago (timeout / not running); not worth another full wait."""
+
+
 def parse_tool_arguments(args) -> dict | None:
     if isinstance(args, dict):
         return args
@@ -91,8 +107,70 @@ class LLMClient:
         self.max_tokens = int(cfg.get("max_tokens", 500))
         self.cloud_timeout = float(cfg.get("cloud_timeout_sec", 12))
         self.local_timeout = float(cfg.get("local_timeout_sec", 40))
+        self.num_ctx = int(cfg.get("num_ctx", 4096))
+        self.local_retry_after = float(cfg.get("local_retry_after_sec", 30))
         self.use_tool_calling = bool(cfg.get("use_tool_calling", True))
         self._tools_unsupported = {"nvidia": False, "ollama": False}
+        self._local_failed_at = None      # time.monotonic() of the last Ollama timeout / connection failure
+        self.last_failure = ""            # "timeout" | "offline" | "": why the last local call failed
+
+    # ------------------------------------------------------------------ provider state
+    @staticmethod
+    def cloud_available() -> bool:
+        """True when an NVIDIA Build key is saved (cloud models handle the full tool prompt quickly)."""
+        try:
+            return bool(CredentialsManager.get_nvidia_api_key())
+        except Exception:
+            return False
+
+    def local_paused(self) -> bool:
+        return self._local_failed_at is not None and (time.monotonic() - self._local_failed_at) < self.local_retry_after
+
+    def _ollama_options(self, max_tokens: int) -> dict:
+        return {"num_predict": max_tokens, "num_ctx": self.num_ctx, "temperature": 0.1}
+
+    def _post_ollama(self, payload: dict, stream: bool = False, url: str | None = None):
+        if self.local_paused():
+            ago = time.monotonic() - self._local_failed_at
+            raise LocalModelPaused(f"skipped: Ollama {self.last_failure or 'failed'} {ago:.0f}s ago")
+        used = estimate_tokens(json.dumps(payload.get("messages", "")), json.dumps(payload.get("tools", "")))
+        if used + int(payload.get("options", {}).get("num_predict", 0)) > self.num_ctx:
+            log.warning(f"LLM: prompt (~{used} tokens) may not fit Ollama's num_ctx={self.num_ctx}; "
+                        "the start of the instructions would be cut off.")
+        return requests.post(url or self.ollama_url, json=payload, timeout=self.local_timeout, stream=stream)
+
+    def _local_ok(self):
+        self._local_failed_at = None
+        self.last_failure = ""
+
+    def _local_error(self, e: Exception):
+        """Remembers timeouts and connection failures (not bad replies) so the next attempts skip Ollama."""
+        if isinstance(e, LocalModelPaused):
+            return
+        if isinstance(e, requests.exceptions.Timeout) or "timed out" in str(e).lower():
+            kind = "timeout"
+        elif isinstance(e, requests.exceptions.ConnectionError):
+            kind = "offline"
+        else:
+            return
+        self._local_failed_at = time.monotonic()
+        self.last_failure = kind
+
+    def warm_up(self) -> bool:
+        """Loads the local model into memory now, so the first real command doesn't pay for it."""
+        url = self.ollama_url.replace("/api/chat", "/api/generate")
+        payload = {"model": self.local_model, "prompt": "", "keep_alive": "2h", "stream": False,
+                   "options": {"num_ctx": self.num_ctx}}
+        try:
+            t0 = time.monotonic()
+            resp = requests.post(url, json=payload, timeout=max(self.local_timeout, 120))
+            if resp.status_code == 200:
+                log.info(f"LLM: {self.local_model} loaded in {time.monotonic() - t0:.1f}s (warm-up).")
+                return True
+            log.warning(f"LLM: warm-up returned {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            log.info(f"LLM: Ollama warm-up skipped ({e}).")
+        return False
 
     # ------------------------------------------------------------------ message builders
     def _nvidia_messages(self, system: str, user: str, image_png: bytes | None):
@@ -133,10 +211,15 @@ class LLMClient:
     def _ollama(self, system: str, user: str, max_tokens: int, json_mode: bool, image_png: bytes | None) -> str | None:
         messages, model = self._ollama_messages(system, user, image_png)
         payload = {"model": model, "messages": messages, "stream": False, "keep_alive": "2h",
-                   "options": {"num_predict": max_tokens, "num_ctx": 4096, "temperature": 0.1}}
+                   "options": self._ollama_options(max_tokens)}
         if json_mode:
             payload["format"] = "json"
-        resp = requests.post(self.ollama_url, json=payload, timeout=self.local_timeout)
+        try:
+            resp = self._post_ollama(payload)
+        except Exception as e:
+            self._local_error(e)
+            raise
+        self._local_ok()
         if resp.status_code != 200:
             log.warning(f"LLM: Ollama returned {resp.status_code}: {resp.text[:200]}")
             return None
@@ -196,8 +279,9 @@ class LLMClient:
             try:
                 messages, model = self._ollama_messages(system, user, image_png)
                 payload = {"model": model, "messages": messages, "stream": False, "keep_alive": "2h", "tools": [tool],
-                           "options": {"num_predict": max_tokens, "num_ctx": 4096, "temperature": 0.1}}
-                resp = requests.post(self.ollama_url, json=payload, timeout=self.local_timeout)
+                           "options": self._ollama_options(max_tokens)}
+                resp = self._post_ollama(payload)
+                self._local_ok()
                 if resp.status_code == 200:
                     msg = resp.json().get("message", {})
                     for call in msg.get("tool_calls") or []:
@@ -209,6 +293,7 @@ class LLMClient:
                 elif resp.status_code == 400 and "does not support tools" in resp.text:
                     self._tools_unsupported["ollama"] = True
             except Exception as e:
+                self._local_error(e)
                 log.warning(f"LLM: Ollama tool call failed: {e}")
         return None
 
@@ -237,13 +322,16 @@ class LLMClient:
         try:
             messages, model = self._ollama_messages(system, user, None)
             payload = {"model": model, "messages": messages, "stream": True, "keep_alive": "2h",
-                       "options": {"num_predict": max_tokens, "num_ctx": 4096, "temperature": 0.1}}
+                       "options": self._ollama_options(max_tokens)}
             if json_mode:
                 payload["format"] = "json"
-            with requests.post(self.ollama_url, json=payload, timeout=self.local_timeout, stream=True) as resp:
+            with self._post_ollama(payload, stream=True) as resp:
                 if resp.status_code == 200:
-                    return self._consume_ndjson(resp.iter_lines(decode_unicode=True), on_delta)
+                    out = self._consume_ndjson(resp.iter_lines(decode_unicode=True), on_delta)
+                    self._local_ok()
+                    return out
         except Exception as e:
+            self._local_error(e)
             log.warning(f"LLM: Ollama stream failed: {e}")
         return ""
 

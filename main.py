@@ -104,6 +104,11 @@ def main():
     except Exception as e:
         log.warning(f"Plugins: {e}")
 
+    # 5c. Local model: load it now, in the background, so the user's first command isn't the slow one
+    if health.get("ollama_running") and not bus.router.llm.cloud_available():
+        import threading
+        threading.Thread(target=bus.router.llm.warm_up, name="llm-warmup", daemon=True).start()
+
     # 6. Core Voice Pipeline (feeds transcripts into the bus, keeps listening while MXB works)
     voice_pipeline = VoicePipeline(config, bus=bus)
     voice_pipeline.vad_status_changed.connect(hud.update_status)

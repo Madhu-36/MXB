@@ -7,7 +7,7 @@ from collections import deque
 from engine.executor import OSExecutionManager
 from engine.tts import VoiceSynthesizer
 from engine.memory import memory_bank
-from engine.actions_catalog import planner_system_prompt, plan_tool_schema, validate_plan
+from engine.actions_catalog import planner_system_prompt, plan_tool_schema, relevant_actions, validate_plan
 from engine.llm_client import LLMClient, parse_json_reply
 from engine.streaming import ReplyStreamer
 from engine.semantic_memory import extract_preference
@@ -547,11 +547,10 @@ class IntentRouter:
 
             if feedback_callback:
                 feedback_callback("Thinking...")
-            plan_data, already_spoke = self._plan(augmented_prompt)
+            plan_data, already_spoke = self._plan(augmented_prompt, query=text)
 
             if not plan_data:
-                fallback_msg = ("I understood your request but could not reach my reasoning engine. "
-                                "Check your NVIDIA API key or start Ollama.")
+                fallback_msg = self._no_plan_message()
                 self.tts.speak(fallback_msg)
                 return fallback_msg
 
@@ -590,13 +589,39 @@ class IntentRouter:
             log.error(f"Router LLM Error: {e}")
             return f"Speech Understanding Error: {e}"
 
-    def _plan(self, prompt: str) -> tuple[dict | None, bool]:
+    def _no_plan_message(self) -> str:
+        failure = getattr(self.llm, "last_failure", "")
+        model = getattr(self.llm, "local_model", "the local model")
+        if failure == "timeout":
+            return (f"My local model ({model}) is too slow on this PC to plan that right now. "
+                    "Try again in a moment, or add a free NVIDIA API key in Settings for fast answers.")
+        if failure == "offline":
+            return "I can't reach my reasoning engine. Start Ollama, or add an NVIDIA API key in Settings."
+        return ("I understood your request but could not reach my reasoning engine. "
+                "Check your NVIDIA API key or start Ollama.")
+
+    def planner_tools(self, query: str | None) -> list[str] | None:
+        """
+        Which actions the planner sees. Cloud models get all of them; a local model gets the core
+        actions plus the ones matching the request (~1,000 tokens instead of ~4,700), because a
+        1B-parameter model on a laptop CPU timed out on the full prompt.
+        """
+        llm_cfg = self.config.get("llm", {})
+        if not query or not llm_cfg.get("compact_local_prompt", True):
+            return None
+        cloud = getattr(self.llm, "cloud_available", None)
+        if callable(cloud) and cloud():
+            return None
+        return relevant_actions(query, k=int(llm_cfg.get("local_tool_count", 12)))
+
+    def _plan(self, prompt: str, query: str | None = None) -> tuple[dict | None, bool]:
         """
         Voice turns: stream the plan and speak the reply sentence-by-sentence as it
         arrives (lowest latency). Text turns: native tool calling (most reliable),
         then JSON mode as a fallback. Returns (plan_data, reply_already_spoken).
         """
-        system = planner_system_prompt()
+        tools = self.planner_tools(query)
+        system = planner_system_prompt(only=tools)
         llm_cfg = self.config.get("llm", {})
         speaking = True
         try:
@@ -610,7 +635,7 @@ class IntentRouter:
             data = parse_json_reply(raw) if raw else None
             if data:
                 return data, streamer.spoke
-        data = self.llm.plan_with_tools(system, prompt, plan_tool_schema())
+        data = self.llm.plan_with_tools(system, prompt, plan_tool_schema(names=tools))
         if not data:
             data = self.llm.chat_json(system, prompt)
         return data, False

@@ -12,6 +12,7 @@ from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
 from engine.barge_in import BargeInDetector, is_probable_echo, resolve_mode
+from engine.listening import InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech, whisper_options
 from utils.credentials import CredentialsManager
 from utils.logger import log
 
@@ -66,8 +67,13 @@ class VoicePipeline(QThread):
         # 800ms pre-roll audio ring buffer to preserve leading syllables
         self.preroll_buffer = collections.deque(maxlen=25)
 
-        # Silero neural VAD model lazy loader
+        # v4.3.1: microphone gain BEFORE voice detection (quiet laptop mics reached the VAD at -48 dBFS)
+        self.agc = InputAGC.from_config(config if isinstance(config, dict) else {})
+        self._gain_log = (0.0, None)          # (time, dB) of the last gain line written to the log
+
+        # Silero neural VAD model lazy loader (+ the streaming wrapper built in run())
         self._vad_model = None
+        self._vad = None
         self.whisper_model = None
 
         # Worker threads
@@ -349,9 +355,10 @@ class VoicePipeline(QThread):
                         speech_pad_ms=adaptive_speech_pad
                     ),
                     condition_on_previous_text=False,
-                    initial_prompt=("Desktop commands: open app, close window, check system, click, scroll down, type text."
-                                    if mode == "en" else None),
-                    no_speech_threshold=0.60
+                    # No initial prompt: Whisper repeated the old one ("open app, close window...") on noise.
+                    initial_prompt=None,
+                    no_speech_threshold=0.60,
+                    **whisper_options(self.whisper_model, self.config.get("engine", {}).get("whisper_hotwords", "")),
                 )
                 detected = getattr(info, "language", None)
                 if detected in LANGUAGES and detected != "en":
@@ -369,15 +376,15 @@ class VoicePipeline(QThread):
             except Exception as e:
                 log.error(f"Local Faster-Whisper error: {e}")
 
-        # Post-transcription noise & hallucination filter
+        # Post-transcription noise & hallucination filter: "open notepad, open notepad" -> "open notepad";
+        # loops Whisper invents from noise ("go, go, go", "open app" x6) are dropped.
         if text:
-            words = text.lower().replace(",", " ").replace("!", " ").replace(".", " ").split()
-            if len(words) >= 4 and len(set(words)) <= 2:
+            cleaned = clean_transcript(text)
+            if cleaned is None:
                 log.info(f"Pipeline: Filtered hallucinated repetition: '{text}'")
-                return None
-            if len(text) < 2:
-                return None
-
+            elif cleaned != text:
+                log.info(f"Pipeline: collapsed repeated phrase '{text}' -> '{cleaned}'")
+            return cleaned
         return text
 
     # =========================================================================
@@ -404,6 +411,10 @@ class VoicePipeline(QThread):
             return
 
         vad_model = self._get_vad_model()
+        # Keeps the VAD's memory between 32 ms frames (calling the model per frame reset it every time).
+        self._vad = StreamingVAD(vad_model) if vad_model is not None else None
+        if self._vad is not None:
+            log.info(f"Pipeline: streaming voice detection ({self._vad.kind}).")
 
         # Start Parallel Worker Threads
         self._asr_thread = threading.Thread(target=self._asr_worker_loop, name="MXB-Parallel-ASR", daemon=True)
@@ -450,6 +461,8 @@ class VoicePipeline(QThread):
         silence_frames = 0
         speech_frames_count = 0
 
+        max_utterance_s = float(self.config.get("engine", {}).get("max_utterance_s", 12))
+        max_utterance_frames = max(32, int(max_utterance_s / 0.032))
         sensitivity = self.config.get("engine", {}).get("microphone_sensitivity", "high").lower()
         if sensitivity == "high":
             vad_speech_prob_threshold = 0.35
@@ -499,19 +512,25 @@ class VoicePipeline(QThread):
                         elif len(chunk) != 512:
                             chunk = np.resize(chunk, 512).astype(np.float32)
 
+                        raw_rms = float(np.sqrt(np.mean(chunk**2)))
+                        speaking_now = self.is_tts_speaking or (time.time() - self.tts_finish_time) < 0.35
+                        # Amplify quiet microphones before anything listens. MXB's own voice doesn't
+                        # train the gain (adapt=False), or it would turn the gain down for the user.
+                        chunk = self.agc.process(chunk, adapt=not speaking_now)
                         rms_volume = float(np.sqrt(np.mean(chunk**2)))
-                        self.mic_level_signal.emit(min(rms_volume * 150.0, 1.0))
+                        noise_level = self.agc.noise_after_gain
+                        self.mic_level_signal.emit(min(rms_volume / (self.agc.target * 1.4), 1.0))
+                        self._log_gain()
 
                         # Silero VAD (<0.2ms)
                         speech_prob = 0.0
-                        if vad_model is not None:
+                        if self._vad is not None:
                             try:
-                                prob_out = vad_model(chunk)
-                                speech_prob = float(prob_out[0]) if len(prob_out) > 0 else 0.0
+                                speech_prob = self._vad(chunk)
                             except Exception:
-                                speech_prob = 1.0 if rms_volume > 0.0006 else 0.0
+                                speech_prob = energy_speech_prob(rms_volume, noise_level)
                         else:
-                            speech_prob = 1.0 if rms_volume > 0.0006 else 0.0
+                            speech_prob = energy_speech_prob(rms_volume, noise_level)
 
                         # Offline wake word: runs on raw audio, before any transcription.
                         if self.wake_engine is not None and self.wake_engine.process(chunk):
@@ -519,16 +538,17 @@ class VoicePipeline(QThread):
                             self.vad_status_changed.emit("Active (Listening...)")
                             self.action_feedback.emit("Wake word heard — listening.")
 
-                        speaking_now = self.is_tts_speaking or (time.time() - self.tts_finish_time) < 0.35
                         if speaking_now and self.barge_in_mode != "off":
                             # Stricter detection while MXB talks, so its own voice doesn't count as speech.
-                            barge = self.barge_detector.update(speech_prob, rms_volume)
+                            # Raw level: the detector's thresholds were tuned before the input gain existed.
+                            barge = self.barge_detector.update(speech_prob, raw_rms)
                             if barge and self.barge_in_mode == "headset" and self.is_tts_speaking:
                                 log.info("Pipeline: barge-in (headset) — interrupting speech immediately.")
                                 self.router.tts.interrupt()
                             has_speech = barge or (is_speaking and speech_prob >= 0.6)
                         else:
-                            has_speech = (speech_prob >= vad_speech_prob_threshold) or (rms_volume > 0.0025)
+                            # Relative to this room's noise floor, not a fixed level that a fan can beat.
+                            has_speech = is_speech(speech_prob, rms_volume, noise_level, vad_speech_prob_threshold)
 
                         if has_speech:
                             if not is_speaking:
@@ -536,12 +556,21 @@ class VoicePipeline(QThread):
                                 started_during_tts = speaking_now
                                 speech_frames_count = 0
                                 self.vad_status_changed.emit("Active (Listening...)")
-                                log.info(f"Speech Detected (Prob: {speech_prob:.3f}, RMS: {rms_volume:.6f})")
+                                log.info(f"Speech Detected (Prob: {speech_prob:.3f}, RMS: {rms_volume:.4f}, "
+                                         f"raw {raw_rms:.4f}, gain {self.agc.gain_db:+.1f} dB)")
                                 buffer.extend(list(self.preroll_buffer))
 
                             buffer.append(chunk)
                             speech_frames_count += 1
                             silence_frames = 0
+                            if len(buffer) >= max_utterance_frames:
+                                # A TV or people talking can keep "speech" going for minutes: transcribe
+                                # in pieces instead of waiting for a pause that never comes.
+                                log.info(f"Pipeline: {len(buffer) * 0.032:.0f} s without a pause; transcribing this part now.")
+                                self._dispatch_utterance(buffer, started_during_tts, agc_target_level, agc_max_gain)
+                                buffer = []
+                                speech_frames_count = 0
+                                started_during_tts = speaking_now
                         else:
                             self.preroll_buffer.append(chunk)
 
@@ -551,7 +580,7 @@ class VoicePipeline(QThread):
 
                                 adaptive_silence_target = self.calculate_adaptive_silence_threshold(
                                     speech_frames_count=speech_frames_count,
-                                    trailing_rms=rms_volume,
+                                    trailing_rms=raw_rms,
                                     base_threshold=silence_threshold
                                 )
 
@@ -563,22 +592,7 @@ class VoicePipeline(QThread):
                                         self.vad_status_changed.emit("Idle")
                                         continue
 
-                                    # With the offline wake engine, nothing is transcribed until the wake
-                                    # word is heard (except while MXB is busy/speaking, so "stop" still works).
-                                    if (self.wake_engine is not None and not self.bus.wake.engaged
-                                            and not self.bus.busy and not self.is_tts_speaking):
-                                        buffer = []
-                                        self.preroll_buffer.clear()
-                                        self.vad_status_changed.emit("Idle")
-                                        continue
-
-                                    # Hand off utterance to ASR Worker WITHOUT BLOCKING AUDIO STREAM
-                                    audio_utterance = np.concatenate(buffer).flatten()
-                                    during_tts = started_during_tts and self.barge_in_mode == "speaker"
-                                    self.utterance_queue.put((audio_utterance, agc_target_level, agc_max_gain, during_tts))
-                                    self.vad_status_changed.emit("Transcribing...")
-                                    log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames). Mic stays listening!")
-
+                                    self._dispatch_utterance(buffer, started_during_tts, agc_target_level, agc_max_gain)
                                     buffer = []
                                     self.preroll_buffer.clear()
                     else:
@@ -587,6 +601,44 @@ class VoicePipeline(QThread):
             error_msg = f"Audio stream error: {e}"
             log.error(error_msg)
             self.vad_status_changed.emit(error_msg)
+
+    def _dispatch_utterance(self, buffer, started_during_tts: bool, agc_target: float, max_gain: float):
+        """Hands an utterance to the ASR worker without ever blocking the microphone loop."""
+        # With the offline wake engine, nothing is transcribed until the wake word is heard
+        # (except while MXB is busy/speaking, so "stop" still works).
+        if (self.wake_engine is not None and not self.bus.wake.engaged
+                and not self.bus.busy and not self.is_tts_speaking):
+            self.vad_status_changed.emit("Idle")
+            return
+        item = (np.concatenate(buffer).flatten(), agc_target, max_gain,
+                started_during_tts and self.barge_in_mode == "speaker")
+        try:
+            self.utterance_queue.put_nowait(item)
+        except queue.Full:
+            # Recognition is behind (long background talk): drop the OLDEST waiting utterance, so the
+            # newest one, most likely the user's command, still gets transcribed.
+            try:
+                self.utterance_queue.get_nowait()
+                self.utterance_queue.task_done()
+                log.warning("Pipeline: speech recognition is behind; dropped the oldest waiting utterance.")
+            except queue.Empty:
+                pass
+            try:
+                self.utterance_queue.put_nowait(item)
+            except queue.Full:
+                return
+        self.vad_status_changed.emit("Transcribing...")
+        log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames). Mic stays listening!")
+
+    def _log_gain(self, every_s: float = 30.0, min_change_db: float = 3.0):
+        """One log line when the microphone gain settles somewhere new (for diagnosing quiet mics)."""
+        last_t, last_db = self._gain_log
+        now = time.time()
+        db = self.agc.gain_db
+        if now - last_t >= every_s and (last_db is None or abs(db - last_db) >= min_change_db):
+            self._gain_log = (now, db)
+            log.info(f"Mic input gain {db:+.1f} dB (noise floor {self.agc.noise:.4f}, speech level {self.agc.speech:.4f}, "
+                     f"mode {self.agc.mode})")
 
     def pause_listening(self):
         self.is_listening = False
@@ -597,6 +649,8 @@ class VoicePipeline(QThread):
 
     def resume_listening(self):
         self.is_listening = True
+        if self._vad is not None:
+            self._vad.reset()               # the voice detector's memory is from before the mute
         self.vad_status_changed.emit("Idle")
         # Unmuting is an explicit "I'm talking to you" signal: no wake word needed next.
         self.bus.wake.engage()

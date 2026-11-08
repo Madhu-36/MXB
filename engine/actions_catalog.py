@@ -11,6 +11,7 @@ Risk levels:
 - "safe":    runs immediately.
 - "confirm": MXB asks the user (voice "yes"/"no", chat buttons, or typed answer) first.
 """
+import re
 from dataclasses import dataclass
 
 
@@ -296,12 +297,51 @@ def uses_input(action: str) -> bool:
     return bool(spec and spec.uses_input)
 
 
-def prompt_tool_list(exclude: tuple[str, ...] = ()) -> str:
+# Small local models (Ollama on a laptop CPU) choke on the full 155-tool prompt (~4,700 tokens with the
+# schema): on a real PC llama3.2:1b timed out three times in a row. They get the core tools plus the
+# ones that match the request instead.
+CORE_ACTIONS = ("conversation", "open_app", "close_app", "open_url", "search_web", "type_text", "press_key",
+                "shortcut", "click_element", "search_on_screen", "read_screen", "wait", "agent_task")
+_SYNONYMS = {
+    "louder": "volume", "quieter": "volume", "sound": "volume", "mute": "volume", "unmute": "volume",
+    "brighter": "brightness", "dimmer": "brightness", "dim": "brightness", "internet": "wifi", "wi-fi": "wifi",
+    "earbuds": "bluetooth", "headphones": "bluetooth", "speaker": "bluetooth", "song": "media", "music": "media",
+    "play": "media", "pause": "media", "next": "media", "remind": "reminder", "alarm": "reminder", "later": "schedule",
+    "document": "file", "documents": "file", "pdf": "file", "folder": "file", "photo": "screenshot",
+    "screenshot": "capture", "website": "web", "site": "web", "page": "web", "browser": "web", "google": "search",
+    "youtube": "media", "window": "window", "minimize": "window", "maximize": "window", "shutdown": "power",
+    "restart": "power", "sleep": "power", "lock": "lock", "battery": "battery", "remember": "memory",
+    "forget": "memory", "notes": "documents", "meeting": "meeting", "scam": "scam", "fraud": "scam",
+    "focus": "focus", "study": "focus", "magnifier": "accessibility", "zoom": "accessibility",
+}
+_STOP = {"the", "a", "an", "to", "and", "or", "of", "in", "on", "for", "my", "me", "please", "can", "you", "it",
+         "this", "that", "is", "what", "with", "mxb", "now", "then", "some", "i", "want"}
+
+
+def relevant_actions(query: str, k: int = 12) -> list[str]:
+    """The core actions plus the k catalog actions whose names/descriptions best match the request."""
+    words = {w for w in re.findall(r"[a-z][a-z0-9-]+", (query or "").lower()) if w not in _STOP}
+    words |= {_SYNONYMS[w] for w in words if w in _SYNONYMS}
+    scored = []
+    for spec in all_specs():
+        if spec.name in CORE_ACTIONS:
+            continue
+        name_words = set(spec.name.split("_")) | {spec.category}
+        text_words = set(re.findall(r"[a-z][a-z0-9-]+", f"{spec.description} {spec.target}".lower()))
+        score = 3 * len(words & name_words) + len(words & text_words)
+        if score:
+            scored.append((-score, spec.name))
+    picked = [name for _, name in sorted(scored)[:k]]
+    return list(CORE_ACTIONS) + picked
+
+
+def prompt_tool_list(exclude: tuple[str, ...] = (), only=None) -> str:
     """Renders the catalog (plus plugin skills) as a compact tool list for LLM system prompts."""
+    keep = set(only) if only is not None else None
     lines = []
     current = None
     for spec in all_specs():
-        if spec.name in exclude:
+        if spec.name in exclude or (keep is not None and spec.name not in keep):
             continue
         if spec.category != current:
             current = spec.category
@@ -324,7 +364,7 @@ PLANNER_RULES = """Rules:
 - Websites: prefer the web_* actions (MXB's browser): web_open, then web_elements to get numbers, then web_click / web_fill by number."""
 
 
-def plan_tool_schema(agent: bool = False) -> dict:
+def plan_tool_schema(agent: bool = False, names=None) -> dict:
     """OpenAI-style function schema used for native tool calling (NVIDIA NIM / Ollama)."""
     props = {
         "reply": {"type": "string", "description": "One or two short spoken sentences for the user."},
@@ -334,7 +374,7 @@ def plan_tool_schema(agent: bool = False) -> dict:
             "items": {
                 "type": "object",
                 "properties": {
-                    "action": {"type": "string", "enum": action_names()},
+                    "action": {"type": "string", "enum": list(names) if names else action_names()},
                     "target": {"type": "string"},
                     "expect": {"type": "string", "description": "Optional text that should be visible after this step."},
                 },
@@ -357,11 +397,12 @@ def plan_tool_schema(agent: bool = False) -> dict:
     }
 
 
-def planner_system_prompt(assistant_name: str = "MXB") -> str:
+def planner_system_prompt(assistant_name: str = "MXB", only=None) -> str:
+    """only: restrict the tool list (compact prompt for small local models)."""
     from safety.injection import UNTRUSTED_RULES
     from engine.indic import language_instruction
     return (
         f"You are {assistant_name}, an AI desktop companion with full control of the user's Windows PC "
         "(mouse, keyboard, apps, windows, files, Bluetooth, Wi-Fi, volume, brightness).\n\n"
-        f"{PLANNER_RULES}\n{UNTRUSTED_RULES}{language_instruction()}\n\nAvailable actions:\n{prompt_tool_list()}"
+        f"{PLANNER_RULES}\n{UNTRUSTED_RULES}{language_instruction()}\n\nAvailable actions:\n{prompt_tool_list(only=only)}"
     )

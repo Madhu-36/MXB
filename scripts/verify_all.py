@@ -38,6 +38,7 @@ PORTABLE_SUITES = [
     "tests.test_v43_accessibility",
     "tests.test_v43_focus",
     "tests.test_v43_integration",
+    "tests.test_v43_listening",
 ]
 
 
