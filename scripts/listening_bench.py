@@ -12,8 +12,10 @@ microphone. The first segment is room noise only: anything "heard" there is a fa
     python -m scripts.listening_bench --level 0.02     # a normal-loudness mic
     python -m scripts.listening_bench --wav a.wav b.wav --expect "open notepad" "open chrome"
 
-Prints a table and writes logs/listening_bench.json. Only uses the pipeline's public pieces, so it
-also runs against older MXB versions (to measure before/after).
+Each command is followed by a second of near-silence, so what was heard can be credited to the right
+command; it is scored the way the CommandBus decides (wake word, follow-up window) and counts only if
+every expected word was heard. Prints a table and writes logs/listening_bench.json. Only uses the
+pipeline's public pieces, so a copy also runs against older MXB versions (to measure before/after).
 """
 import argparse
 import json
@@ -221,6 +223,14 @@ def norm(text: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9' ]", " ", (text or "").lower()).split())
 
 
+def covers(command: str, expected: str, fuzz) -> bool:
+    """Every expected word was heard (allowing small spelling differences): "open" is not "open notepad"."""
+    words = norm(command).split()
+    if expected and expected.replace(" ", "") in "".join(words):          # "screen shot" = "screenshot"
+        return True
+    return bool(expected) and all(any(fuzz.ratio(e, w) >= 85 for w in words) for e in expected.split())
+
+
 # ---------------------------------------------------------------------------- main
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
@@ -357,7 +367,10 @@ def main(argv=None) -> int:
         speech = scale_to(clip, args.level)
         mask = speech_mask(speech)
         lead, tail = room(seconds(1.0)), room(seconds(1.8))
-        mixed = np.concatenate([lead, speech + room(len(speech)), tail])
+        # A second of near-silence after each command (the TV pauses), so the pipeline finishes the
+        # utterance and what it heard is credited to this phrase rather than the next one.
+        hush = np.random.default_rng(len(results)).normal(0, 0.0005, seconds(1.0)).astype(np.float32)
+        mixed = np.concatenate([lead, speech + room(len(speech)), tail, hush])
         bus.heard.clear()
         start_frame = len(spy.probs) + len(lead) // FRAME
         feed(pipe, mixed)
@@ -375,7 +388,7 @@ def main(argv=None) -> int:
                 if command:
                     commands.append(command)
         rest = " ".join(commands)
-        ok = bool(found and expected and fuzz.token_set_ratio(norm(rest), expected) >= 85)
+        ok = bool(found and covers(rest, expected, fuzz))
         results.append({"phrase": label, "expected": expected, "heard": [t for _, t in bus.heard], "wake_word": found,
                         "command": rest, "ok": ok,
                         "vad_median": round(float(np.median(speech_probs)), 3) if speech_probs.size else None,
