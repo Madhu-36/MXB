@@ -1,3 +1,33 @@
+## v4.3.1 — Listening fixes, measured on a real laptop
+The report: MXB missed most voice commands, didn't run tools, and needed to hear better. Its own log on the laptop (Realtek mic through the Windows Sound Mapper, llama3.2:1b on the CPU) showed speech arriving at RMS ~0.004 (-48 dBFS), the voice detector scoring it ~0.09, 58 of 60 detections coming from a fixed loudness rule instead, Whisper repeating its prompt back on noise, missed wake words, "open notebook" finding no app, and the local model timing out three times in a row (136 s) before giving up.
+
+**Hearing**
+- **The real bug:** the Silero voice detector forgot everything every 32 ms. faster-whisper ≥ 1.1 resets the model's memory on each call and MXB called it once per frame. `StreamingVAD` keeps the state and audio context between frames (faster-whisper 0.10–1.2). On a real speech clip at the quiet-mic level: 2–9% of speech frames detected before, 95–98% after.
+- **Input gain** before voice detection (`engine.input_gain`: `"auto"`, `"off"` or fixed dB). It tracks the room's noise floor and speech level, lifts quiet speech up to +30 dB without lifting the noise floor past a ceiling, cuts at once on a shout, soft-limits, and never learns from MXB's own voice. On the 4 s test clip it raises detection from 67–82% (memory alone) to 94–100%; with Windows' voice on the laptop the memory fix alone already reached 94–100%, so gain is the smaller of the two.
+- Speech vs silence is judged against the room's noise floor. The old rule (any frame above RMS 0.0025 is speech) let a TV or people talking hold one utterance open forever: in the bench, v4.3.0 heard **0 of 6** commands under continuous background talk. Utterances are now also cut every 12 s (`engine.max_utterance_s`) and handed to recognition without ever blocking the microphone.
+
+**Understanding**
+- Removed Whisper's prompt ("Desktop commands: open app, close window…"): it came back as "open app, open app…" on noise, and turned "open Notepad" into "open note app".
+- One Whisper decode (no 6-temperature fallback) with a token budget sized to the utterance: one 10 s stretch of background talk had taken 77 s and blocked the commands queued behind it.
+- "open notepad, open notepad" becomes one command, noise loops are dropped, and "stop, stop, stop!" now stops MXB (the repeated form didn't match before).
+- Wake word after fillers ("Ahh, MXB"), at the end ("open chrome, MXB"), at the start of a later sentence (talk ran into the command), and as Whisper spells it (MXP, AMX-B, AMXP, Emexbee, NXB…). A mention mid-sentence still doesn't wake MXB.
+
+**Tools**
+- "open notebook" opens Notepad. Windows' own tools start by name, common mishearings are corrected, your own app with the exact name still wins, and Microsoft Store apps without a Start-menu shortcut (WhatsApp, Spotify…) are found with `Get-StartApps`.
+- Local models get a compact planner prompt: 13 core tools plus up to 12 matching the request, ~1,000 tokens instead of ~4,700 (which also overflowed `num_ctx` 4096 and cut off the instructions).
+- One Ollama timeout or connection failure pauses Ollama for 30 s (`llm.local_retry_after_sec`), so the router's three planning attempts cost one timeout, not three. The model is loaded in the background at startup, every call uses the same `llm.num_ctx` (a change reloads the model), and the failure reply says whether Ollama is slow or not running.
+
+**Measured on the laptop** (`scripts\listening_bench.bat`: Windows' voice says 6 commands through the real pipeline, mixed with 6 s of noise recorded from the mic, which held background talk at the time; scored like the command bus, every word must be heard)
+
+| Condition | v4.3.0 | v4.3.1 |
+| :--- | :--- | :--- |
+| Background talk that never pauses, speech 10 dB above it | 0/6 (stuck listening) | transcribed in 12 s pieces |
+| Background talk with pauses, speech 10 dB above it | 3/6, detector median 0.56–0.76 | **6/6**, 0.91–0.98 |
+| Quiet room, quiet speech (-48 dBFS) | 5/6, detector median 0.22–0.34 | 5/6 → 6/6 with "AMXP" added, 0.96–0.99 |
+
+**Quality**
+- New suite `tests/test_v43_listening.py` (49 tests, including the real Silero model on a 4 s public-domain speech clip); 421 portable tests in total.
+
 ## v4.3.0 — Real-world problems
 **Scam shield** (`engine/scam_shield.py`)
 - "is this a scam?" for copied messages, links, MXB's browser page, the active window and QR codes. Offline weighted rules for the fraud patterns in Indian bank, NPCI and DoT advisories: OTP/PIN requests (including "enter PIN to receive"), remote-access apps, digital arrest and fake police/customs/courier calls, KYC and account-block threats, prize, refund, task-job and investment traps, pay-first fees, secrecy pressure, fake support numbers, family impersonation. Negation-aware ("do not share your OTP" is a genuine bank line), with multi-signal combos.

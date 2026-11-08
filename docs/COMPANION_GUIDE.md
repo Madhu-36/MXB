@@ -303,6 +303,13 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `voice.piper_exe` / `voice.piper_model` | `""` | Paths for offline Piper TTS |
 | `voice.barge_in` | `"auto"` | `headset`, `speaker`, `off` |
 | `listening.engine` | `"transcript"` | `"openwakeword"` for the offline audio wake word |
+| `engine.input_gain` | `"auto"` | Mic gain before voice detection: `"auto"`, `"off"` or fixed dB like `"12"` |
+| `engine.max_input_gain_db` / `engine.input_target_rms` | `30` / `0.1` | Auto gain ceiling and the speech level it aims for |
+| `engine.max_utterance_s` | `12` | Transcribe in pieces when talk never pauses (TV, people in the room) |
+| `engine.whisper_hotwords` | `""` | Words to bias Whisper toward (faster-whisper ≥ 1.0). Off: Whisper can repeat them on noise |
+| `llm.num_ctx` | `4096` | Ollama context size, the same for every call (changing it reloads the model) |
+| `llm.compact_local_prompt` / `llm.local_tool_count` | `true` / `12` | Local models see the core tools plus this many matching the request |
+| `llm.local_retry_after_sec` | `30` | After an Ollama timeout or connection failure, skip it this long instead of waiting again |
 | `listening.openwakeword_model` / `_threshold` | `hey_jarvis` / `0.5` | Pretrained name or path to a custom `.onnx` |
 | `memory.embedding_provider` | `"auto"` | `ollama`, `nvidia`, `local` |
 | `agent.max_marks` / `agent.max_stuck_turns` | `60` / `3` | Set-of-Marks size, stuck limit |
@@ -346,6 +353,7 @@ The live suite works in a sandbox folder (`Documents\MXB-Bench-<time>`) with its
 - **Brightness** works on laptop panels (WMI) and monitors with DDC/CI enabled.
 - **Accessibility tree:** most Windows apps, Chrome, Edge and Firefox expose their controls. Games and custom-drawn UIs don't, so MXB falls back to OCR or shortcuts.
 - **Switching the default audio output** has no public Windows API; MXB lists devices and opens Sound settings instead.
+- **Voice in a room with a TV or people talking:** their speech is speech too, so MXB transcribes it in 12 s pieces and the wake word picks out yours. Say "MXB" at the start of a sentence; a quiet mic under loud talk can still be missed, so move closer or use a headset.
 - **Barge-in on laptop speakers** relies on the echo filter (comparing what it heard with what it just said). Headsets interrupt instantly and are more reliable.
 - **edge-tts needs internet**; when it fails MXB switches to Windows voices for the session. Use Piper for an offline neural voice.
 - **The offline wake word** ships with pretrained phrases ("hey jarvis", "alexa", "hey mycroft"). A custom "hey MXB" needs a model trained with openWakeWord's training notebook.

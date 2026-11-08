@@ -20,7 +20,8 @@ GREETINGS = {"hey", "hi", "hello", "ok", "okay", "yo", "hai"}
 FILLERS = GREETINGS | {"ah", "ahh", "aah", "uh", "uhh", "um", "umm", "hmm", "er", "erm", "oh", "so", "and", "well",
                        "please", "yeah"}
 # How Whisper spells "MXB" when it mishears it; always accepted alongside the configured wake words.
-ASR_VARIANTS = {"mxp", "mxv", "nxb", "emxb", "emexb", "emexbee", "maxb", "mxbee", "amxb"}   # "AMX-B" = "Hey MXB"
+ASR_VARIANTS = {"mxp", "mxv", "nxb", "emxb", "emexb", "emexbee", "maxb", "mxbee",
+                "amxb", "amxp"}                    # "AMX-B" / "AMXP": how Whisper wrote "Hey MXB" on a real PC
 
 
 _KEEP = r"[^a-z0-9\u0900-\u0D7F]"   # letters/digits plus Indian scripts (zero-width joiners dropped)
