@@ -22,7 +22,7 @@ import tests._stubs  # noqa: F401
 from engine.actions_catalog import (CORE_ACTIONS, action_names, plan_tool_schema, planner_system_prompt,
                                     relevant_actions)
 from engine.listening import (InputAGC, StreamingVAD, clean_transcript, db_to_gain, energy_speech_prob, gain_to_db,
-                              is_speech, whisper_options)
+                              is_speech, max_tokens_for, whisper_options)
 from engine.llm_client import LLMClient, LocalModelPaused, estimate_tokens
 from engine.wake_word import WakeWordGate
 from utils.app_launcher import SmartAppLauncher, parse_start_apps
@@ -281,24 +281,32 @@ class TestCleanTranscript(unittest.TestCase):
 
 
 class TestWhisperOptions(unittest.TestCase):
-    def test_hotwords_only_when_asked_and_supported(self):
+    def test_options_only_when_asked_and_supported(self):
         class New:
-            def transcribe(self, audio, beam_size=5, hotwords=None):
+            def transcribe(self, audio, beam_size=5, hotwords=None, max_new_tokens=None, without_timestamps=False):
                 pass
 
         class Old:
             def transcribe(self, audio, beam_size=5, initial_prompt=None):
                 pass
-        self.assertEqual(whisper_options(New()), {})                          # off by default
-        self.assertEqual(whisper_options(New(), "MXB Notepad"), {"hotwords": "MXB Notepad"})
-        self.assertEqual(whisper_options(Old(), "MXB Notepad"), {})
+        self.assertEqual(whisper_options(New()), {"without_timestamps": True})        # no hint words by default
+        self.assertEqual(whisper_options(New(), "MXB Notepad", max_new_tokens=48),
+                         {"hotwords": "MXB Notepad", "max_new_tokens": 48, "without_timestamps": True})
+        self.assertEqual(whisper_options(Old(), "MXB Notepad", max_new_tokens=48), {})
         self.assertEqual(whisper_options(object(), "MXB"), {})
+
+    def test_token_budget_scales_with_the_utterance(self):
+        self.assertEqual(max_tokens_for(3.0), 48)
+        self.assertEqual(max_tokens_for(12.8), 126)
+        self.assertEqual(max_tokens_for(60.0), 224)              # never Whisper's full 448
+        self.assertEqual(max_tokens_for(-1), 24)
 
     def test_audio_pipeline_uses_the_helpers(self):
         """engine/audio.py needs PortAudio to import, so check its wiring from the source."""
         source = (Path(__file__).parent.parent / "engine" / "audio.py").read_text(encoding="utf-8")
         for needed in ("StreamingVAD(", "self.agc.process(chunk, adapt=", "is_speech(", "clean_transcript(",
-                       "initial_prompt=None", "barge_detector.update(speech_prob, raw_rms)"):
+                       "initial_prompt=None", "temperature=0.0", "max_new_tokens=max_tokens_for(",
+                       "barge_detector.update(speech_prob, raw_rms)", "self._dispatch_utterance(", "put_nowait(item)"):
             self.assertIn(needed, source)
         self.assertNotIn("Desktop commands: open app", source)
         self.assertNotIn("vad_model(chunk)", source)

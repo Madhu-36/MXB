@@ -12,7 +12,8 @@ from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
 from engine.barge_in import BargeInDetector, is_probable_echo, resolve_mode
-from engine.listening import InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech, whisper_options
+from engine.listening import (InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech, max_tokens_for,
+                              whisper_options)
 from utils.credentials import CredentialsManager
 from utils.logger import log
 
@@ -358,7 +359,10 @@ class VoicePipeline(QThread):
                     # No initial prompt: Whisper repeated the old one ("open app, close window...") on noise.
                     initial_prompt=None,
                     no_speech_threshold=0.60,
-                    **whisper_options(self.whisper_model, self.config.get("engine", {}).get("whisper_hotwords", "")),
+                    # One decode, no fallback ladder: noise was re-decoded at up to 6 temperatures.
+                    temperature=0.0,
+                    **whisper_options(self.whisper_model, self.config.get("engine", {}).get("whisper_hotwords", ""),
+                                      max_new_tokens=max_tokens_for(audio_len_s)),
                 )
                 detected = getattr(info, "language", None)
                 if detected in LANGUAGES and detected != "en":

@@ -210,15 +210,29 @@ def clean_transcript(text: str | None) -> str | None:
     return text
 
 
-def whisper_options(model, hotwords: str = "") -> dict:
+def max_tokens_for(seconds: float) -> int:
+    """Enough tokens for fast speech of this length (~4 words/s), so noise can't run on for 448."""
+    return int(min(224, 24 + 8 * max(0.0, seconds)))
+
+
+def whisper_options(model, hotwords: str = "", max_new_tokens: int | None = None) -> dict:
     """
-    Extra transcribe() arguments. Off by default: hint words work like a prompt, and Whisper repeats
-    prompts back on noise (the old "open app, close window..." prompt did exactly that), so a hint
-    of "MXB" could fire the wake word on its own. Opt in with engine.whisper_hotwords.
-    Needs faster-whisper >= 1.0; older versions get nothing.
+    Extra transcribe() arguments the installed faster-whisper supports:
+    - max_new_tokens / without_timestamps: on a real laptop one 10 s stretch of background talk took
+      77 s to decode, because Whisper ran on to its 448-token limit. Commands are short.
+    - hotwords: off by default. Hint words work like a prompt, and Whisper repeats prompts back on noise
+      (the old "open app, close window..." prompt did exactly that), so a hint of "MXB" could fire the
+      wake word on its own. Opt in with engine.whisper_hotwords (faster-whisper >= 1.0).
     """
     try:
         params = inspect.signature(getattr(model, "transcribe")).parameters
     except (AttributeError, TypeError, ValueError):
         return {}
-    return {"hotwords": hotwords} if hotwords and "hotwords" in params else {}
+    out = {}
+    if hotwords and "hotwords" in params:
+        out["hotwords"] = hotwords
+    if max_new_tokens and "max_new_tokens" in params:
+        out["max_new_tokens"] = int(max_new_tokens)
+    if "without_timestamps" in params:
+        out["without_timestamps"] = True
+    return out
