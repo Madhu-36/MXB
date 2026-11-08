@@ -325,6 +325,7 @@ class TestWakeWordFillers(unittest.TestCase):
         self.check("MXP open notepad", "open notepad")
         self.check("Emexbee, open notepad", "open notepad")
         self.check("M X B open notepad", "open notepad")
+        self.check("AMX-B, what time is it?", "what time is it?")          # Whisper's "Hey MXB" on a real PC
 
     def test_wake_word_starting_a_later_sentence(self):
         """Background talk or a TV runs into the command; Whisper still marks the sentence break."""

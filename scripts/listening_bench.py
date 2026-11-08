@@ -252,6 +252,7 @@ def main(argv=None) -> int:
 
     from faster_whisper.vad import get_vad_model
     from thefuzz import fuzz
+    from engine.wake_word import WakeWordGate
     import engine.audio as audio_mod
     from utils.credentials import CredentialsManager
 
@@ -363,13 +364,20 @@ def main(argv=None) -> int:
         wait_idle(pipe)
         probs = np.array(spy.probs[start_frame:start_frame + len(mask)])
         speech_probs = probs[mask[: len(probs)]] if len(probs) else np.array([])
-        text = " ".join(t for _, t in bus.heard)
-        gate = bus.wake
-        gate.disengage()
-        found, rest = gate.strip_wake_word(text)
+        # Score the way the CommandBus decides: one utterance at a time through a fresh wake-word gate,
+        # so "MXB." followed by "Open the calculator." counts (the follow-up window), as it does live.
+        gate = WakeWordGate(mode="wake_word", wake_words=config.get("listening", {}).get("wake_words"))
+        commands, found = [], False
+        for _, utterance in bus.heard:
+            command = gate.process(utterance)
+            if command is not None:
+                found = True
+                if command:
+                    commands.append(command)
+        rest = " ".join(commands)
         ok = bool(found and expected and fuzz.token_set_ratio(norm(rest), expected) >= 85)
         results.append({"phrase": label, "expected": expected, "heard": [t for _, t in bus.heard], "wake_word": found,
-                        "command": rest if found else "", "ok": ok,
+                        "command": rest, "ok": ok,
                         "vad_median": round(float(np.median(speech_probs)), 3) if speech_probs.size else None,
                         "vad_detected": round(float((speech_probs >= 0.35).mean()), 3) if speech_probs.size else None})
 
