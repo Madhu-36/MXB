@@ -125,8 +125,13 @@ class CommandBus(QObject):
             self.executor.command_runner = lambda text: self.router.route(text, feedback_callback=self.feedback.emit)
         if hasattr(self.executor, "speak"):
             self.executor.speak = lambda text: self.tts.speak(text)
+        if hasattr(self.executor, "interrupt_speech"):
+            self.executor.interrupt_speech = lambda: self.tts.interrupt()
+        if hasattr(self.executor, "speech_rate"):
+            self.executor.speech_rate = self.set_speech_rate
         self.scheduler = None
         self.remote = None
+        self.clipboard_guard = None
         # Indian languages: commands are translated to English for routing; replies come back translated.
         self.indic = IndicBridge(self.config, llm_getter=lambda: getattr(self.executor, "llm", None))
 
@@ -156,9 +161,25 @@ class CommandBus(QObject):
             t.start()
             self._workers.append(t)
 
-    def start_services(self, scheduler=True, remote=True):
+    def start_services(self, scheduler=True, remote=True, clipboard_guard=True, focus=True):
         """Starts the scheduler and prepares the phone remote (it only listens once turned on)."""
         services = getattr(self.executor, "services", None)
+        if clipboard_guard and self.clipboard_guard is None and \
+                self.config.get("scam_shield", {}).get("watch_clipboard", True):
+            from engine.scam_shield import ClipboardGuard, ScamShield
+            shield = getattr(self.executor, "shield", None)
+            if isinstance(shield, ScamShield):
+                self.clipboard_guard = ClipboardGuard(shield, announce=self.announce)
+                self.clipboard_guard.start()
+        focus_cfg = self.config.get("focus", {}) or {}
+        if focus and (focus_cfg.get("track_activity") or focus_cfg.get("eye_break_minutes")):
+            from engine.focus_coach import FocusCoach
+            try:
+                coach = getattr(self.executor, "coach", None)
+                if isinstance(coach, FocusCoach):
+                    coach.start()       # only runs if the user turned on screen time or eye breaks
+            except Exception as e:
+                log.warning(f"CommandBus: focus coach could not start: {e}")
         if scheduler and self.scheduler is None:
             from engine.scheduler import Scheduler
             self.scheduler = Scheduler(fire=self._fire_job)
@@ -212,8 +233,24 @@ class CommandBus(QObject):
             except Exception:
                 pass
 
+    def set_speech_rate(self, percent=None):
+        """None -> the current rate; a number -> sets it (percent faster than normal) and saves it."""
+        inner = getattr(self.tts, "inner", self.tts)
+        if percent is None:
+            return getattr(inner, "rate_percent", None)
+        setter = getattr(inner, "set_rate", None)
+        if not callable(setter):
+            return None
+        value = setter(percent)
+        save = getattr(self.executor, "save_setting", None)
+        if callable(save):
+            save("voice", "rate_percent", value)
+        return value
+
     def shutdown(self):
         self._running = False
+        if self.clipboard_guard is not None:
+            self.clipboard_guard.stop()
         executor = getattr(self.router, "executor", None)
         if executor is not None and hasattr(executor, "shutdown"):
             executor.shutdown()

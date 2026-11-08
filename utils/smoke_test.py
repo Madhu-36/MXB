@@ -25,20 +25,21 @@ OWN_MODULES = [
     "ui.chat", "ui.hud", "ui.tray", "ui.settings", "ui.setup_wizard", "ui.marks_overlay",
     "utils.updater", "utils.autostart", "utils.paths", "utils.version", "utils.single_instance",
     "engine.web", "engine.mcp_client", "engine.grounding", "engine.indic",
+    "engine.scam_shield", "engine.meetings", "engine.accessibility", "engine.focus_coach",
 ]
 
 THIRD_PARTY = [
     "PySide6.QtWidgets", "numpy", "requests", "psutil", "pyperclip", "rapidfuzz", "thefuzz.fuzz",
     "faster_whisper", "ctranslate2", "onnxruntime", "sounddevice", "edge_tts", "miniaudio", "qrcode",
     "pypdf", "docx", "send2trash", "PIL.Image", "pynput.keyboard", "pynput.mouse", "keyboard",
-    "playwright.sync_api", "mcp", "mcp.client.stdio", "mcp.client.streamable_http",
+    "playwright.sync_api", "mcp", "mcp.client.stdio", "mcp.client.streamable_http", "zxingcpp",
 ]
 
 WINDOWS_ONLY = [
     "pywinauto", "pycaw.pycaw", "comtypes", "win32com.client", "pythoncom", "pyttsx3",
     "pyttsx3.drivers.sapi5", "screen_brightness_control", "pygetwindow",
     "winrt.windows.media.ocr", "winrt.windows.graphics.imaging", "winrt.windows.storage.streams",
-    "winrt.windows.devices.radios",
+    "winrt.windows.devices.radios", "pyaudiowpatch",
 ]
 
 

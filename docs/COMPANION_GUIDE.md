@@ -1,4 +1,4 @@
-# MXB v4.2 Companion Guide
+# MXB v4.3 Companion Guide
 
 MXB is a Windows desktop companion you can **talk to or type to**. It keeps listening while it works, can operate any app through the mouse, keyboard and accessibility tree, controls your hardware, and works with your files. Anything destructive needs your "yes" first.
 
@@ -191,6 +191,55 @@ Type or speak Kannada, Hindi, Telugu, Tamil, Malayalam, Marathi, Bengali or Guja
 - **Offline:** with `voice.language` set to a language (or `auto`), MXB loads multilingual Whisper (`engine.whisper_model_multilingual`, default `small`). Restart after changing it. Hindi works well; Kannada and Telugu are much weaker on `small`, so use Sarvam or a larger model with a GPU.
 - "Stop", "yes" and "no" work instantly in every supported language (ನಿಲ್ಲಿಸು, रुको, ఆపు, நிறுத்து; ಹೌದು / ಬೇಡ, हाँ / नहीं …), and the wake word MXB is understood in native script too.
 
+### v4.3: scam shield (India-first)
+| Say | Does |
+| :--- | :--- |
+| "is this a scam" (after copying a message), "is this link safe", "is this a scam: *paste the message*" | Checks what you copied, else MXB's browser page, else the active window, and says what to do |
+| "check this QR code" | Reads a QR code on screen (or an image file). A UPI QR code always **pays**: MXB says who it pays and how much |
+| "report this scam" | Saves the message and a screenshot to `Documents\MXB Scam Reports` and opens Chakshu on Sanchar Saathi |
+| "I got scammed", "I lost money to a scam" | Tells you to call **1930** right away and opens cybercrime.gov.in, with the evidence saved |
+
+What it looks for: OTP/PIN requests (including "enter your PIN to receive"), remote-access apps, "digital arrest" and fake police/customs/courier calls, KYC and account-block threats, prize, refund, task-job and investment traps, pay-first fees, secrecy pressure, look-alike bank and government links (official domains, `*.bank.in`, `*.gov.in`), link shorteners, risky TLDs, punycode and raw-IP links, and UPI payment links dressed up as refunds. Each warning says why.
+
+- Copying a high-risk message gets a spoken warning. That check is offline rules only: the copied text never leaves the PC (`scam_shield.watch_clipboard`).
+- Opening a link that looks like a scam asks first, whoever asked to open it.
+- On explicit checks an AI second opinion can raise the risk, never lower it, and the message is fenced as untrusted, so a scam can't talk its way to "safe".
+
+### v4.3: meeting copilot
+| Say | Does |
+| :--- | :--- |
+| "take meeting notes", "start notes for the DSA lecture", "transcribe this call" | Records what you hear (the other side, from your speakers or headset) and what you say (mic) as two streams, and writes the transcript live to `Documents\MXB Meetings\<date> <title>.md` |
+| "what did they just say", "summarize the meeting so far" | Catch up in the middle of a call |
+| "stop meeting notes", "the meeting is over" | Adds a summary, decisions, action items (who, what, by when) and open questions, and indexes the file so "ask my notes about the hackathon meeting" works |
+| "list my meetings", "recap the last meeting", "what were the action items from the last meeting" | Past meetings |
+
+Works with any app (Zoom, Meet, Teams, WhatsApp calls, YouTube lectures); no bot joins the call. **Tell the other people you're transcribing.** Consent rules for recording differ by place, and MXB reminds you each time. Hearing the other side needs PyAudioWPatch (in `requirements.txt`); without it MXB hears only your mic. Transcription uses the same Whisper model as voice commands, so an English-only model (`base.en`) won't transcribe Hindi or Kannada calls.
+
+### v4.3: accessibility mode (blind and low-vision users)
+| Say | Does |
+| :--- | :--- |
+| "turn on accessibility mode", "I can't see the screen" | MXB reads whatever gets keyboard focus as you Tab around: "Search, edit box" |
+| "what's on my screen", "what am I looking at" | Describes the screen with the vision model. Without one, it summarizes the window from the accessibility tree and its text |
+| "next button", "previous link", "first field", "next element" | Moves a reading cursor and reads "Send, button, 3 of 4" **without pressing anything**. "activate" clicks it |
+| "read this" | Reads the selected text (your clipboard is put back), else the focused item |
+| "what is focused" (and "where am I" in accessibility mode) | The window and the focused element |
+| "speak faster", "speak slower", "speak at normal speed", "set your speech rate to 40" | Speaking speed for every voice engine, saved for next time |
+| "turn on magnifier", "zoom in the screen", "magnifier off", "invert colors", "turn on high contrast", "turn on narrator" | Windows' own tools (Win+Plus, Win+Minus, Win+Esc, Win+Ctrl+C, Alt+Shift+PrtScn, Win+Ctrl+Enter) |
+
+Commands work in the Indian languages above, and replies are spoken in your language. Win+Ctrl+C only works after you turn on *Keyboard shortcut for color filters* in Settings → Accessibility → Color filters. If you also run NVDA or Narrator, turn MXB's focus reading off ("turn off accessibility mode") so you don't hear everything twice; the other commands keep working.
+
+### v4.3: focus & study coach
+| Say | Does |
+| :--- | :--- |
+| "start a 50 minute focus session for DSA practice", "help me focus", "focus on ML notes for an hour" | A focus session. After 10 seconds on a distraction: "You're on YouTube. 32 min left on 'DSA practice'. Back to it?" (again every 2 minutes if you stay). At the end: focused vs distracted minutes and a break suggestion |
+| "start a strict study session for 1 hour, allow LeetCode" | Strict mode minimizes distracting windows (nothing is closed). "allow …" whitelists sites for that session |
+| "how much time is left in my focus session", "stop the focus session" | Status, or end early with a summary |
+| "track my screen time", then "how much screen time today", "screen time this week", "how much time did I spend on YouTube this week" | Local screen-time reports by category (focused, distracted, messages, meetings) |
+| "remind me to rest my eyes", "… every 30 minutes", "turn off eye breaks" | 20-20-20 reminders after continuous screen time |
+| "delete my screen time data" | Erases it (asks first) |
+
+Privacy: nothing is tracked until you ask. `activity.db` in the data folder stores app and site names with seconds per day and your session goals, never window titles, URLs or content (a title is read for a moment to tell YouTube from LeetCode, then dropped). While the coach is running (a focus session, screen-time tracking or eye breaks), it offers once per call to take notes when you're in a Zoom, Teams or Meet call. If you study from YouTube lectures, add `"productive": ["YouTube"]` under `focus` or say "allow YouTube" for that session.
+
 ### v4: plugins
 Drop a Python file into `plugins/`:
 ```python
@@ -226,6 +275,9 @@ Restart MXB. The pattern runs instantly, and the skill also appears in the LLM's
     - **Suspicious mode.** If the screen contains instruction-like text ("ignore previous instructions", "send the file to…"), MXB warns you and asks before every non-read action for the rest of the task.
 12. **Audit log.** Every action, block and refusal is appended to `audit.log.jsonl` in the data folder with the time, source (voice, text, phone, schedule, agent) and outcome. Passwords, OTPs and card or account numbers are redacted; vault actions are fully hidden. Ask *"show the audit log"* or *"what did you do today?"*. It rotates at 5 MB (3 old files kept).
 
+13. **Listening and tracking are your call.** Meeting notes, screen-time tracking, focus sessions, accessibility mode, speech settings and scam reports are never available to the agent, so a web page or document can't start them. Scam *checks* are allowed (read-only).
+14. **Scam links need a yes.** Opening a link that scores as a likely scam asks first, whoever asked to open it: you, the agent or a schedule.
+
 To turn confirmations off entirely (not recommended), set `safety.confirm_destructive: false`.
 
 ---
@@ -260,6 +312,17 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `update.check_on_start` / `update.repo` | `true` / `"Madhu-36/MXB"` | Daily quiet update check; where releases come from |
 | `llm.build_custom_model` | `false` | Build the old `mxb-brain` Ollama model on start (pulls a 4.7 GB base) |
 | `setup_complete` | absent | Set after the first-run wizard; delete it to see the wizard again |
+| `scam_shield.watch_clipboard` | `true` | Warn when something you copy looks like a scam (offline rules) |
+| `scam_shield.check_links` | `true` | Ask before opening links that look like scams |
+| `scam_shield.ai_second_opinion` | `true` | LLM second opinion on explicit checks (can only raise the risk) |
+| `scam_shield.region` | `"IN"` | Reporting advice (India: Chakshu, 1930, cybercrime.gov.in) |
+| `meetings.folder` / `meetings.capture_system_audio` | `""` (Documents\MXB Meetings) / `true` | Where notes go; hear the other side of calls |
+| `accessibility.describe_with_vision` / `accessibility.move_mouse` | `true` / `true` | Describe the screen with the vision model; mouse follows the reading cursor |
+| `voice.rate_percent` | absent | Speaking speed saved by "speak faster" (-50 to 100) |
+| `focus.default_minutes` | `25` | Session length when you don't say one |
+| `focus.track_activity` | `false` | Screen-time tracking (opt-in) |
+| `focus.eye_break_minutes` | `0` | 20-20-20 reminders (0 = off) |
+| `focus.productive` / `focus.distracting` | `[]` | Override app or site categories, e.g. `["YouTube"]` |
 
 ---
 
@@ -293,4 +356,8 @@ The live suite works in a sandbox folder (`Documents\MXB-Bench-<time>`) with its
 - **MCP servers that need an OAuth browser login** aren't supported yet; use servers that take a token (env or header).
 - **Visual clicking** is only as good as the model (Qwen3-VL-4B is strong on ordinary apps, weaker on dense professional software). In agent mode risky buttons still ask first.
 - **Indian languages** add one translation round trip per command (cached); edge voices need internet.
+- **Scam shield** is rules plus an optional AI opinion. New scam scripts can slip through and an unusual genuine message can be flagged; it always says why, so you can judge. It warns, it doesn't block payments.
+- **Meeting copilot** loopback records everything your PC plays, notification sounds included. Speakers are labelled You and Others, not by name. Noisy calls and Indian-language calls need a bigger or multilingual Whisper model.
+- **Accessibility mode** reads what apps expose through UI Automation. Custom-drawn apps and games expose little ("what's on my screen" still works by looking). It complements NVDA and Narrator; it isn't a full screen reader (no braille, no browse mode).
+- **Focus coach** checks the foreground window every 5 seconds and names sites from page titles, so a YouTube lecture counts as YouTube unless you mark it productive.
 - **Tool calling** depends on the model. If the hosted model rejects `tools`, MXB detects that once and uses JSON mode from then on.

@@ -635,6 +635,10 @@ class IntentRouter:
             self.tts.speak(reply)
             return f"MXB: {reply}"
 
+        v43 = self._route_v43(t, o)
+        if v43 is not None:
+            return v43
+
         # ---------------- Set-of-marks voice clicking ----------------
         if t in {"show numbers", "show marks", "show labels", "show hints", "label the screen", "number the screen",
                  "number everything", "show clickable items", "show numbers on screen"}:
@@ -822,6 +826,217 @@ class IntentRouter:
             return self._act(t, "phone_remote", "status")
         if t in {"new phone link", "reset phone remote", "change phone remote link", "rotate phone remote token"}:
             return self._act(t, "phone_remote", "rotate")
+        return None
+
+    def _a11y_on(self) -> bool:
+        access = getattr(self.executor, "_access", None)
+        return getattr(access, "enabled", False) is True
+
+    _MEETING = r"(?:meeting|call|lecture|class|interview|standup|stand-up|webinar|session)"
+    _NAV_KINDS = (r"(?:button|link|field|text field|edit box|box|checkbox|check box|radio button|menu item|element|"
+                  r"control|image|item|tab)")
+
+    def _route_v43(self, t: str, o: str) -> str | None:
+        # ---------------- v4.3: scam shield ----------------
+        strong = r"(?:a\s+)?(?:scam|fraud|fake|phishing|spam)"
+        weak = r"(?:safe|real|genuine|legit|legitimate|trustworthy)"   # "is it safe" alone is too vague to grab
+        scam = rf"(?:{strong}|{weak})"
+        thing = (r"(?:message|sms|text|link|url|email|mail|whatsapp message|whatsapp|call|offer|job offer|website|site|"
+                 r"page|forward|number)")
+        tail = r"(?:\s*[:\-]\s*(?P<x>.+)|\s+(?P<u>(?:https?://|www\.)\S+))?"
+        subject = r"^(?:is|was)\s+(?:this|that|it)\s+"
+        m = re.match(rf"{subject}(?:{thing}\s+)?{strong}(?:\s+{thing})?{tail}$", t) or \
+            re.match(rf"{subject}{thing}\s+(?:a\s+)?{weak}{tail}$", t) or \
+            re.match(rf"{subject}(?:a\s+)?{weak}\s+(?P<u>(?:https?://|www\.)\S+)$", t) or \
+            re.match(rf"^(?:check|scan|verify)\s+(?:if\s+|whether\s+)?(?:this|that|the)\s+(?:{thing}\s+)?"
+                     rf"(?:(?:is\s+)?{scam}|for\s+(?:scams?|fraud|phishing)){tail}$", t) or \
+            re.match(rf"^(?:scam\s+check|fraud\s+check|check\s+for\s+(?:scams?|fraud)){tail}$", t)
+        if m:
+            groups = m.groupdict()
+            text = self._grp(m, "x", t, o) if groups.get("x") else (self._grp(m, "u", t, o) if groups.get("u") else "")
+            return self._act(t, "scam_check", text)
+        qr = r"(?:this|that|the)\s+qr(?:\s+code)?"
+        if re.match(rf"^(?:check|scan|read|decode|verify)\s+{qr}(?:\s+on\s+(?:the|my)\s+screen)?$", t) or \
+                re.match(rf"^(?:is|was)\s+{qr}\s+{scam}$", t) or re.match(rf"^what\s+(?:does|will)\s+{qr}\s+do$", t):
+            return self._act(t, "scam_check_qr", "")
+        if t in {"report this scam", "report scam", "report the scam", "report this fraud", "report fraud",
+                 "report this number", "report this message", "report this as a scam", "report this as fraud"}:
+            return self._act(t, "scam_report", "")
+        if re.match(r"^i(?:'ve| have)?\s+(?:been|got|was|am being)\s+(?:scammed|cheated|defrauded)(?:\s+online)?$", t) or \
+                re.match(r"^i\s+(?:lost|have lost|just lost)\s+money\s+(?:to|in)\s+(?:a\s+)?(?:scam|fraud)$", t) or \
+                t in {"money was debited without my permission", "someone stole money from my account",
+                      "someone took money from my account"}:
+            return self._act(t, "scam_report", "lost money")
+
+        # ---------------- v4.3: meeting copilot ----------------
+        meeting = self._MEETING
+        m = re.match(rf"^(?:start|begin)\s+(?:taking\s+)?(?:the\s+)?(?:{meeting}\s+)?notes"
+                     rf"(?:\s+(?:for|on|of|in|during)\s+(?:the\s+|this\s+|my\s+)?(?P<title>.+))?$", t) or \
+            re.match(rf"^take\s+(?:the\s+)?(?:{meeting}\s+)?notes(?:\s+(?:for|on|of|in|during)\s+(?:the\s+|this\s+|my\s+)?"
+                     rf"(?P<title>.+))?$", t) or \
+            re.match(rf"^(?:transcribe|record)\s+(?:this|the|my)\s+(?P<title>{meeting}(?:\s+.+)?)$", t) or \
+            re.match(rf"^(?:start|begin)\s+(?:recording|transcribing)\s+(?:this|the|my)\s+(?P<title>{meeting}(?:\s+.+)?)$", t)
+        if m:
+            title = self._grp(m, "title", t, o) if m.group("title") else ""
+            if re.fullmatch(meeting, title.lower()):
+                title = ""
+            return self._act(t, "meeting_start", title)
+        if t in {"stop meeting notes", "stop the meeting notes", "stop taking notes", "end meeting notes",
+                 "end the meeting notes", "finish meeting notes", "stop notes", "stop transcribing", "stop transcription",
+                 "stop recording the meeting", "stop recording the call", "stop recording the lecture",
+                 "the meeting is over", "meeting is over", "the call is over", "call is over", "the lecture is over",
+                 "lecture is over", "the class is over", "class is over", "meeting ended", "the meeting ended"}:
+            return self._act(t, "meeting_stop", "")
+        if re.match(r"^what\s+(?:did|was)\s+(?:they|he|she|the speaker|the teacher|the professor|sir|ma'?am|the host)\s+"
+                    r"(?:just\s+)?say(?:ing)?$", t) or t in {"repeat what they said", "what did they say just now"}:
+            return self._act(t, "meeting_status", "just")
+        if re.match(rf"^(?:summari[sz]e|recap)\s+(?:the|this)\s+{meeting}\s+so\s+far$", t) or \
+                t in {"what have we discussed so far", "meeting summary so far", "catch me up on the meeting",
+                      "catch me up on the call", "what did i miss in the meeting", "what did i miss in the call"}:
+            return self._act(t, "meeting_status", "so far")
+        if t in {"list my meetings", "list meetings", "show my meetings", "show my meeting notes", "list my meeting notes",
+                 "my meeting notes", "show meeting notes", "list meeting notes", "what meetings do you have"}:
+            return self._act(t, "meeting_list", "")
+        m = re.match(rf"^(?:recap|summari[sz]e|what happened in|what was decided in|"
+                     rf"what were the action items (?:from|in|of)|action items (?:from|of))\s+(?:my\s+|the\s+)?"
+                     rf"(?P<when>last|latest|previous|yesterday's|today's)?\s*{meeting}"
+                     rf"(?:\s+(?:about|on|with|called|named)\s+(?P<about>.+))?$", t)
+        if m:
+            target = self._grp(m, "about", t, o) if m.group("about") else ("last" if m.group("when") else "")
+            return self._act(t, "meeting_recap", target)
+        if t in {"what are my action items", "what were my action items", "my action items"}:
+            return self._act(t, "meeting_recap", "last")
+
+        # ---------------- v4.3: accessibility mode ----------------
+        if re.match(r"^(?:turn on|enable|start|switch on|activate)\s+(?:the\s+)?(?:accessibility|screen reader)(?:\s+mode)?$", t) or \
+                t in {"accessibility mode", "accessibility mode on", "screen reader mode", "screen reader on",
+                      "i can't see the screen", "i cannot see the screen", "i can't see my screen", "i cannot see my screen"}:
+            return self._act(t, "accessibility_mode", "on")
+        if re.match(r"^(?:turn off|disable|stop|switch off|exit|deactivate)\s+(?:the\s+)?(?:accessibility|screen reader)(?:\s+mode)?$", t) or \
+                t in {"accessibility mode off", "screen reader off"}:
+            return self._act(t, "accessibility_mode", "off")
+        if t in {"what's on my screen", "what is on my screen", "what's on the screen", "what is on the screen",
+                 "describe my screen", "describe the screen", "describe this screen", "describe what's on my screen",
+                 "describe what's on the screen", "describe what is on my screen", "what am i looking at",
+                 "what do you see on my screen", "what can you see on my screen", "tell me what's on my screen",
+                 "what is this screen", "what's this screen"}:
+            return self._act(t, "describe_screen", "")
+        if t in {"where is the focus", "where's the focus", "what has focus", "what's focused", "what is focused",
+                 "what is selected", "what's selected"} or (t == "where am i" and self._a11y_on()):
+            return self._act(t, "where_am_i", "")
+        if t in {"read this", "read that", "read it", "read the selection", "read selection", "read selected text",
+                 "read the selected text", "read what i selected", "read what's selected", "read this aloud",
+                 "read it aloud", "read this out loud", "read it out loud", "read that out loud"}:
+            return self._act(t, "read_this", "")
+        m = re.match(rf"^(?:(?:go|move|jump)\s+to\s+(?:the\s+)?|read\s+(?:the\s+)?)?(?P<d>next|previous|prev|first|last)\s+"
+                     rf"(?P<k>{self._NAV_KINDS})s?$", t)
+        if m and (m.group("k") not in ("tab", "item", "image") or self._a11y_on()):
+            direction = {"prev": "previous"}.get(m.group("d"), m.group("d"))
+            return self._act(t, "navigate_screen", f"{direction} {m.group('k')}")
+        if t in {"activate", "activate it", "activate this", "activate that", "activate element"} or \
+                (t in {"press it", "click it", "open it"} and self._a11y_on()):
+            return self._act(t, "activate_element", "")
+        rate = self._speech_rate_target(t)
+        if rate is not None:
+            return self._act(t, "speech_rate", rate)
+        tool = self._windows_tool(t)
+        if tool is not None:
+            return self._act(t, "windows_accessibility", tool)
+
+        # ---------------- v4.3: focus & study coach ----------------
+        if re.match(r"^(?:track|start tracking|turn on|enable|start)\s+(?:my\s+)?(?:screen\s*time|app usage)(?:\s+tracking)?$", t) or \
+                re.match(r"^screen\s*time(?:\s+tracking)?\s+on$", t):
+            return self._act(t, "screen_time_tracking", "on")
+        if re.match(r"^(?:stop tracking|turn off|disable|stop)\s+(?:my\s+)?(?:screen\s*time|app usage)(?:\s+tracking)?$", t) or \
+                re.match(r"^screen\s*time(?:\s+tracking)?\s+off$", t) or t in {"stop tracking me", "don't track my screen time"}:
+            return self._act(t, "screen_time_tracking", "off")
+        if re.match(r"^(?:delete|clear|erase|forget|wipe|reset)\s+(?:all\s+)?(?:my\s+)?(?:screen\s*time|focus|app usage)"
+                    r"(?:\s+(?:data|history|stats|records))?$", t):
+            return self._act(t, "screen_time_forget", "")
+        eyes = r"(?:eye[\s-]?breaks?(?:\s+reminders?)?|eye[\s-]?break reminders?|20[\s-]20[\s-]20(?:\s+rule)?(?:\s+reminders?)?)"
+        m = re.match(r"^remind me to (?:rest|relax|break) my eyes(?:\s+every\s+(?P<n>\d+)\s*(?:minutes?|mins?))?$", t)
+        if m or re.match(rf"^(?:turn on|enable|start)\s+(?:the\s+)?{eyes}$", t) or re.match(rf"^{eyes}\s+on$", t):
+            return self._act(t, "eye_breaks", (m.group("n") if m and m.group("n") else "on"))
+        if re.match(rf"^(?:turn off|disable|stop)\s+(?:the\s+)?{eyes}$", t) or re.match(rf"^{eyes}\s+off$", t) or \
+                t == "stop reminding me to rest my eyes":
+            return self._act(t, "eye_breaks", "off")
+        fw = r"(?:focus(?:ing)?|study(?:ing)?|deep\s*work|pomodoro)"
+        m = re.match(rf"^(?:start|begin|let'?s\s+(?:do|start)|turn\s+on|enable)\s+(?P<rest>(?!.*\bassist\b).*\b{fw}\b.*)$", t)
+        if m:
+            return self._act(t, "focus_start", self._grp(m, "rest", t, o))
+        m = re.match(r"^focus\s+(?P<rest>(?:on\s+.+?\s+)?for\s+(?:\d|an?\b|half\b|one\b|two\b|three\b).*)$", t)
+        if m:
+            return self._act(t, "focus_start", self._grp(m, "rest", t, o))
+        if t in {"help me focus", "i need to focus", "i want to focus", "focus mode", "focus mode on", "pomodoro",
+                 "let's focus", "time to focus", "time to study", "let's study"}:
+            return self._act(t, "focus_start", "")
+        if t in {"stop focus", "stop focusing", "stop the focus session", "stop focus session", "end focus session",
+                 "end the focus session", "end focus", "end focus mode", "stop focus mode", "turn off focus mode",
+                 "cancel focus session", "cancel the focus session", "stop studying", "end the study session",
+                 "end study session", "stop study session", "stop the study session", "stop pomodoro", "end pomodoro",
+                 "i'm done studying", "i am done studying", "done studying", "focus mode off"}:
+            return self._act(t, "focus_stop", "")
+        if t in {"focus status", "how's my focus", "how is my focus", "how's my focus session", "how is my focus session",
+                 "how is my focus session going", "how's my focus session going", "how much focus time is left",
+                 "how much time is left in my focus session", "how long is left in my focus session",
+                 "time left in my focus session", "time left in focus session"}:
+            return self._act(t, "focus_status", "")
+        m = re.match(r"^(?:what(?:'s| is)|show|show me|tell me|check|give me)\s+(?:my\s+)?screen\s*time(?P<rest>.*)$", t) or \
+            re.match(r"^(?:how much|how long)\s+(?:is\s+)?(?:my\s+)?screen\s*time(?P<rest>.*)$", t) or \
+            re.match(r"^screen\s*time(?P<rest>.*)$", t) or \
+            re.match(r"^how (?:much time|long) (?:did|have) i (?:spend|spent|been|wasted?|waste)\s+(?:on|in|using)\s+(?P<rest>.+)$", t) or \
+            re.match(r"^how (?:much time|long) (?:was|have) i (?:been\s+)?(?:on|using)\s+(?P<rest>.+)$", t) or \
+            re.match(r"^how much time did i waste(?P<rest>.*)$", t) or \
+            re.match(r"^how productive (?:was i|have i been)(?P<rest>.*)$", t)
+        if m:
+            return self._act(t, "screen_time", m.group("rest").strip() or "today")
+        return None
+
+    @staticmethod
+    def _speech_rate_target(t: str) -> str | None:
+        m = re.match(r"^(?:speak|talk|read)\s+(?:a\s+(?:bit|little)\s+)?(?P<d>faster|quicker|slower|more slowly|slowly|"
+                     r"normally|at normal speed|at (?:the\s+)?normal (?:speed|rate|pace))$", t)
+        if m:
+            d = m.group("d")
+            return "faster" if d in ("faster", "quicker") else ("normal" if "normal" in d else "slower")
+        m = re.match(r"^(?:speak|talk)\s+(?P<n>\d+)\s*(?:%|percent)\s+(?P<d>faster|quicker|slower)$", t)
+        if m:
+            return m.group("n") if m.group("d") != "slower" else f"-{m.group('n')}"
+        m = re.match(r"^(?:set|change)\s+(?:your\s+|the\s+)?(?:speech|speaking|voice|talking)\s+(?:rate|speed)\s+to\s+(?P<v>.+)$", t)
+        if m:
+            v = m.group("v").strip()
+            n = re.search(r"-?\d+", v)
+            return n.group() if n else ("normal" if "normal" in v else v)
+        if t in {"you're speaking too fast", "you are speaking too fast", "you're talking too fast", "you speak too fast",
+                 "you talk too fast"}:
+            return "slower"
+        if t in {"you're speaking too slowly", "you are speaking too slowly", "you speak too slowly", "you're too slow"}:
+            return "faster"
+        return None
+
+    def _windows_tool(self, t: str) -> str | None:
+        table = {
+            "magnifier_on": {"turn on magnifier", "turn on the magnifier", "open magnifier", "open the magnifier",
+                             "start magnifier", "start the magnifier", "magnifier on", "enable magnifier",
+                             "magnify the screen", "magnify my screen"},
+            "zoom_in": {"zoom in the screen", "zoom into the screen", "magnifier zoom in", "zoom in on the screen"},
+            "zoom_out": {"zoom out the screen", "magnifier zoom out", "zoom out on the screen"},
+            "magnifier_off": {"turn off magnifier", "turn off the magnifier", "close magnifier", "close the magnifier",
+                              "magnifier off", "stop magnifier", "exit magnifier", "disable magnifier"},
+            "color_filter": {"invert colors", "invert the colors", "invert screen colors", "invert colours",
+                             "turn on color filter", "turn on color filters", "turn off color filter",
+                             "turn off color filters", "toggle color filter", "toggle color filters", "color filter",
+                             "colour filter", "turn on colour filter", "turn off colour filter"},
+            "contrast": {"turn on high contrast", "turn off high contrast", "toggle high contrast", "high contrast mode",
+                         "high contrast", "turn on contrast theme", "turn off contrast theme", "toggle contrast"},
+            "narrator": {"turn on narrator", "start narrator", "open narrator", "turn off narrator", "stop narrator",
+                         "toggle narrator", "turn on windows narrator", "turn off windows narrator"},
+        }
+        for tool, phrases in table.items():
+            if t in phrases:
+                return tool
+        if t in {"zoom in", "zoom out"} and self._a11y_on():
+            return "zoom_in" if t == "zoom in" else "zoom_out"
         return None
 
     def _web_on(self) -> bool:

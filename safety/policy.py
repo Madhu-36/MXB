@@ -97,6 +97,8 @@ class SafetyPolicy:
             return "Download and install the new MXB version now? MXB will restart."
         if action == "vault_get":
             return f"Reveal the secret '{target}' out loud and on screen?"
+        if action == "screen_time_forget":
+            return "Delete all your saved screen-time and focus-session history? This can't be undone."
         if action.startswith("mcp__"):
             parts = action.split("__", 2)
             server, tool = (parts[1], parts[2]) if len(parts) == 3 else ("MCP", action)

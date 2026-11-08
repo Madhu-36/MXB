@@ -64,6 +64,7 @@ hiddenimports += [
     "comtypes.client", "comtypes.stream",
     "send2trash", "miniaudio", "qrcode.image.pil", "pypdf", "docx",
     "sounddevice", "onnxruntime",
+    "zxingcpp", "pyaudiowpatch",   # v4.3: QR decoding, meeting loopback audio (imported lazily)
 ]
 
 excludes = [

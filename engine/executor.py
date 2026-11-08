@@ -49,6 +49,16 @@ def _split_target(target, parts: int = 2) -> list[str]:
         pieces.append("")
     return pieces
 
+
+V43_ACTIONS = frozenset({
+    "meeting_start", "meeting_stop", "meeting_status", "meeting_list", "meeting_recap",
+    "accessibility_mode", "describe_screen", "where_am_i", "read_this", "navigate_screen", "activate_element",
+    "speech_rate", "windows_accessibility",
+    "focus_start", "focus_stop", "focus_status", "screen_time", "screen_time_tracking", "eye_breaks",
+    "screen_time_forget",
+})
+
+
 class OSExecutionManager:
     """
     Unified OS Execution Manager for MXB.
@@ -90,6 +100,10 @@ class OSExecutionManager:
         self._web = None
         self._grounder = None
         self._mcp = None
+        self._shield = None
+        self._meetings = None
+        self._access = None
+        self._coach = None
         self.extension_handlers: dict = {}   # dynamic actions (MCP tools): name -> fn(target) -> str
         self.marks: dict = {}
         self.ui_hooks: dict = {}          # "show_marks", "hide_marks", "show_qr" -> thread-safe callables
@@ -97,6 +111,8 @@ class OSExecutionManager:
         self.command_runner = None        # fn(text) -> str: run a full natural-language command
         self.announce = None              # fn(text): tell the user something later (background jobs)
         self.speak = lambda text: None
+        self.interrupt_speech = lambda: None   # set by CommandBus: cut off what MXB is saying
+        self.speech_rate = None           # set by CommandBus: fn(percent | None) -> current percent
 
     @staticmethod
     def _load_config() -> dict:
@@ -263,15 +279,213 @@ class OSExecutionManager:
         except Exception:
             return False
 
+    # ------------------------------------------------------------------ scam shield
+    @property
+    def shield(self):
+        if self._shield is None:
+            from engine.scam_shield import ScamShield
+            from engine.indic import IndicBridge, script_language
+            bridge = IndicBridge(self.config, llm_getter=lambda: self.llm)
+            self._shield = ScamShield(self.config, llm_getter=lambda: self.llm,
+                                      translator=lambda text: bridge.to_english(text, script_language(text) or "hi"))
+        return self._shield
+
+    def _scam_link_warning(self, target: str) -> str | None:
+        from engine.scam_shield import check_url, find_urls
+        if self.config.get("scam_shield", {}).get("check_links", True) is False:
+            return None
+        urls = find_urls(target) or ([target] if "." in target and " " not in target.strip() else [])
+        for url in urls:
+            info = check_url(url)
+            if info["score"] >= 60:
+                why = info["reasons"][0] if info["reasons"] else "it has several warning signs"
+                return f"Careful: that link looks like a scam. {why} Open it anyway?"
+        return None
+
+    def _text_to_check(self) -> tuple[str, str]:
+        """What 'is this a scam?' refers to: the clipboard, else MXB's browser page, else the active window."""
+        try:
+            import pyperclip
+            clip = (pyperclip.paste() or "").strip()
+            if clip:
+                return clip, "what you copied"
+        except Exception:
+            pass
+        if self.web_active():
+            page = self.web.handle("web_read", "")
+            if page and not page.startswith(("Browser error", "The page has no")):
+                return page, "this web page"
+        return (self.screen.read_active_window_text() or "").strip(), "the active window"
+
+    def scam_check(self, target: str) -> str:
+        from engine.scam_shield import find_urls
+        text, where = (target.strip(), "that") if target.strip() else self._text_to_check()
+        if not text:
+            return "Copy the message (or open it on screen) and ask me again: 'is this a scam?'"
+        urls = find_urls(text)
+        if len(urls) == 1 and urls[0].strip() == text.strip():
+            verdict = self.shield.check_link(text)
+        else:
+            if self.feedback_callback:
+                self.feedback_callback(f"Checking {where} for scam signs...")
+            verdict = self.shield.check_text(text)
+        return verdict.summary()
+
+    def scam_check_qr(self, target: str) -> str:
+        img = None
+        if target.strip():
+            try:
+                from PIL import Image
+                img = Image.open(target.strip().strip('"'))
+            except Exception as e:
+                return f"I couldn't open that image: {e}"
+        else:
+            img = self.screen.capture_screen_image()
+        if img is None:
+            return "I couldn't get an image to look for QR codes."
+        verdict = self.shield.check_qr_image(img)
+        if verdict is None:
+            return "I don't see a QR code. Show it on screen (or give me the image file) and ask again."
+        return verdict.summary()
+
+    def scam_report(self, target: str) -> str:
+        """Saves evidence and opens the right official portal (India)."""
+        import webbrowser
+        lost = bool(re.search(r"\b(lost|paid|sent|debited|transferred|money gone|cheated)\b", target.lower()))
+        folder = Path.home() / "Documents" / "MXB Scam Reports" / time.strftime("%Y-%m-%d_%H%M%S")
+        saved = ""
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            shield = self.shield
+            lines = [f"Saved by MXB on {time.strftime('%Y-%m-%d %H:%M')}", "", "MESSAGE:", shield.last_text or "(none checked yet)"]
+            if shield.last_verdict is not None:
+                lines += ["", "MXB CHECK:", shield.last_verdict.summary()]
+            (folder / "message.txt").write_text("\n".join(lines), encoding="utf-8")
+            img = self.screen.capture_screen_image()
+            if img is not None:
+                img.save(str(folder / "screenshot.png"), "PNG")
+            saved = f" I saved the message and a screenshot in Documents/MXB Scam Reports/{folder.name}."
+        except Exception as e:
+            log.warning(f"OSExecution: couldn't save scam evidence: {e}")
+        region = self.config.get("scam_shield", {}).get("region", "IN").upper()
+        if region != "IN":
+            return "Report it to your bank right away and to your country's cybercrime service." + saved
+        if lost:
+            webbrowser.open("https://cybercrime.gov.in")
+            return ("Call 1930 right now: the sooner you call, the better the chance your money can be frozen. "
+                    "I opened cybercrime.gov.in so you can file the complaint." + saved)
+        webbrowser.open("https://sancharsaathi.gov.in/sfc/")
+        return ("I opened Chakshu on Sanchar Saathi so you can report the sender. If you have lost money, "
+                "call 1930 instead and file at cybercrime.gov.in." + saved)
+
     def web_active(self) -> bool:
         return self._web is not None and self._web.active
 
+    # ------------------------------------------------------------------ v4.3: meetings, accessibility, focus
+    @property
+    def meetings(self):
+        if self._meetings is None:
+            from engine.meetings import MeetingCopilot
+            self._meetings = MeetingCopilot(self.config, transcriber=self.services.get("transcribe"),
+                                            llm_getter=lambda: self.llm,
+                                            indexer=lambda folder: self.knowledge.index_folder(folder))
+        return self._meetings
+
+    @property
+    def access(self):
+        if self._access is None:
+            from engine.accessibility import AccessibilityMode
+            self._access = AccessibilityMode(self, speak=self._speak_now, config=self.config)
+        return self._access
+
+    @property
+    def coach(self):
+        if self._coach is None:
+            from engine.focus_coach import ActivityStore, FocusCoach
+            self._coach = FocusCoach(self.config, announce=self._announce, store=ActivityStore(),
+                                     save_setting=lambda key, value: self.save_setting("focus", key, value),
+                                     meeting_active=lambda: self._meetings is not None and self._meetings.active)
+        return self._coach
+
+    def _speak_now(self, text: str):
+        """Focus changes must be heard at once: cut off the previous sentence, then speak."""
+        try:
+            self.interrupt_speech()
+        except Exception:
+            pass
+        self.speak(text)
+
+    def save_setting(self, section: str, key: str, value):
+        """Changes one setting now and in the saved config (so it survives a restart)."""
+        self.config.setdefault(section, {})[key] = value
+        try:
+            from utils.paths import load_config, save_config
+            saved = load_config() or {}
+            saved.setdefault(section, {})[key] = value
+            save_config(saved)
+        except Exception as e:
+            log.warning(f"OSExecution: couldn't save {section}.{key}: {e}")
+
+    def v43_action(self, action: str, target: str) -> str:
+        t = (target or "").strip()
+        on = t.lower() not in {"off", "stop", "disable", "disabled", "false", "no"}
+        if action == "meeting_start":
+            return self.meetings.start(t)
+        if action == "meeting_stop":
+            return self.meetings.stop()
+        if action == "meeting_status":
+            return self.meetings.status(t)
+        if action == "meeting_list":
+            return self.meetings.list_meetings()
+        if action == "meeting_recap":
+            if not t and self.meetings.active:          # "summarize the meeting" during the meeting
+                return self.meetings.status("so far")
+            return self.meetings.recap(t)
+        if action == "accessibility_mode":
+            return self.access.enable() if on else self.access.disable()
+        if action == "describe_screen":
+            if self.feedback_callback:
+                self.feedback_callback("Looking at the screen...")
+            return self.access.describe_screen()
+        if action == "where_am_i":
+            return self.access.where_am_i()
+        if action == "read_this":
+            return self.access.read_this()
+        if action == "navigate_screen":
+            return self.access.navigate(t)
+        if action == "activate_element":
+            return self.access.activate()
+        if action == "speech_rate":
+            return self.access.set_rate(t)
+        if action == "windows_accessibility":
+            return self.access.windows_tool(t or "magnifier")
+        if action == "focus_start":
+            return self.coach.start_session(t)
+        if action == "focus_stop":
+            return self.coach.stop_session()
+        if action == "focus_status":
+            return self.coach.status()
+        if action == "screen_time":
+            return self.coach.report(t or "today")
+        if action == "screen_time_tracking":
+            return self.coach.set_tracking(on)
+        if action == "eye_breaks":
+            return self.coach.set_eye_breaks(t or "on")
+        if action == "screen_time_forget":
+            return self.coach.forget_data()
+        return f"Unknown action '{action}'."
+
     def shutdown(self):
-        """Closes MXB's browser and MCP servers (called when MXB exits)."""
-        for obj in (self._web, self._mcp):
+        """Closes MXB's browser and MCP servers, saves meeting notes and focus data (called when MXB exits)."""
+        if self._meetings is not None and self._meetings.active:
+            try:
+                log.info("OSExecution: " + self._meetings.stop(summarize_notes=False, timeout=10))
+            except Exception as e:
+                log.warning(f"OSExecution: couldn't finish the meeting notes: {e}")
+        for obj, method in ((self._access, "stop"), (self._coach, "shutdown"), (self._web, "close"), (self._mcp, "close")):
             if obj is not None:
                 try:
-                    obj.close()
+                    getattr(obj, method)()
                 except Exception as e:
                     log.warning(f"OSExecution: shutdown of {type(obj).__name__} failed: {e}")
 
@@ -337,6 +551,13 @@ class OSExecutionManager:
             if verdict == "confirm" and not self._confirm(why):
                 self._audit(action, target, why, "cancelled", scope.flags)
                 return f"Cancelled — {why}"
+
+        # Scam shield: a link that looks like a scam needs a yes, whoever asked to open it.
+        if action in ("open_url", "web_open", "web_new_tab") and str(target or "").strip():
+            warning = self._scam_link_warning(str(target))
+            if warning and not self._confirm(warning):
+                self._audit(action, target, warning, "cancelled")
+                return "Cancelled — I didn't open that link because it looks like a scam."
 
         # Safety gate: destructive / privacy-sensitive actions need an explicit "yes".
         reason = self.policy.confirmation_reason(action, target, self._risk_context(action, target))
@@ -960,6 +1181,18 @@ class OSExecutionManager:
 
             elif action in ("click_visual", "double_click_visual", "type_visual", "locate_visual"):
                 return self.visual_action(action, str(target or ""))
+
+            elif action == "scam_check":
+                return self.scam_check(str(target or ""))
+
+            elif action == "scam_check_qr":
+                return self.scam_check_qr(str(target or ""))
+
+            elif action == "scam_report":
+                return self.scam_report(str(target or ""))
+
+            elif action in V43_ACTIONS:
+                return self.v43_action(action, str(target or ""))
 
             elif action == "set_language":
                 return self.set_language(str(target or ""))

@@ -116,5 +116,28 @@
     "coord_mode": "auto",
     "zoom_refine": "auto",
     "max_image_width": 1280
+  },
+  "scam_shield": {
+    "region": "IN",
+    "check_links": true,
+    "watch_clipboard": true,
+    "ai_second_opinion": true
+  },
+  "meetings": {
+    "folder": "",
+    "capture_system_audio": true
+  },
+  "accessibility": {
+    "describe_with_vision": true,
+    "move_mouse": true
+  },
+  "focus": {
+    "default_minutes": 25,
+    "track_activity": false,
+    "eye_break_minutes": 0,
+    "offer_meeting_notes": true,
+    "idle_after_seconds": 120,
+    "productive": [],
+    "distracting": []
   }
 }

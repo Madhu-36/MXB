@@ -277,6 +277,22 @@ class UIAutomation:
             return None
 
     # ------------------------------------------------------------------ queries
+    def focused(self) -> UIElement | None:
+        """The element with keyboard focus: one UIA call, no tree walk (fast enough to poll)."""
+        if not self.available():
+            return None
+        self._ensure_com()
+        try:
+            from pywinauto.uia_defines import IUIA
+            from pywinauto.uia_element_info import UIAElementInfo
+            el = self._to_element(UIAElementInfo(IUIA().iuia.GetFocusedElement()), 0)
+            if el is not None:
+                el.has_focus = True
+            return el
+        except Exception as e:
+            log.debug(f"UIAutomation: focused element unavailable: {e}")
+            return None
+
     def find_search_box(self, hint: str = "") -> UIElement | None:
         elements, top = self.collect()
         return pick_search_box(elements, hint, top)

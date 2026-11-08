@@ -179,6 +179,37 @@ CATALOG: tuple[ActionSpec, ...] = (
     ActionSpec("type_visual", '"description of the field :: text"', "Find a field by looking, click it and type", "screen", uses_input=True),
     ActionSpec("locate_visual", "what to find", "Say where something is on screen without clicking it", "screen"),
 
+    # ---------------- v4.3: scam shield ----------------
+    ActionSpec("scam_check", 'message text or link, or "" for what you copied / the page on screen', "Check a message, link or page for scam signs and say what to do", "safety"),
+    ActionSpec("scam_check_qr", 'image path or "" for the screen', "Read a QR code and explain what it really does (UPI QR codes always PAY)", "safety"),
+    ActionSpec("scam_report", '"lost money" or ""', "Save scam evidence and open the right official reporting site", "safety"),
+
+    # ---------------- v4.3: meeting copilot ----------------
+    ActionSpec("meeting_start", 'meeting title or ""', "Start live notes for a call or lecture (records speakers and mic, writes a transcript)", "meetings"),
+    ActionSpec("meeting_stop", '""', "Stop meeting notes and write the summary, decisions and action items", "meetings"),
+    ActionSpec("meeting_status", '"what did they just say" or "summary so far"', "Catch up during a meeting", "meetings"),
+    ActionSpec("meeting_list", '""', "List saved meeting notes", "meetings"),
+    ActionSpec("meeting_recap", 'meeting title, "last" or ""', "Read back the summary and action items of a past meeting", "meetings"),
+
+    # ---------------- v4.3: accessibility mode (blind & low-vision users) ----------------
+    ActionSpec("accessibility_mode", '"on" or "off"', "Speak whatever gets keyboard focus, like a screen reader", "accessibility"),
+    ActionSpec("describe_screen", '""', "Describe what's on the screen for someone who can't see it", "accessibility"),
+    ActionSpec("where_am_i", '""', "Say which window and element have focus", "accessibility"),
+    ActionSpec("read_this", '""', "Read the selected text aloud, else the focused element", "accessibility", uses_input=True),
+    ActionSpec("navigate_screen", '"next button", "previous link", "first field", "next item"...', "Move a reading cursor over the window's elements without pressing anything", "accessibility", uses_input=True),
+    ActionSpec("activate_element", '""', "Click the element the reading cursor is on", "accessibility", uses_input=True),
+    ActionSpec("speech_rate", '"faster", "slower", "normal" or a percent like "40"', "Change how fast MXB speaks", "accessibility"),
+    ActionSpec("windows_accessibility", '"magnifier", "zoom in", "zoom out", "magnifier off", "color filter", "contrast", "narrator"', "Use Windows' built-in vision tools", "accessibility", uses_input=True),
+
+    # ---------------- v4.3: focus & study coach ----------------
+    ActionSpec("focus_start", '"50 minutes for DSA practice", "strict 1 hour on notes, allow YouTube" or ""', "Start a focus session: nudges when you drift to distractions, summary at the end", "focus"),
+    ActionSpec("focus_stop", '""', "End the focus session early and hear how it went", "focus"),
+    ActionSpec("focus_status", '""', "Time left and focus so far in this session", "focus"),
+    ActionSpec("screen_time", '"today", "yesterday", "this week" or an app/site like "youtube"', "Report screen time by app and site (stored only on this PC)", "focus"),
+    ActionSpec("screen_time_tracking", '"on" or "off"', "Start or stop recording screen time (app and site names only)", "focus"),
+    ActionSpec("eye_breaks", '"on", "off" or minutes like "30"', "20-20-20 eye-break reminders during long screen time", "focus"),
+    ActionSpec("screen_time_forget", '""', "Delete all saved screen-time and focus-session data", "focus", risk="confirm"),
+
     # ---------------- v4.2: MCP tools & language ----------------
     ActionSpec("mcp_tools", '""', "List connected MCP servers and their tools", "mcp"),
     ActionSpec("mcp_reload", '""', "Reconnect to the MCP servers in config", "mcp"),

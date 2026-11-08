@@ -60,6 +60,8 @@ class KeyboardExtended:
         "media_play_pause": 0xB3,
         "print_screen": 0x2C,
         "prtsc": 0x2C,
+        "plus": 0xBB, "equals": 0xBB, "oem_plus": 0xBB,   # Win+Plus: Magnifier / zoom in
+        "minus": 0xBD, "oem_minus": 0xBD,
     }
 
     KEYEVENTF_KEYUP = 0x0002

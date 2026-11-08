@@ -1,3 +1,36 @@
+## v4.3.0 — Real-world problems
+**Scam shield** (`engine/scam_shield.py`)
+- "is this a scam?" for copied messages, links, MXB's browser page, the active window and QR codes. Offline weighted rules for the fraud patterns in Indian bank, NPCI and DoT advisories: OTP/PIN requests (including "enter PIN to receive"), remote-access apps, digital arrest and fake police/customs/courier calls, KYC and account-block threats, prize, refund, task-job and investment traps, pay-first fees, secrecy pressure, fake support numbers, family impersonation. Negation-aware ("do not share your OTP" is a genuine bank line), with multi-signal combos.
+- Link analysis: look-alike brands vs official domains (`*.bank.in`, `*.gov.in` aware), shorteners, risky TLDs, punycode, raw IPs. UPI deep links and QR codes (zxing-cpp) decoded to show who they pay and how much; a UPI link that talks about *receiving* money scores as a scam.
+- Optional AI second opinion that can only raise the risk; the message is fenced as untrusted.
+- Clipboard guard: a spoken warning when you copy a high-risk message (offline only, nothing leaves the PC). Opening a scam-looking link asks first, whoever asked to open it.
+- "report this scam" saves the message and a screenshot and opens Chakshu; "I got scammed" says call 1930 and opens cybercrime.gov.in.
+
+**Meeting copilot** (`engine/meetings.py`)
+- Live notes for any call or lecture: speakers (WASAPI loopback via PyAudioWPatch) and mic as separate streams, labelled Others / You, with echo suppression when there's no headset.
+- Energy VAD segmenter, the voice pipeline's Whisper model (or MXB's own), markdown written as it goes to `Documents\MXB Meetings`.
+- "what did they just say", "summarize the meeting so far"; on stop, map-reduce notes (summary, decisions, action items with owner and due date, open questions), indexed for "ask my notes". Consent reminder on every start.
+
+**Accessibility mode** (`engine/accessibility.py`)
+- Focus follower (speaks each newly focused control), screen description by the vision model with an accessibility-tree + OCR fallback, a reading cursor ("next button", "previous link", "first field") that never presses anything until "activate", "read this" with clipboard restore, "what is focused".
+- Speech rate for every voice engine ("speak faster/slower", saved): SAPI rate, edge-tts rate and Piper length scale, applied on the speech thread before the next sentence.
+- Windows' own tools by voice: Magnifier, zoom, color filters, contrast themes, Narrator. Added the missing plus/minus keys to the key map (Win+Plus couldn't be pressed before).
+
+**Focus & study coach** (`engine/focus_coach.py`)
+- Focus sessions with a nudge after 10 s on a distraction (repeats every 2 min), strict mode that minimizes distracting windows, "allow …" whitelists, end-of-session summary and break.
+- Opt-in screen-time tracking: app and site names with seconds per day in `activity.db`, never titles or URLs; idle time and sleep gaps aren't counted, videos and calls are. Reports for today, yesterday, the week or one site.
+- 20-20-20 eye-break reminders (off by default), offer to take notes when a Zoom/Teams/Meet call is in front, "delete my screen time data" (asks first).
+
+**Integration and safety**
+- 23 new catalog actions, router fast paths for all four features, and v4.3 config sections.
+- Recording, tracking and settings actions are always denied to the agent; `scam_check` is allowed and read-only.
+- Executor shutdown finishes running meeting notes and stops the tracker.
+
+**Quality**
+- 81 new tests (5 suites, 368 portable in total).
+- MXB-Bench: 50 tuned v4.3 cases (100% correct). 10 new held-out phrases were written *before* the v4.3 rules and not tuned against: 3 handled fast, 7 handed to the LLM, 0 new misroutes. Held-out coverage is 48.6% on 38 cases (was 56.0% on 28).
+- `verify_all.py` (all mode) now really runs every suite, including v4.2's.
+
 ## v4.2.0 — Web, tools, vision and your language
 **MXB browser (Playwright)**
 - Drives your installed Edge/Chrome with its own persistent profile; 18 `web_*` actions: open, search, numbered elements, click by number or text, fill, press, select, scroll, read, summarize, tabs, wait, screenshot.

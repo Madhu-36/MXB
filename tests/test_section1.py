@@ -45,7 +45,7 @@ class TestVersionAndPaths(TempDirCase):
         self.assertTrue(is_newer("4.10.0", "4.9.9"))       # numeric, not string order
         self.assertFalse(is_newer("4.1.0", "4.1.0"))
         self.assertFalse(is_newer("v4.0.9", "4.1.0"))
-        self.assertEqual(__version__, "4.2.0")
+        self.assertEqual(__version__, "4.3.0")
 
     def test_data_dir_override_and_frozen_location(self):
         with patch.dict(os.environ, {"MXB_DATA_DIR": str(self.tmp / "custom")}):

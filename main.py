@@ -113,6 +113,9 @@ def main():
     bus.reply_ready.connect(lambda text, _src: hud.update_action(text.splitlines()[0] if text else ""))
     bus.confirmation_requested.connect(lambda q: hud.update_action(f"CONFIRM: {q}  (say yes / no)"))
     voice_pipeline.start()
+    # v4.3: meeting notes reuse the speech model the voice pipeline already loaded
+    from engine.meetings import whisper_transcriber
+    bus.executor.services["transcribe"] = whisper_transcriber(lambda: getattr(voice_pipeline, "whisper_model", None))
 
     # 7. Chat window (type to MXB, see replies, Stop / Yes / No buttons)
     chat = ChatWindow(bus, voice_pipeline)

@@ -28,6 +28,37 @@ SVSF_ASYNC = 1
 SVSF_PURGE_BEFORE_SPEAK = 2
 
 
+RATE_MIN, RATE_MAX = -50, 100      # percent slower/faster than normal
+
+
+def clamp_rate(percent) -> int:
+    try:
+        return max(RATE_MIN, min(RATE_MAX, int(round(float(percent)))))
+    except (TypeError, ValueError):
+        return 0
+
+
+def initial_rate(cfg: dict) -> int:
+    """voice.rate_percent if set, else the edge_rate string ("+5%")."""
+    if cfg.get("rate_percent") is not None:
+        return clamp_rate(cfg["rate_percent"])
+    try:
+        return clamp_rate(str(cfg.get("edge_rate", "+0%")).strip().rstrip("%"))
+    except Exception:
+        return 0
+
+
+def sapi_rate(percent: int) -> int:
+    """SAPI Rate runs -10..10, where 10 is 3x normal speed and -10 a third of it."""
+    import math
+    return max(-10, min(10, round(10 * math.log(1 + clamp_rate(percent) / 100) / math.log(3))))
+
+
+def piper_length_scale(percent: int) -> float:
+    """Piper speaks faster with a smaller length scale."""
+    return round(1 / (1 + clamp_rate(percent) / 100), 3)
+
+
 def _load_voice_config() -> dict:
     try:
         from utils.paths import load_config
@@ -60,6 +91,10 @@ class SapiBackend:
                 self.speaker.Voice = v
                 break
         self.speaker.Rate = int(self.cfg.get("sapi_rate", 1))
+
+    def set_rate(self, percent: int):
+        if self.speaker is not None:
+            self.speaker.Rate = sapi_rate(percent)
 
     def speak(self, text: str, interrupt: threading.Event):
         self.speaker.Speak(text, SVSF_ASYNC)
@@ -116,6 +151,9 @@ class EdgeBackend(_PcmBackend):
         self.gender = cfg.get("indic_voice_gender", "female")
         self.devanagari = "mr" if (cfg.get("language") or "").lower() == "mr" else "hi"
 
+    def set_rate(self, percent: int):
+        self.rate = f"{clamp_rate(percent):+d}%"
+
     def synth(self, text: str) -> tuple[np.ndarray, int]:
         import asyncio
         import edge_tts
@@ -148,16 +186,23 @@ class PiperBackend(_PcmBackend):
             raise RuntimeError("voice.piper_model must point to a Piper .onnx voice")
         meta = Path(str(self.model) + ".json")
         self.sample_rate = 22050
+        self.length_scale = None
         try:
             self.sample_rate = int(json.loads(meta.read_text(encoding="utf-8"))["audio"]["sample_rate"])
         except Exception:
             pass
 
+    def set_rate(self, percent: int):
+        self.length_scale = piper_length_scale(percent) if clamp_rate(percent) else None
+
     def synth(self, text: str) -> tuple[np.ndarray, int]:
         kwargs = {"input": text.encode("utf-8"), "capture_output": True, "timeout": 30}
         if hasattr(subprocess, "CREATE_NO_WINDOW"):
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-        proc = subprocess.run([self.exe, "--model", str(self.model), "--output_raw"], **kwargs)
+        cmd = [self.exe, "--model", str(self.model), "--output_raw"]
+        if self.length_scale:
+            cmd += ["--length_scale", str(self.length_scale)]
+        proc = subprocess.run(cmd, **kwargs)
         if proc.returncode != 0 or not proc.stdout:
             raise RuntimeError(f"piper failed: {proc.stderr[:200]!r}")
         return np.frombuffer(proc.stdout, dtype=np.int16), self.sample_rate
@@ -197,6 +242,31 @@ class TTSThread(QThread):
         self._prefetch_pool = ThreadPoolExecutor(max_workers=1)
         self._prefetched: dict[str, object] = {}
         self._edge_for_indic = None   # lazily created for Indian-language sentences when SAPI/Piper is active
+        self._rate = initial_rate(self.cfg)
+        self._rate_explicit = self.cfg.get("rate_percent") is not None   # else SAPI keeps voice.sapi_rate
+        self._rate_dirty = self._rate_explicit
+
+    @property
+    def rate_percent(self) -> int:
+        return self._rate
+
+    def set_rate(self, percent) -> int:
+        """Applied by the TTS thread before the next sentence (SAPI objects belong to that thread)."""
+        self._rate = clamp_rate(percent)
+        self._rate_explicit = True
+        self._rate_dirty = True
+        return self._rate
+
+    def _apply_rate(self):
+        self._rate_dirty = False
+        self._prefetched.clear()                      # audio made at the old speed
+        for backend in (self.backend, self._edge_for_indic or None):
+            fn = getattr(backend, "set_rate", None)
+            if callable(fn):
+                try:
+                    fn(self._rate)
+                except Exception as e:
+                    print(f"[TTS] couldn't change the speaking rate: {e}")
 
     def enqueue(self, text: str):
         if text and text.strip() and self.is_running:
@@ -226,6 +296,7 @@ class TTSThread(QThread):
         print(f"[TTS] {getattr(self.backend, 'name', '?')} failed ({error}); switching to Windows voices.")
         self.backend = SapiBackend(self.cfg)
         self.backend.start()
+        self._rate_dirty = self._rate_dirty or self._rate_explicit
 
     def _synth_future(self, text: str):
         if text not in self._prefetched:
@@ -250,6 +321,7 @@ class TTSThread(QThread):
         if getattr(self, "_edge_for_indic", None) is None:
             try:
                 self._edge_for_indic = EdgeBackend(self.cfg)
+                self._edge_for_indic.set_rate(self._rate)
             except Exception as e:
                 print(f"[TTS] No voice for Indian languages ({e}); showing the reply as text only.")
                 self._edge_for_indic = False
@@ -303,6 +375,8 @@ class TTSThread(QThread):
                 print(f"[MXB Voice] {text}")
                 if self.backend is not None:
                     try:
+                        if self._rate_dirty:
+                            self._apply_rate()
                         self._speak_one(text)
                     except Exception as spk_err:
                         print(f"[TTS Speak Error] {spk_err}")
@@ -361,6 +435,13 @@ class VoiceSynthesizer(QObject):
     def interrupt(self):
         """Cut off current speech immediately ("stop", barge-in, kill switch)."""
         self._thread.interrupt()
+
+    @property
+    def rate_percent(self) -> int:
+        return self._thread.rate_percent
+
+    def set_rate(self, percent) -> int:
+        return self._thread.set_rate(percent)
 
     def stop(self):
         self._thread.stop()

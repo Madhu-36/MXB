@@ -14,3 +14,4 @@ miniaudio>=1.59
 qrcode[pil]>=7.4
 playwright>=1.49
 mcp>=1.23,<3
+zxing-cpp>=2.2

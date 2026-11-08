@@ -32,6 +32,11 @@ PORTABLE_SUITES = [
     "tests.test_v42_mcp",
     "tests.test_v42_grounding",
     "tests.test_v42_indic",
+    "tests.test_v43_scam",
+    "tests.test_v43_meetings",
+    "tests.test_v43_accessibility",
+    "tests.test_v43_focus",
+    "tests.test_v43_integration",
 ]
 
 
@@ -79,6 +84,7 @@ def run_all_verifications(mode: str = "all"):
         "tests.test_v4_automation",
         "tests.test_section1"
     ]
+    test_modules += [m for m in PORTABLE_SUITES if m not in test_modules]   # "all" really means all
     if mode == "portable":
         test_modules = PORTABLE_SUITES
     elif mode == "windows":

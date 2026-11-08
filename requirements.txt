@@ -69,3 +69,8 @@ qrcode[pil]>=7.4
 playwright>=1.49
 # v4.2: MCP client (tools from any Model Context Protocol server)
 mcp>=1.23,<3
+
+# v4.3: scam shield reads QR codes (UPI "scan to receive" traps)
+zxing-cpp>=2.2
+# v4.3: meeting copilot hears the other side of a call (WASAPI loopback of your speakers/headset)
+PyAudioWPatch>=0.2.12; sys_platform == "win32"

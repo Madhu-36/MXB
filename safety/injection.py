@@ -89,11 +89,13 @@ UI_ACTIONS = {
     "web_wait", "web_screenshot",
     # pixel grounding
     "click_visual", "double_click_visual", "type_visual", "locate_visual",
+    # scam shield (read-only: the agent may check a page it's on before acting on it)
+    "scam_check",
 }
 READ_ONLY_OR_PAUSE = {"wait", "scroll", "read_screen", "read_active_window", "list_ui_elements", "show_marks",
                       "hide_marks", "conversation", "weather", "check_battery", "check_system", "pick_color",
                       "web_elements", "web_read", "web_summarize", "web_tabs", "web_wait", "web_screenshot",
-                      "web_scroll", "locate_visual"}
+                      "web_scroll", "locate_visual", "scam_check"}
 TYPING_ACTIONS = {"type_text", "type_into", "type_mark", "search_on_screen", "web_fill", "web_search", "type_visual"}
 NAVIGATION_ACTIONS = {"open_url", "web_open", "web_new_tab"}
 CLICK_ACTIONS = {"click_mark", "click_element", "click_text", "left_click", "double_click", "web_click", "web_select",
@@ -127,6 +129,10 @@ ALWAYS_DENIED = {
     "open_terminal", "open_task_manager", "agent_task", "install_update", "check_updates", "autostart",
     "remember_preference", "forget_memory", "recall_memories", "remember_fact", "index_folder", "lock_pc",
     "audit_log", "undo_last", "mcp_reload", "mcp_tools", "set_language", "web_close",
+    # v4.3: recording, tracking and settings are the user's call, never a web page's
+    "scam_report", "meeting_start", "meeting_stop", "meeting_status", "meeting_list", "meeting_recap",
+    "accessibility_mode", "speech_rate", "windows_accessibility", "focus_start", "focus_stop", "focus_status",
+    "screen_time", "screen_time_tracking", "eye_breaks", "screen_time_forget",
 }
 DANGEROUS_SHORTCUTS = {"win+r", "win+x", "ctrl+shift+esc", "win+i", "ctrl+alt+delete", "ctrl+alt+del", "win+l",
                        "alt+f4+enter"}
