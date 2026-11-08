@@ -315,7 +315,8 @@ class FileOperationsManager:
                 import string
                 drives = [Path(f"{d}:\\") for d in string.ascii_uppercase if Path(f"{d}:\\").exists()]
                 return drives
-            roots = [Path(r) for r in self.access.allowed_roots()]
+            lister = getattr(self.access, "search_roots", None) or self.access.allowed_roots
+            roots = [Path(r) for r in lister()]   # real letter case: normcase'd roots would show "c:\\users\\..."
         else:
             roots = [p for p in self.FOLDER_ALIASES.values()]
         seen, out = set(), []

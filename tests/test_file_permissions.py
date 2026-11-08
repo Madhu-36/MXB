@@ -65,6 +65,23 @@ class TestFileAccessManager(unittest.TestCase):
         self.assertIn("give access", reason)
 
 
+class TestPathCase(unittest.TestCase):
+    """Windows normcase lowercases whole paths. Comparisons may use that; paths shown to the user must not."""
+
+    def test_found_files_keep_their_real_letter_case(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory(prefix="MXB_Case_") as tmp:
+            home = Path(tmp)
+            (home / "Projects").mkdir()
+            target = home / "Projects" / "Old_Draft.txt"
+            target.write_text("x")
+            with mock.patch("os.path.normcase", side_effect=lambda p: p.lower()):   # behave like Windows
+                access = FileAccessManager(store_path=home / "p.json", default_roots=[home], protected_roots=[])
+                found = FileOperationsManager(access=access).find_files("old_draft.txt")
+                self.assertTrue(access.can_read(str(target).upper()))          # matching stays case-insensitive
+            self.assertEqual(found, [str(target)])                             # not "/tmp/mxb_case_x/Projects/..."
+
+
 class TestGuardedFileOps(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

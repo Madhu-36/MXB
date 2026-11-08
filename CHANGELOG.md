@@ -27,9 +27,12 @@
 - Executor shutdown finishes running meeting notes and stops the tracker.
 
 **Quality**
-- 81 new tests (5 suites, 368 portable in total).
+- 82 new tests (5 suites, 369 portable in total).
 - MXB-Bench: 50 tuned v4.3 cases (100% correct). 10 new held-out phrases were written *before* the v4.3 rules and not tuned against: 3 handled fast, 7 handed to the LLM, 0 new misroutes. Held-out coverage is 48.6% on 38 cases (was 56.0% on 28).
-- `verify_all.py` (all mode) now really runs every suite, including v4.2's.
+- `verify_all.py` (all mode) now really runs every suite, including v4.2's. On GitHub Actions each failing test is also printed as an annotation, so it shows on the run page without signing in to read logs.
+
+**Fixes**
+- Windows: a file found by name was shown with a lowercased path (`c:\users\…`) in the delete/move confirmation, because search walked the case-folded permission roots. Search now walks folders in their real letter case; permission checks stay case-insensitive. Caught by the first Windows CI run.
 
 ## v4.2.0 — Web, tools, vision and your language
 **MXB browser (Playwright)**

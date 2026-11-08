@@ -20,9 +20,24 @@ from utils.paths import data_file, load_config
 _ALL_WORDS = {"all", "everything", "full", "*", "all files", "entire disk", "whole computer", "all drives"}
 
 
+def _abs(path) -> str:
+    """Absolute path in the letter case it was given (what users should see)."""
+    return os.path.abspath(os.path.expanduser(str(path).strip().strip('"').strip("'")))
+
+
 def _norm(path) -> str:
-    p = os.path.expanduser(str(path).strip().strip('"').strip("'"))
-    return os.path.normcase(os.path.abspath(p))
+    """For comparisons only: normcase lowercases the whole path on Windows."""
+    return os.path.normcase(_abs(path))
+
+
+def _display(normed: str) -> str:
+    """A stored (lowercased on Windows) path back in its real letter case, when it exists."""
+    if os.name == "nt" and os.path.exists(normed):
+        try:
+            return os.path.realpath(normed)
+        except OSError:
+            pass
+    return normed
 
 
 def _is_under(child: str, parent: str) -> bool:
@@ -69,12 +84,13 @@ class FileAccessManager:
                 self.granted.append(_norm(extra))
 
     # ------------------------------------------------------------------ roots
-    def default_roots(self) -> list[str]:
+    def default_roots(self, display: bool = False) -> list[str]:
+        fix = _abs if display else _norm
         if self._default_roots is not None:
-            return [_norm(p) for p in self._default_roots]
+            return [fix(p) for p in self._default_roots]
         home = Path.home()
         names = ["Desktop", "Documents", "Downloads", "Pictures", "Music", "Videos", "OneDrive"]
-        return [_norm(home / n) for n in names]
+        return [fix(home / n) for n in names]
 
     def protected_roots(self) -> list[str]:
         if self._protected_roots is not None:
@@ -87,6 +103,10 @@ class FileAccessManager:
 
     def allowed_roots(self) -> list[str]:
         return self.default_roots() + list(self.granted)
+
+    def search_roots(self) -> list[str]:
+        """The allowed roots in their real letter case, for walking folders and naming files to the user."""
+        return self.default_roots(display=True) + [_display(g) for g in self.granted]
 
     # ------------------------------------------------------------------ checks
     def can_read(self, path) -> bool:
