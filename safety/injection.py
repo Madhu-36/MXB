@@ -83,9 +83,21 @@ UI_ACTIONS = {
     "list_ui_elements", "show_marks", "hide_marks", "switch_window", "manage_window", "show_desktop", "open_app",
     "open_url", "wait", "conversation", "media_control", "search_web", "weather", "check_battery", "check_system",
     "pick_color", "close_app",
+    # MXB browser
+    "web_open", "web_search", "web_elements", "web_click", "web_fill", "web_press", "web_select", "web_scroll",
+    "web_read", "web_summarize", "web_back", "web_tabs", "web_switch_tab", "web_new_tab", "web_close_tab",
+    "web_wait", "web_screenshot",
+    # pixel grounding
+    "click_visual", "double_click_visual", "type_visual", "locate_visual",
 }
 READ_ONLY_OR_PAUSE = {"wait", "scroll", "read_screen", "read_active_window", "list_ui_elements", "show_marks",
-                      "hide_marks", "conversation", "weather", "check_battery", "check_system", "pick_color"}
+                      "hide_marks", "conversation", "weather", "check_battery", "check_system", "pick_color",
+                      "web_elements", "web_read", "web_summarize", "web_tabs", "web_wait", "web_screenshot",
+                      "web_scroll", "locate_visual"}
+TYPING_ACTIONS = {"type_text", "type_into", "type_mark", "search_on_screen", "web_fill", "web_search", "type_visual"}
+NAVIGATION_ACTIONS = {"open_url", "web_open", "web_new_tab"}
+CLICK_ACTIONS = {"click_mark", "click_element", "click_text", "left_click", "double_click", "web_click", "web_select",
+                 "click_visual", "double_click_visual"}
 
 # Unlocked only when the user's goal itself talks about them.
 CONDITIONAL = [
@@ -114,7 +126,7 @@ ALWAYS_DENIED = {
     "create_routine", "delete_routine", "start_recording", "stop_recording", "schedule_command", "cancel_schedule",
     "open_terminal", "open_task_manager", "agent_task", "install_update", "check_updates", "autostart",
     "remember_preference", "forget_memory", "recall_memories", "remember_fact", "index_folder", "lock_pc",
-    "audit_log", "undo_last",
+    "audit_log", "undo_last", "mcp_reload", "mcp_tools", "set_language", "web_close",
 }
 DANGEROUS_SHORTCUTS = {"win+r", "win+x", "ctrl+shift+esc", "win+i", "ctrl+alt+delete", "ctrl+alt+del", "win+l",
                        "alt+f4+enter"}
@@ -165,20 +177,21 @@ class TaskScope:
         if action == "shortcut" and re.sub(r"\s+", "", target.lower()) in DANGEROUS_SHORTCUTS:
             return "deny", f"The shortcut {target} can run commands or change system settings, so it's blocked in agent mode."
 
-        if action in ("type_text", "type_into", "type_mark", "search_on_screen"):
-            text = target.split("::", 1)[1] if (action != "type_text" and "::" in target) else target
+        if action in TYPING_ACTIONS:
+            whole = action in ("type_text", "web_search")
+            text = target.split("::", 1)[1] if (not whole and "::" in target) else target
             if not derived_from_goal(text, self.goal):
                 return "confirm", f"The agent wants to type text that isn't from your request: \"{text.strip()[:80]}\". Allow it?"
 
-        if action == "open_url":
+        if action in NAVIGATION_ACTIONS and target.strip():
             domain = re.sub(r"^(?:https?://)?(?:www\.)?", "", target.lower()).split("/")[0]
             site = domain.split(".")[0] if domain else ""
             mentioned = domain in self._goal_norm or (len(site) >= 3 and site in self._goal_norm)
             if domain and not mentioned and not target.lower().startswith("file:"):
                 return "confirm", f"The agent wants to open {domain}, which isn't in your request. Allow it?"
 
-        if action in ("click_mark", "click_element", "click_text", "left_click", "double_click"):
-            name = label or (target.split("||", 1)[0] if action != "left_click" else "")
+        if action in CLICK_ACTIONS:
+            name = label or (target.split("||", 1)[0].split("::", 1)[0] if action != "left_click" else "")
             m = RISKY_LABEL.search(name or "")
             if m and m.group(0).lower() not in self._goal_norm:
                 return "confirm", f"The agent wants to click '{name.strip()[:60]}'. That can send, buy, delete or allow something. Allow it?"
@@ -197,7 +210,25 @@ def scope_for_goal(goal: str) -> TaskScope:
             allowed |= actions
     if re.search(r"\b(close|quit|exit)\b", g) is None:
         allowed.discard("close_app")
+    allowed |= mcp_actions_for_goal(g)
     return TaskScope(goal, allowed - ALWAYS_DENIED)
+
+
+def mcp_actions_for_goal(goal_lower: str) -> set[str]:
+    """MCP tools are unlocked only for servers the user's goal names ("using github, ...")."""
+    try:
+        from engine.actions_catalog import action_names
+    except Exception:
+        return set()
+    out = set()
+    for name in action_names():
+        if not name.startswith("mcp__"):
+            continue
+        server = name.split("__")[1]
+        spoken = server.replace("_", " ")
+        if re.search(rf"\b({re.escape(server)}|{re.escape(spoken)})\b", goal_lower):
+            out.add(name)
+    return out
 
 
 # ---------------------------------------------------------------------------

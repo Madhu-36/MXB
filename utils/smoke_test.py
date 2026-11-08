@@ -24,12 +24,14 @@ OWN_MODULES = [
     "safety.policy", "safety.permissions", "safety.injection", "safety.audit", "safety.hotkeys",
     "ui.chat", "ui.hud", "ui.tray", "ui.settings", "ui.setup_wizard", "ui.marks_overlay",
     "utils.updater", "utils.autostart", "utils.paths", "utils.version", "utils.single_instance",
+    "engine.web", "engine.mcp_client", "engine.grounding", "engine.indic",
 ]
 
 THIRD_PARTY = [
     "PySide6.QtWidgets", "numpy", "requests", "psutil", "pyperclip", "rapidfuzz", "thefuzz.fuzz",
     "faster_whisper", "ctranslate2", "onnxruntime", "sounddevice", "edge_tts", "miniaudio", "qrcode",
     "pypdf", "docx", "send2trash", "PIL.Image", "pynput.keyboard", "pynput.mouse", "keyboard",
+    "playwright.sync_api", "mcp", "mcp.client.stdio", "mcp.client.streamable_http",
 ]
 
 WINDOWS_ONLY = [

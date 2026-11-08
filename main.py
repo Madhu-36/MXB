@@ -124,6 +124,13 @@ def main():
     bus.executor.ui_hooks["quit_app"] = tray.quit_requested.emit
     tray.show()
 
+    # 8a. MCP servers from config connect in the background (their tools become MXB actions)
+    from engine.mcp_client import load_server_specs
+    if config.get("mcp", {}).get("enabled", True) and load_server_specs(config):
+        import threading
+        threading.Thread(target=lambda: log.info("MCP: " + bus.executor.mcp.start().replace("\n", " | ")),
+                         name="mcp-start", daemon=True).start()
+
     # 8b. Quiet daily update check: announces in chat only when a newer release exists
     update_cfg = config.get("update", {})
     if update_cfg.get("check_on_start", True):

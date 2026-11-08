@@ -24,6 +24,10 @@ NO_WORDS = {
 
 def classify_answer(text: str) -> bool | None:
     """Returns True for yes, False for no, None if the text isn't a yes/no answer."""
+    from engine.indic import classify_answer as indic_answer
+    indic = indic_answer(text)
+    if indic is not None:
+        return indic
     clean = re.sub(r"[^\w\s']", " ", (text or "").lower())
     clean = re.sub(r"\s+", " ", clean).strip()
     # Drop a leading wake word / filler so "mxb yes" and "yes mxb" both work.
@@ -93,6 +97,11 @@ class SafetyPolicy:
             return "Download and install the new MXB version now? MXB will restart."
         if action == "vault_get":
             return f"Reveal the secret '{target}' out loud and on screen?"
+        if action.startswith("mcp__"):
+            parts = action.split("__", 2)
+            server, tool = (parts[1], parts[2]) if len(parts) == 3 else ("MCP", action)
+            args = target if len(target) <= 160 else target[:157] + "..."
+            return f"Use the {server.replace('_', ' ')} tool '{tool}'" + (f" with {args}" if args and args != '""' else "") + "?"
         return f"Run {action.replace('_', ' ')} on '{target}'?"
 
 

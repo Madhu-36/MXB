@@ -64,3 +64,8 @@ qrcode[pil]>=7.4
 #   openwakeword>=0.6.0        offline audio wake word ("hey jarvis", or a custom trained model)
 #   Piper TTS (offline neural voice): download piper.exe + a voice .onnx and set voice.piper_exe / voice.piper_model
 #   ollama pull nomic-embed-text   private semantic embeddings for memory & document search
+
+# v4.2: MXB browser (uses your installed Edge/Chrome: no browser download needed)
+playwright>=1.49
+# v4.2: MCP client (tools from any Model Context Protocol server)
+mcp>=1.23,<3

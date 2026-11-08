@@ -1,3 +1,26 @@
+## v4.2.0 — Web, tools, vision and your language
+**MXB browser (Playwright)**
+- Drives your installed Edge/Chrome with its own persistent profile; 18 `web_*` actions: open, search, numbered elements, click by number or text, fill, press, select, scroll, read, summarize, tabs, wait, screenshot.
+- Works through the page (CDP), not the OS mouse, on its own thread; new-tab links become the current page; never types into password fields.
+- The agent sees the page's numbered elements and text inside the untrusted fence; injection detection covers web pages.
+
+**MCP client**
+- Official MCP SDK (1.x and 2.x), stdio and Streamable HTTP, Claude-Desktop-compatible config, `${ENV}` expansion, pagination.
+- Each tool becomes an action `mcp__<server>__<tool>` with JSON (or single-value) arguments; confirm-by-default trust model using tool annotations; agent tasks only get servers the goal names; server stderr to `logs/mcp-servers.log`.
+
+**Pixel grounding**
+- `click_visual`, `double_click_visual`, `type_visual`, `locate_visual`; `click_element` falls back to looking.
+- Ollama (`qwen3-vl:4b`), NVIDIA (`qwen/qwen3.5-122b-a10b`) or any OpenAI-compatible server; parses relative-1000, absolute, normalized, percent and UI-TARS outputs; zoom pass on wide screens.
+
+**Indian languages**
+- Kannada, Hindi, Telugu, Tamil, Malayalam, Marathi, Bengali, Gujarati: script and romanized detection, cached LLM translation to English for routing, replies in the user's language (planner instruction + translated results), edge-tts Indian voices (also when SAPI/Piper is the main voice).
+- Sarvam Saaras speech-to-English or multilingual Whisper; instant stop/yes/no and native-script wake word in every language; "speak in kannada" switches and saves the language.
+
+**Fixes**
+- Yes/no in Indian scripts never matched: the words weren't listed, and the cleanup stripped vowel signs.
+- MCP server stderr no longer floods MXB's console; one shared, closed log handle.
+- Catalog test now checks delegated handler tables instead of string presence.
+
 ## v4.1.0 — Made real
 **Install & update**
 - One-click per-user installer (PyInstaller one-folder + Inno Setup, no admin), Start-menu entry, optional desktop icon; upgrades clear stale files; uninstall removes autostart and keeps your data.

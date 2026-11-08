@@ -56,5 +56,28 @@ class CredentialsManager:
         return ""
 
     @staticmethod
+    def get_secret(name: str) -> str | None:
+        """Any key from the environment or MXB's .env files (e.g. SARVAM_API_KEY, GITHUB_TOKEN)."""
+        import os
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+        from utils.paths import data_dir, APP_DIR
+        prefix = f"{name}="
+        for env_file in dict.fromkeys([data_dir() / ".env", APP_DIR / ".env"]):
+            try:
+                if not env_file.exists():
+                    continue
+                for line in env_file.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if line.startswith(prefix):
+                        val = line[len(prefix):].strip().strip('"').strip("'")
+                        if val:
+                            return val
+            except Exception:
+                continue
+        return None
+
+    @staticmethod
     def has_nvidia_api_key() -> bool:
         return bool(CredentialsManager.get_nvidia_api_key())

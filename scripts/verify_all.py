@@ -28,6 +28,10 @@ PORTABLE_SUITES = [
     "tests.test_v4_memory",
     "tests.test_v4_automation",
     "tests.test_section1",
+    "tests.test_v42_web",
+    "tests.test_v42_mcp",
+    "tests.test_v42_grounding",
+    "tests.test_v42_indic",
 ]
 
 

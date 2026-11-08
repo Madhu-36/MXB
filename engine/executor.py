@@ -87,6 +87,10 @@ class OSExecutionManager:
         self._routines = None
         self._recorder = None
         self._skills = None
+        self._web = None
+        self._grounder = None
+        self._mcp = None
+        self.extension_handlers: dict = {}   # dynamic actions (MCP tools): name -> fn(target) -> str
         self.marks: dict = {}
         self.ui_hooks: dict = {}          # "show_marks", "hide_marks", "show_qr" -> thread-safe callables
         self.services: dict = {}          # "scheduler", "remote"
@@ -167,6 +171,109 @@ class OSExecutionManager:
             self._skills.context = SkillContext(executor=self, speak=lambda t: self.speak(t), llm=self.llm,
                                                 memory=None, config=self.config)
         return self._skills
+
+    @property
+    def web(self):
+        if self._web is None:
+            from engine.web import WebController
+            self._web = WebController(self.config)
+            self._web.ask_llm = lambda system, user: (self.llm.chat(system, user, max_tokens=450, json_mode=False)
+                                                      or "I couldn't reach my reasoning engine to summarize the page.")
+        return self._web
+
+    @property
+    def mcp(self):
+        if self._mcp is None:
+            from engine.mcp_client import MCPManager
+            self._mcp = MCPManager(self.config, handlers=self.extension_handlers)
+        return self._mcp
+
+    @property
+    def grounder(self):
+        if self._grounder is None:
+            from engine.grounding import Grounder
+            self._grounder = Grounder(self.config)
+        return self._grounder
+
+    def visual_action(self, action: str, target: str) -> str:
+        """click_visual / double_click_visual / type_visual / locate_visual: find by looking (vision model)."""
+        from engine.grounding import GroundingError, where_on_screen
+        desc, _, text = str(target or "").partition("::") if action == "type_visual" else (str(target or ""), "", "")
+        desc = desc.strip().strip('"\'')
+        img = self.screen.capture_screen_image()
+        if img is None:
+            return "I couldn't take a screenshot to look for it."
+        if self.feedback_callback:
+            self.feedback_callback(f"Looking for '{desc}' on screen...")
+        try:
+            hit = self.grounder.locate(desc, img)
+        except GroundingError as e:
+            return str(e)
+        except Exception as e:
+            return f"Visual search failed: {e}"
+        if hit is None:
+            return f"I looked, but I can't see '{desc}' on the screen."
+        if action == "locate_visual":
+            w, h = img.size
+            return f"'{desc}' is at the {where_on_screen(hit.x, hit.y, w, h)} of the screen ({hit.x}, {hit.y})."
+        if action == "double_click_visual":
+            self.mouse.double_click(hit.x, hit.y)
+        else:
+            self._click_at(hit.x, hit.y)
+        if action == "type_visual":
+            time.sleep(0.2)
+            self.keyboard.type_text(text.strip())
+            return f"Typed into '{desc}'."
+        return f"{'Double-clicked' if action == 'double_click_visual' else 'Clicked'} '{desc}' at {hit.x}, {hit.y}."
+
+    def set_language(self, name: str) -> str:
+        """'speak in kannada' -> MXB listens for and replies in Kannada (saved for next time)."""
+        from engine.indic import LANGUAGES, code_for, set_preferred_language
+        code = code_for(name)
+        if code is None:
+            names = ", ".join(lang.name for lang in LANGUAGES.values())
+            return f"I don't know the language '{name}'. I can use {names}, or 'auto'."
+        set_preferred_language(code)
+        self.config.setdefault("voice", {})["language"] = code
+        try:
+            from utils.paths import load_config, save_config
+            saved = load_config() or {}
+            saved.setdefault("voice", {})["language"] = code
+            save_config(saved)
+        except Exception as e:
+            log.warning(f"OSExecution: couldn't save language: {e}")
+        if code == "auto":
+            return "Okay. I'll reply in whatever language you speak or type."
+        if code == "en":
+            return "Okay, English from now on."
+        lang = LANGUAGES[code]
+        note = ""
+        whisper = str(self.config.get("engine", {}).get("whisper_model", "base.en"))
+        from utils.credentials import CredentialsManager
+        if whisper.endswith(".en") and not CredentialsManager.get_secret("SARVAM_API_KEY"):
+            note = " For speech in that language, restart MXB so I can load the multilingual speech model, or add a SARVAM_API_KEY."
+        return f"Okay, I'll talk to you in {lang.name} ({lang.native}).{note}"
+
+    def _grounding_fallback_on(self) -> bool:
+        setting = self.config.get("grounding", {}).get("fallback", True)
+        if setting is False:
+            return False
+        try:
+            return self.grounder.available()
+        except Exception:
+            return False
+
+    def web_active(self) -> bool:
+        return self._web is not None and self._web.active
+
+    def shutdown(self):
+        """Closes MXB's browser and MCP servers (called when MXB exits)."""
+        for obj in (self._web, self._mcp):
+            if obj is not None:
+                try:
+                    obj.close()
+                except Exception as e:
+                    log.warning(f"OSExecution: shutdown of {type(obj).__name__} failed: {e}")
 
     def set_marks(self, marks: dict):
         self.marks = dict(marks or {})
@@ -261,8 +368,12 @@ class OSExecutionManager:
                 m = re.search(r"\d+", str(target))
                 el = self.marks.get(int(m.group(0))) if m else None
                 return el.label() if el is not None else ""
-            if action in ("click_element", "click_text"):
+            if action in ("click_element", "click_text", "click_visual", "double_click_visual"):
                 return str(target).split("||", 1)[0].strip()
+            if action in ("web_click", "web_select"):
+                return self._web.label_for(target) if self._web is not None else str(target).split("::", 1)[0].strip()
+            if action == "type_visual":
+                return str(target).split("::", 1)[0].strip()
         except Exception:
             pass
         return ""
@@ -847,6 +958,24 @@ class OSExecutionManager:
                 Notifier.show_notification("MXB Executive Brain", str(target))
                 return f"Notification: {target}"
 
+            elif action in ("click_visual", "double_click_visual", "type_visual", "locate_visual"):
+                return self.visual_action(action, str(target or ""))
+
+            elif action == "set_language":
+                return self.set_language(str(target or ""))
+
+            elif action == "mcp_tools":
+                return self.mcp.start() if not self.mcp.started else self.mcp.describe()
+
+            elif action == "mcp_reload":
+                return self.mcp.reload()
+
+            elif action.startswith("web_"):
+                return self.web.handle(action, str(target or ""))
+
+            elif action in self.extension_handlers:
+                return self.extension_handlers[action](str(target or ""))
+
             elif self.skills.has(action):
                 return self.skills.run(action, str(target or ""))
 
@@ -1103,6 +1232,10 @@ class OSExecutionManager:
         if fallback:
             self._click_at(*fallback)
             return f"Clicked the recorded spot for '{name}' at {fallback}."
+        if self._grounding_fallback_on():
+            result = self.visual_action("click_visual", name)
+            if result.startswith("Clicked"):
+                return result + " (found by looking)"
         return f"Could not find '{name}' on screen to click."
 
     def list_ui_elements(self) -> str:

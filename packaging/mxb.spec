@@ -45,6 +45,7 @@ if (ROOT / "llm" / "Modelfile").exists():
 datas += optional(collect_data_files, "faster_whisper")   # Silero VAD .onnx assets
 datas += optional(collect_data_files, "openwakeword")     # optional offline wake-word models
 datas += optional(collect_data_files, "edge_tts")
+datas += optional(collect_data_files, "playwright")       # the Playwright driver (talks to Edge/Chrome)
 
 binaries = []
 binaries += optional(collect_dynamic_libs, "ctranslate2")  # Whisper inference DLLs
@@ -53,7 +54,7 @@ binaries += optional(collect_dynamic_libs, "onnxruntime")
 hiddenimports = []
 for pkg in ("engine", "safety", "utils", "ui"):
     hiddenimports += local_modules(pkg)
-for pkg in ("winrt", "pycaw", "pywinauto", "screen_brightness_control", "edge_tts"):
+for pkg in ("winrt", "pycaw", "pywinauto", "screen_brightness_control", "edge_tts", "mcp", "playwright"):
     hiddenimports += optional(collect_submodules, pkg)
 hiddenimports += [
     # imported dynamically by name, so static analysis can't see them

@@ -23,6 +23,7 @@ import time
 from PySide6.QtCore import QObject, Signal
 from safety.policy import ConfirmationManager
 from engine.wake_word import WakeWordGate
+from engine.indic import IndicBridge, is_stop as indic_is_stop, set_reply_language
 from utils.logger import log
 
 STOP_PHRASES = {
@@ -126,6 +127,8 @@ class CommandBus(QObject):
             self.executor.speak = lambda text: self.tts.speak(text)
         self.scheduler = None
         self.remote = None
+        # Indian languages: commands are translated to English for routing; replies come back translated.
+        self.indic = IndicBridge(self.config, llm_getter=lambda: getattr(self.executor, "llm", None))
 
         listen_cfg = self.config.get("listening", {})
         self.wake = WakeWordGate(
@@ -211,6 +214,9 @@ class CommandBus(QObject):
 
     def shutdown(self):
         self._running = False
+        executor = getattr(self.router, "executor", None)
+        if executor is not None and hasattr(executor, "shutdown"):
+            executor.shutdown()
         if self.scheduler is not None:
             self.scheduler.stop()
         if self.remote is not None:
@@ -230,7 +236,7 @@ class CommandBus(QObject):
         return self._action_busy.is_set()
 
     # ------------------------------------------------------------------ control lane
-    def submit(self, text: str, source: str = "text") -> str:
+    def submit(self, text: str, source: str = "text", lang: str | None = None) -> str:
         """
         Entry point for every user utterance. Returns a short code describing what
         happened ("stopped", "confirmed", "ignored", "queued", ...) for tests/UI.
@@ -240,8 +246,8 @@ class CommandBus(QObject):
             return "empty"
         norm = normalize(text)
 
-        # 1. Emergency stop always wins (no wake word, no queue).
-        if is_stop_command(text):
+        # 1. Emergency stop always wins (no wake word, no queue), in every supported language.
+        if is_stop_command(text) or indic_is_stop(text):
             self.user_message.emit(text, source)
             self.stop_all()
             return "stopped"
@@ -289,7 +295,7 @@ class CommandBus(QObject):
         if self.busy and is_info_query(text):
             lane_queue, lane = self.info_queue, "info"
         try:
-            lane_queue.put_nowait((text, source))
+            lane_queue.put_nowait((text, source, lang))
         except queue.Full:
             self._say("I'm overloaded with queued commands. Say stop to clear them.", source)
             return "full"
@@ -368,11 +374,21 @@ class CommandBus(QObject):
                 continue
             if item is None:
                 break
-            text, source = item
+            text, source, lang_hint = (tuple(item) + (None,))[:3]
+            lang = None
             try:
                 from safety.injection import set_source
                 set_source(source)
                 self.tts.set_thread_speaking(source == "voice" or self.speak_text_replies)
+                lang = self.indic.detect(text, hint=lang_hint)
+                if lang:
+                    english = self.indic.to_english(text, lang)
+                    if english != text:
+                        self.feedback.emit(f"{self.indic.describe(lang)}: \"{english[:80]}\"")
+                    text = english
+                set_reply_language(lang)
+                if hasattr(self.tts, "set_thread_language"):
+                    self.tts.set_thread_language(lang, self.indic.from_english if lang else None)
                 if lane == "action":
                     self._action_busy.set()
                     self.current_task = text
@@ -381,13 +397,19 @@ class CommandBus(QObject):
                 started = time.time()
                 result = self.router.route(text, feedback_callback=self.feedback.emit)
                 log.info(f"CommandBus[{lane}] '{text}' -> {result!r} ({time.time() - started:.2f}s)")
-                self.reply_ready.emit(format_result(result), source)
+                reply = format_result(result)
+                if lang:
+                    reply = self.indic.from_english(reply, lang)
+                self.reply_ready.emit(reply, source)
                 if source == "voice":
                     self.wake.engage()
             except Exception as e:
                 log.error(f"CommandBus[{lane}] error: {e}")
                 self.reply_ready.emit(f"Something went wrong: {e}", source)
             finally:
+                set_reply_language(None)
+                if hasattr(self.tts, "set_thread_language"):
+                    self.tts.set_thread_language(None, None)
                 if lane == "action":
                     self.current_task = ""
                     if q.empty():

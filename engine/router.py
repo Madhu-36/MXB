@@ -769,6 +769,49 @@ class IntentRouter:
         if t in {"don't start with windows", "do not start with windows", "disable autostart", "stop starting with windows"}:
             return self._act(t, "autostart", "off")
 
+        # ---------------- v4.2: MXB browser ----------------
+        browser = r"(?:the\s+)?mxb(?:'s)?\s+browser"
+        m = re.match(rf"^open\s+(?P<u>.+?)\s+in\s+{browser}$", t) or re.match(r"^(?:browse|surf)\s+(?:to\s+)?(?P<u>(?!.*\b(?:folder|files?|documents|downloads|desktop|pictures|drive)\b).+)$", t)
+        if m:
+            return self._act(t, "web_open", m.group("u"), speak_result=True)
+        if re.match(rf"^(?:open|start|launch)\s+{browser}$", t):
+            return self._act(t, "web_open", "about:blank", speak_result=True)
+        if re.match(rf"^(?:close|quit|exit)\s+{browser}$", t):
+            return self._act(t, "web_close", "")
+        m = re.match(r"^(?:web|page)\s+(?P<verb>click|press)\s+(?:on\s+)?(?P<x>.+)$", t)
+        if m:
+            return self._act(t, "web_click" if m.group("verb") == "click" else "web_press", m.group("x"))
+        if self._web_on():
+            if t in {"read this page", "read the page", "read the web page", "read this webpage", "read the webpage",
+                     "read this website", "read the article"}:
+                return self._act(t, "web_read", "", speak_result=True)
+            if t in {"summarize this page", "summarise this page", "summarize the page", "summarise the page",
+                     "what is this page about", "what's this page about", "summarize this article", "tldr"}:
+                return self._act(t, "web_summarize", "", speak_result=True)
+            if re.match(r"^(?:show|list|number)\s+(?:the\s+)?(?:page\s+elements|elements|links|buttons)(?:\s+on\s+(?:the|this)\s+page)?$", t):
+                return self._act(t, "web_elements", "", speak_result=True)
+            if t in {"list tabs", "list the tabs", "show tabs", "show the tabs", "which tabs are open"}:
+                return self._act(t, "web_tabs", "", speak_result=True)
+            if t in {"go back", "back", "previous page"}:
+                return self._act(t, "web_back", "")
+
+        # ---------------- v4.2: MCP, visual grounding, language ----------------
+        if t in {"list mcp tools", "show mcp tools", "mcp tools", "mcp status", "what mcp tools do you have",
+                 "list my tools", "what tools do you have", "show connected tools"}:
+            return self._act(t, "mcp_tools", "", speak_result=True)
+        if t in {"reload mcp", "reconnect mcp", "reload mcp servers", "restart mcp servers", "reconnect mcp servers"}:
+            return self._act(t, "mcp_reload", "", speak_result=True)
+        m = re.match(r"^(?:visually\s+click|click\s+visually(?:\s+on)?|look for and click|find and click)\s+(?:on\s+)?(?:the\s+)?(?P<d>.+)$", t)
+        if m:
+            return self._act(t, "click_visual", m.group("d"))
+        m = re.match(r"^where(?:'s|\s+is)\s+(?:the\s+)?(?P<d>.+?)\s+on\s+(?:the\s+|my\s+)?screen$", t)
+        if m:
+            return self._act(t, "locate_visual", m.group("d"), speak_result=True)
+        m = re.match(r"^(?:speak|talk|reply|answer|respond)(?:\s+to\s+me)?\s+(?:only\s+)?in\s+(?P<lang>[a-z]+)$", t) or \
+            re.match(r"^(?:switch|change|set)\s+(?:your\s+|the\s+)?language\s+to\s+(?P<lang>[a-z]+)$", t)
+        if m:
+            return self._act(t, "set_language", m.group("lang"), speak_result=True)
+
         # ---------------- Phone remote ----------------
         phone = r"(?:phone|mobile)\s+(?:remote|control|access|app)"
         if re.match(rf"^(?:turn on|enable|start|open|switch on)\s+(?:the\s+)?{phone}$", t):
@@ -780,6 +823,13 @@ class IntentRouter:
         if t in {"new phone link", "reset phone remote", "change phone remote link", "rotate phone remote token"}:
             return self._act(t, "phone_remote", "rotate")
         return None
+
+    def _web_on(self) -> bool:
+        probe = getattr(self.executor, "web_active", None)
+        try:
+            return callable(probe) and probe() is True
+        except Exception:
+            return False
 
     _NUM_WORDS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
                   "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,

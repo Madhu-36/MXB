@@ -1,4 +1,4 @@
-# MXB v4.1 Companion Guide
+# MXB v4.2 Companion Guide
 
 MXB is a Windows desktop companion you can **talk to or type to**. It keeps listening while it works, can operate any app through the mouse, keyboard and accessibility tree, controls your hardware, and works with your files. Anything destructive needs your "yes" first.
 
@@ -145,6 +145,52 @@ Embeddings: `memory.embedding_provider = "auto"` uses Ollama (`ollama pull nomic
 3. On the phone you can chat, follow live progress, press **Stop**, answer **Yes/No** questions, and tap **Screen** to peek at the PC.
 "turn off phone remote" stops it; "new phone link" invalidates old links.
 
+### v4.2: MXB browser (websites, reliably)
+MXB opens its own browser window (your installed Edge, or Chrome) with its own profile in the data folder: sign in to your sites there once and MXB stays signed in. It works through the page itself, not your mouse, so you can keep typing elsewhere while it browses.
+
+| Say | Does |
+| :--- | :--- |
+| "browse to github.com", "open wikipedia.org in MXB browser" | Opens the page |
+| "show page elements" | Numbers every button, link and field: `[7] button 'Sign in'` |
+| "web click 7", "web click sign in" | Clicks by number or visible text |
+| "fill the search box with playwright", "type python into field 3" (planner) | Types into a field (`web_fill "3 :: python"`) |
+| "read this page", "summarize this page", "what is this page about" | Reads or summarizes (the page is treated as data, never as instructions) |
+| "list tabs", "go back", "close MXB browser" | Tabs and navigation |
+
+MXB never types into password fields: click the field and type your password yourself, then say "continue". Agent tasks ("find the cheapest flight on…") use the same numbered elements. Set `web.browser` to `chrome`, or `web.cdp_url` to attach to a Chromium you started with `--remote-debugging-port=9222` (recent Chrome only allows that with a separate profile).
+
+### v4.2: MCP tools (any app with an MCP server)
+Add servers to `config.json` (same format as Claude Desktop), or set `"claude_desktop_config": true` to reuse Claude Desktop's list:
+```json
+"mcp": {
+  "enabled": true,
+  "trust": "ask",
+  "servers": {
+    "github": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"],
+               "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"}, "trust": "read_only"},
+    "notion": {"url": "https://mcp.notion.com/mcp", "headers": {"Authorization": "Bearer ${NOTION_TOKEN}"}}
+  }
+}
+```
+`${NAME}` is filled from your environment or MXB's `.env`. Servers connect in the background when MXB starts. Say *"list MCP tools"* to see them, *"reload MCP"* after editing the config, or just ask: *"using github, list my open issues"*.
+
+Trust per server: `ask` (default) asks before every tool call; `read_only` runs tools that declare themselves read-only without asking; `auto` asks only for tools that declare themselves destructive. During agent tasks a server is only available if your goal names it. Server logs go to `logs/mcp-servers.log`.
+
+### v4.2: clicking by looking (pixel grounding)
+For icons, games and apps without accessibility info: *"visually click the gear icon"*, *"where is the recycle bin on the screen"*. Ordinary *"click Settings"* also falls back to looking when the accessibility tree and OCR can't find it.
+
+Setup, either one:
+- Local and private: install Ollama 0.12.7+ and `ollama pull qwen3-vl:4b` (3.3 GB).
+- Cloud: your NVIDIA key is enough (uses `qwen/qwen3.5-122b-a10b`).
+- Your own server: `"grounding": {"provider": "openai", "base_url": "http://localhost:8000/v1", "model": "<your model>"}`; set `"coord_mode": "absolute"` for models that answer in pixels (Qwen2.5-VL, UI-TARS).
+
+### v4.2: Indian languages
+Type or speak Kannada, Hindi, Telugu, Tamil, Malayalam, Marathi, Bengali or Gujarati. MXB answers in the same language with a neural voice for it (`voice.indic_voice_gender`: female/male). Native script is recognized automatically. For romanized commands ("notepad open maadi"), say *"speak in kannada"* (or set `voice.language`).
+
+- **Best speech recognition:** add `SARVAM_API_KEY=...` to MXB's `.env`. Sarvam's Saaras model turns Indian-language speech straight into English and reports which language you spoke.
+- **Offline:** with `voice.language` set to a language (or `auto`), MXB loads multilingual Whisper (`engine.whisper_model_multilingual`, default `small`). Restart after changing it. Hindi works well; Kannada and Telugu are much weaker on `small`, so use Sarvam or a larger model with a GPU.
+- "Stop", "yes" and "no" work instantly in every supported language (ನಿಲ್ಲಿಸು, रुको, ఆపు, நிறுத்து; ಹೌದು / ಬೇಡ, हाँ / नहीं …), and the wake word MXB is understood in native script too.
+
 ### v4: plugins
 Drop a Python file into `plugins/`:
 ```python
@@ -243,4 +289,8 @@ The live suite works in a sandbox folder (`Documents\MXB-Bench-<time>`) with its
 - **Local hashing embeddings** match by keywords and phrases, not deep meaning. Run `ollama pull nomic-embed-text` for real semantic recall.
 - **Unsigned installer.** SmartScreen may warn on first install (*More info → Run anyway*). The update checksum catches corrupted or tampered downloads, but only code signing protects against a compromised release account.
 - **Injection detection is pattern-based.** A clever page may not trip it; the per-goal allowlist and confirmations are what actually stop harm.
+- **MXB browser** numbers elements in the main page, not inside iframes (embedded widgets, some payment forms): use web click with visible text, or the desktop tools.
+- **MCP servers that need an OAuth browser login** aren't supported yet; use servers that take a token (env or header).
+- **Visual clicking** is only as good as the model (Qwen3-VL-4B is strong on ordinary apps, weaker on dense professional software). In agent mode risky buttons still ask first.
+- **Indian languages** add one translation round trip per command (cached); edge voices need internet.
 - **Tool calling** depends on the model. If the hosted model rejects `tools`, MXB detects that once and uses JSON mode from then on.

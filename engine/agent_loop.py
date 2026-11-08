@@ -101,7 +101,13 @@ class AgentLoop:
             obs["text"] = (self.executor.screen.read_active_window_text() or "")[:1500]
         except Exception as e:
             log.warning(f"Agent: OCR observation failed: {e}")
-        obs["signature"] = screen_signature(obs["window"], obs["marks"])
+        web = self._observe_web()
+        if web:
+            obs["web"] = web
+        web_key = ""
+        if web:
+            web_key = web.get("url", "") + "|" + "|".join(f"{e.get('role')}:{e.get('name')}" for e in web.get("elements", []))
+        obs["signature"] = screen_signature(obs["window"] + "#" + web_key, obs["marks"])
         if self.use_vision:
             try:
                 img = self.executor.screen.capture_screen_image()
@@ -120,10 +126,25 @@ class AgentLoop:
                 log.warning(f"Agent: screenshot failed: {e}")
         return obs
 
+    def _observe_web(self) -> dict:
+        """MXB's browser page (numbered elements + text), only when that browser is open."""
+        probe = getattr(self.executor, "web_active", None)
+        try:
+            if not callable(probe) or probe() is not True:
+                return {}
+            web = self.executor.web.observe()
+            return web if isinstance(web, dict) else {}
+        except Exception as e:
+            log.warning(f"Agent: browser observation failed: {e}")
+            return {}
+
     @staticmethod
     def haystack(obs: dict) -> str:
         names = " ".join(el.label() for el in obs.get("marks", {}).values())
-        return f"{obs.get('window', '')} {names} {obs.get('text', '')}"
+        web = obs.get("web") or {}
+        web_text = " ".join([web.get("title", ""), " ".join(e.get("name", "") for e in web.get("elements", [])),
+                             web.get("text", "")])
+        return f"{obs.get('window', '')} {names} {obs.get('text', '')} {web_text}"
 
     @staticmethod
     def build_prompt(goal: str, history: list[dict], obs: dict, banned: list[str], stuck_note: str = "") -> str:
@@ -146,6 +167,14 @@ class AgentLoop:
             screen.append("ELEMENTS: none detected (use visible text, shortcuts, or coordinates)")
         if obs.get("text"):
             screen.append("VISIBLE TEXT: " + obs["text"].replace("\n", " "))
+        web = obs.get("web")
+        if web:
+            from engine.web import describe
+            screen.append(f"MXB BROWSER PAGE: {web.get('title') or 'Untitled'} ({web.get('url', '')}). "
+                          "Use web_click / web_fill / web_select with these numbers:")
+            screen.extend(describe(e) for e in web.get("elements", []))
+            if web.get("text"):
+                screen.append("PAGE TEXT: " + web["text"])
         lines.append("CURRENT SCREEN:")
         lines.append(wrap_untrusted("\n".join(screen), "screen", 6000))
         if obs.get("image") is not None:

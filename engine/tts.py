@@ -113,15 +113,19 @@ class EdgeBackend(_PcmBackend):
         import miniaudio  # noqa: F401
         self.voice = cfg.get("edge_voice", "en-IN-NeerjaNeural")
         self.rate = cfg.get("edge_rate", "+5%")
+        self.gender = cfg.get("indic_voice_gender", "female")
+        self.devanagari = "mr" if (cfg.get("language") or "").lower() == "mr" else "hi"
 
     def synth(self, text: str) -> tuple[np.ndarray, int]:
         import asyncio
         import edge_tts
         import miniaudio
+        from engine.indic import voice_for
+        voice = voice_for(text, self.voice, self.gender, self.devanagari)   # Kannada text -> Kannada voice
 
         async def _collect() -> bytes:
             chunks = []
-            async for chunk in edge_tts.Communicate(text, self.voice, rate=self.rate).stream():
+            async for chunk in edge_tts.Communicate(text, voice, rate=self.rate).stream():
                 if chunk.get("type") == "audio" and chunk.get("data"):
                     chunks.append(chunk["data"])
             return b"".join(chunks)
@@ -192,6 +196,7 @@ class TTSThread(QThread):
         self.recent_spoken: deque = deque(maxlen=8)   # (time, text) for barge-in echo filtering
         self._prefetch_pool = ThreadPoolExecutor(max_workers=1)
         self._prefetched: dict[str, object] = {}
+        self._edge_for_indic = None   # lazily created for Indian-language sentences when SAPI/Piper is active
 
     def enqueue(self, text: str):
         if text and text.strip() and self.is_running:
@@ -235,7 +240,30 @@ class TTSThread(QThread):
         if nxt and nxt not in self._prefetched and getattr(self.backend, "synthesizes_audio", False):
             self._prefetched[nxt] = self._prefetch_pool.submit(self.backend.synth, nxt)
 
+    def _indic_backend(self, text: str):
+        """Windows/Piper voices can't read Indian scripts: use the edge neural voice for those sentences."""
+        if getattr(self.backend, "name", "") == "edge":
+            return None
+        from engine.indic import script_language
+        if not script_language(text):
+            return None
+        if getattr(self, "_edge_for_indic", None) is None:
+            try:
+                self._edge_for_indic = EdgeBackend(self.cfg)
+            except Exception as e:
+                print(f"[TTS] No voice for Indian languages ({e}); showing the reply as text only.")
+                self._edge_for_indic = False
+        return self._edge_for_indic or None
+
     def _speak_one(self, text: str):
+        indic = self._indic_backend(text)
+        if indic is not None:
+            try:
+                samples, rate = indic.synth(text)
+                indic.play(samples, rate, self._interrupt)
+            except Exception as e:
+                print(f"[TTS] Indian-language voice failed ({e}); the reply stays on screen.")
+            return
         if getattr(self.backend, "synthesizes_audio", False):
             try:
                 samples, rate = self._synth_future(text).result(timeout=30)
@@ -360,12 +388,30 @@ class ModalityTTS:
     def speaking_enabled(self) -> bool:
         return getattr(self._local, "enabled", True)
 
+    def set_thread_language(self, code: str | None, translator=None):
+        """Replies on this worker thread are spoken in `code` (English text is translated first)."""
+        self._local.language = code
+        self._local.translator = translator
+
+    def localize(self, text: str) -> str:
+        code = getattr(self._local, "language", None)
+        translate = getattr(self._local, "translator", None)
+        if not code or not translate or not text:
+            return text
+        from engine.indic import script_language
+        if script_language(text):
+            return text
+        try:
+            return translate(text, code) or text
+        except Exception:
+            return text
+
     def speak(self, text: str, wait=False):
         if self.speaking_enabled():
-            self._inner.speak(text, wait=wait)
+            self._inner.speak(self.localize(text), wait=wait)
 
     def speak_always(self, text: str, wait=False):
-        self._inner.speak(text, wait=wait)
+        self._inner.speak(self.localize(text), wait=wait)
 
     def interrupt(self):
         fn = getattr(self._inner, "interrupt", None)

@@ -230,7 +230,7 @@ class VoicePipeline(QThread):
                     self.transcription_ready.emit(text)
                     # Stop words, confirmations and the wake word are handled instantly
                     # in the bus; real commands are queued without blocking this thread.
-                    outcome = self.bus.submit(text, source="voice")
+                    outcome = self.bus.submit(text, source="voice", lang=getattr(self, "last_language", None))
                     if outcome == "ignored":
                         self.vad_status_changed.emit("Idle")
                 else:
@@ -281,6 +281,24 @@ class VoicePipeline(QThread):
             return text
         return None
 
+    def _transcribe_sarvam(self, audio_data: np.ndarray, mode: str) -> str | None:
+        """Sarvam Saaras: Indian-language speech -> English text + detected language (needs SARVAM_API_KEY)."""
+        key = CredentialsManager.get_secret("SARVAM_API_KEY")
+        if not key:
+            return None
+        try:
+            from engine.indic import SarvamSTT
+            cfg = self.config.get("speech_recognition", {})
+            stt = SarvamSTT(key, model=cfg.get("sarvam_model", "saaras:v3"), mode="translate")
+            t0 = time.time()
+            text, lang = stt.transcribe(self._audio_to_wav_bytes(audio_data, 16000), mode)
+            self.last_language = lang
+            log.info(f"Sarvam ASR ({time.time() - t0:.2f}s, {lang or 'en'}): '{text}'")
+            return text or None
+        except Exception as e:
+            log.warning(f"Sarvam ASR failed, using local recognition: {e}")
+            return None
+
     def _transcribe_audio(self, audio_data: np.ndarray, agc_target: float, max_gain: float) -> str | None:
         # Zero-center waveform by removing DC bias
         audio_data = audio_data - float(np.mean(audio_data))
@@ -294,9 +312,17 @@ class VoicePipeline(QThread):
                 audio_data = np.tanh(audio_data * 1.05)
 
         text = None
+        self.last_language = None
+        from engine.indic import LANGUAGES, preferred_language
+        mode = preferred_language(self.config)   # "en", "auto" or an Indian language code
 
-        # 1. Cloud NVIDIA Build ASR (fastest)
-        if self.config.get("speech_recognition", {}).get("provider") == "nvidia" or CredentialsManager.has_nvidia_api_key():
+        # 0. Indian languages: Sarvam turns speech straight into English and says which language it was.
+        if mode != "en":
+            text = self._transcribe_sarvam(audio_data, mode)
+
+        # 1. Cloud NVIDIA Build ASR (fastest, English only)
+        if text is None and mode == "en" and (self.config.get("speech_recognition", {}).get("provider") == "nvidia"
+                                              or CredentialsManager.has_nvidia_api_key()):
             try:
                 text = self._transcribe_nvidia_build(audio_data)
             except Exception as e:
@@ -308,9 +334,13 @@ class VoicePipeline(QThread):
             try:
                 audio_len_s = len(audio_data) / 16000.0
                 adaptive_speech_pad = min(350, max(180, int(audio_len_s * 55)))
-                segments, _ = self.whisper_model.transcribe(
+                lang_kwargs = {}
+                if mode != "en" and not getattr(self, "_whisper_english_only", False):
+                    lang_kwargs["language"] = None if mode == "auto" else mode
+                segments, info = self.whisper_model.transcribe(
                     audio_data,
                     beam_size=5,
+                    **lang_kwargs,
                     vad_filter=True,
                     vad_parameters=dict(
                         threshold=0.35,
@@ -319,9 +349,13 @@ class VoicePipeline(QThread):
                         speech_pad_ms=adaptive_speech_pad
                     ),
                     condition_on_previous_text=False,
-                    initial_prompt="Desktop commands: open app, close window, check system, click, scroll down, type text.",
+                    initial_prompt=("Desktop commands: open app, close window, check system, click, scroll down, type text."
+                                    if mode == "en" else None),
                     no_speech_threshold=0.60
                 )
+                detected = getattr(info, "language", None)
+                if detected in LANGUAGES and detected != "en":
+                    self.last_language = detected
                 filtered_segments = []
                 for s in segments:
                     if getattr(s, "no_speech_prob", 0.0) > 0.65:
@@ -355,9 +389,14 @@ class VoicePipeline(QThread):
 
         try:
             model_size = self.config.get("engine", {}).get("whisper_model", "base.en")
+            from engine.indic import preferred_language
+            if preferred_language(self.config) != "en" and str(model_size).endswith(".en"):
+                # English-only models can't hear Kannada, Hindi...: load the multilingual one instead.
+                model_size = self.config.get("engine", {}).get("whisper_model_multilingual", "small")
             device = "cpu"
             compute_type = "int8"
             self.whisper_model = WhisperModel(model_size, device=device, compute_type=compute_type)
+            self._whisper_english_only = str(model_size).endswith(".en")
         except Exception as e:
             error_msg = f"Model Error: {e}"
             log.error(error_msg)

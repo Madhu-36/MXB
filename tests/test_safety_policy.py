@@ -19,8 +19,14 @@ class TestCatalog(unittest.TestCase):
 
     def test_every_catalog_action_is_handled_by_executor(self):
         source = (ROOT / "engine" / "executor.py").read_text(encoding="utf-8")
-        missing = [n for n in action_names(include_dynamic=False) if n != "wait" and not re.search(rf'["\']{n}["\']', source)]
+        from engine.web import WebController   # the executor delegates every web_* action to this table
+        delegated = set(WebController.HANDLERS)
+        missing = [n for n in action_names(include_dynamic=False)
+                   if n != "wait" and n not in delegated and not re.search(rf'["\']{n}["\']', source)]
         self.assertEqual(missing, [], f"Executor does not handle: {missing}")
+        broken = [a for a, method in WebController.HANDLERS.items() if not callable(getattr(WebController, method, None))]
+        self.assertEqual(broken, [], f"Web handlers point at missing methods: {broken}")
+        self.assertTrue(all(n.startswith("web_") for n in delegated))
 
     def test_destructive_actions_require_confirmation(self):
         for name in ("delete_file", "empty_recycle_bin", "kill_process", "power_action", "force_close_app",

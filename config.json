@@ -8,7 +8,8 @@
   "speech_recognition": {
     "provider": "nvidia",
     "model": "nvidia/parakeet-tdt-0.6b",
-    "api_url": "https://integrate.api.nvidia.com/v1/audio/transcriptions"
+    "api_url": "https://integrate.api.nvidia.com/v1/audio/transcriptions",
+    "sarvam_model": "saaras:v3"
   },
   "llm": {
     "provider": "nvidia",
@@ -27,7 +28,8 @@
     "microphone_sensitivity": "high",
     "vad_speech_prob_threshold": 0.35,
     "agc_target_level": 0.85,
-    "max_gain": 60.0
+    "max_gain": 60.0,
+    "whisper_model_multilingual": "small"
   },
   "listening": {
     "mode": "wake_word",
@@ -49,7 +51,9 @@
     "edge_rate": "+5%",
     "piper_exe": "",
     "piper_model": "",
-    "barge_in": "auto"
+    "barge_in": "auto",
+    "language": "en",
+    "indic_voice_gender": "female"
   },
   "safety": {
     "confirm_destructive": true,
@@ -86,5 +90,31 @@
   "update": {
     "check_on_start": true,
     "repo": "Madhu-36/MXB"
+  },
+  "web": {
+    "browser": "msedge",
+    "headless": false,
+    "cdp_url": "",
+    "timeout_ms": 15000,
+    "max_elements": 80,
+    "search_url": "https://www.google.com/search?q={q}"
+  },
+  "mcp": {
+    "enabled": true,
+    "trust": "ask",
+    "claude_desktop_config": false,
+    "servers": {}
+  },
+  "grounding": {
+    "enabled": "auto",
+    "fallback": true,
+    "provider": "auto",
+    "models": {
+      "ollama": "qwen3-vl:4b",
+      "nvidia": "qwen/qwen3.5-122b-a10b"
+    },
+    "coord_mode": "auto",
+    "zoom_refine": "auto",
+    "max_image_width": 1280
   }
 }

@@ -18,8 +18,11 @@ DEFAULT_WAKE_WORDS = ["mxb", "m x b", "mx b", "m xb", "emexbee", "max b"]
 GREETINGS = {"hey", "hi", "hello", "ok", "okay", "yo", "hai"}
 
 
+_KEEP = r"[^a-z0-9\u0900-\u0D7F]"   # letters/digits plus Indian scripts (zero-width joiners dropped)
+
+
 def _norm_token(tok: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", tok.lower())
+    return re.sub(_KEEP, "", tok.lower())
 
 
 class WakeWordGate:
@@ -28,14 +31,17 @@ class WakeWordGate:
         self.mode = (mode or "wake_word").lower()
         words = wake_words or DEFAULT_WAKE_WORDS
         # Compare without spaces so "MXB", "M X B", "M.X.B." and "mx-b" all match "mxb".
-        self.wake_keys = {re.sub(r"[^a-z0-9]", "", w.lower()) for w in words if w.strip()}
+        self.wake_keys = {re.sub(_KEEP, "", w.lower()) for w in words if w.strip()}
+        if "mxb" in self.wake_keys:
+            from engine.indic import WAKE_VARIANTS
+            self.wake_keys |= WAKE_VARIANTS
         self.max_tokens = max((len(w.split()) for w in words), default=1) + 2
         self.follow_up_seconds = float(follow_up_seconds)
         self._clock = clock
         self._engaged_until = 0.0
 
     def add_wake_word(self, phrase: str):
-        key = re.sub(r"[^a-z0-9]", "", (phrase or "").lower())
+        key = re.sub(_KEEP, "", (phrase or "").lower())
         if key:
             self.wake_keys.add(key)
             self.max_tokens = max(self.max_tokens, len(phrase.split()) + 2)

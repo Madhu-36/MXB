@@ -153,6 +153,37 @@ CATALOG: tuple[ActionSpec, ...] = (
     ActionSpec("check_updates", '""', "Check GitHub for a newer MXB release", "system"),
     ActionSpec("install_update", '""', "Download (SHA-256 verified) and install the newest MXB release", "system", risk="confirm"),
     ActionSpec("autostart", '"on", "off" or "status"', "Start MXB when Windows starts", "system"),
+    # ---------------- v4.2: MXB browser (Playwright: DOM-level, doesn't take over your mouse) ----------------
+    ActionSpec("web_open", "url or site, e.g. 'github.com'", "Open a page in MXB's browser (reliable web clicking and typing)", "web"),
+    ActionSpec("web_search", "search words", "Search the web in MXB's browser", "web"),
+    ActionSpec("web_elements", '""', "List the numbered buttons, links and fields on the current page", "web"),
+    ActionSpec("web_click", "element number from web_elements, or its visible text", "Click a link/button/tab on the page", "web"),
+    ActionSpec("web_fill", '"element number or field name :: text"', "Type into a page field (never passwords)", "web"),
+    ActionSpec("web_press", "enter, tab, escape, ctrl+a, ...", "Press a key on the page", "web"),
+    ActionSpec("web_select", '"dropdown number or name :: option"', "Choose an option in a dropdown", "web"),
+    ActionSpec("web_scroll", '"down", "up", "down 3", "top", "bottom"', "Scroll the page", "web"),
+    ActionSpec("web_read", '""', "Read the page's main text", "web"),
+    ActionSpec("web_summarize", 'question about the page, or ""', "Summarize the page or answer a question about it", "web"),
+    ActionSpec("web_back", '""', "Go back to the previous page", "web"),
+    ActionSpec("web_tabs", '""', "List the browser tabs", "web"),
+    ActionSpec("web_switch_tab", "tab number", "Switch to a browser tab", "web"),
+    ActionSpec("web_new_tab", 'url or ""', "Open a new tab", "web"),
+    ActionSpec("web_close_tab", 'tab number or ""', "Close a tab (the current one by default)", "web"),
+    ActionSpec("web_wait", 'text to wait for, or ""', "Wait until text appears on the page", "web"),
+    ActionSpec("web_screenshot", '""', "Save a screenshot of the page", "web"),
+    ActionSpec("web_close", '""', "Close MXB's browser", "web"),
+
+    # ---------------- v4.2: pixel grounding (vision model finds things by looking) ----------------
+    ActionSpec("click_visual", "what to click, e.g. 'the gear icon' or 'the blue Submit button'", "Find something on screen by looking and click it (icons, games, apps without accessibility info)", "screen", uses_input=True),
+    ActionSpec("double_click_visual", "what to double-click", "Find something on screen by looking and double-click it", "screen", uses_input=True),
+    ActionSpec("type_visual", '"description of the field :: text"', "Find a field by looking, click it and type", "screen", uses_input=True),
+    ActionSpec("locate_visual", "what to find", "Say where something is on screen without clicking it", "screen"),
+
+    # ---------------- v4.2: MCP tools & language ----------------
+    ActionSpec("mcp_tools", '""', "List connected MCP servers and their tools", "mcp"),
+    ActionSpec("mcp_reload", '""', "Reconnect to the MCP servers in config", "mcp"),
+    ActionSpec("set_language", '"kannada", "hindi", "telugu", "tamil", "malayalam", "marathi", "bengali", "gujarati", "english" or "auto"', "Choose the language MXB listens and replies in", "voice"),
+
     ActionSpec("wait", "seconds e.g. '1.5'", "Pause between steps (e.g. while an app opens)", "control"),
     ActionSpec("conversation", '"none"', "Just answer in the reply field, no OS action", "control"),
 )
@@ -258,7 +289,8 @@ PLANNER_RULES = """Rules:
 - Never invent file paths. Use find_files first when the user names a file without a location.
 - Dangerous actions (delete, kill, shutdown, overwrite) are confirmed by the system; do not ask for confirmation yourself.
 - Put "reply" FIRST in the JSON. Keep it to one or two short spoken sentences without markdown.
-- Questions about the user's own documents/notes -> ask_documents. Things the user says about themselves -> remember_preference."""
+- Questions about the user's own documents/notes -> ask_documents. Things the user says about themselves -> remember_preference.
+- Websites: prefer the web_* actions (MXB's browser): web_open, then web_elements to get numbers, then web_click / web_fill by number."""
 
 
 def plan_tool_schema(agent: bool = False) -> dict:
@@ -296,8 +328,9 @@ def plan_tool_schema(agent: bool = False) -> dict:
 
 def planner_system_prompt(assistant_name: str = "MXB") -> str:
     from safety.injection import UNTRUSTED_RULES
+    from engine.indic import language_instruction
     return (
         f"You are {assistant_name}, an AI desktop companion with full control of the user's Windows PC "
         "(mouse, keyboard, apps, windows, files, Bluetooth, Wi-Fi, volume, brightness).\n\n"
-        f"{PLANNER_RULES}\n{UNTRUSTED_RULES}\n\nAvailable actions:\n{prompt_tool_list()}"
+        f"{PLANNER_RULES}\n{UNTRUSTED_RULES}{language_instruction()}\n\nAvailable actions:\n{prompt_tool_list()}"
     )
