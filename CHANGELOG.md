@@ -27,13 +27,14 @@
 - Executor shutdown finishes running meeting notes and stops the tracker.
 
 **Quality**
-- 83 new tests (5 suites, 370 portable in total).
+- 85 new tests (5 suites, 372 portable in total); all 372 also pass natively on Windows 11 with Python 3.14.
 - MXB-Bench: 50 tuned v4.3 cases (100% correct). 10 new held-out phrases were written *before* the v4.3 rules and not tuned against: 3 handled fast, 7 handed to the LLM, 0 new misroutes. Held-out coverage is 48.6% on 38 cases (was 56.0% on 28).
 - `verify_all.py` (all mode) now really runs every suite, including v4.2's. On GitHub Actions each failing test is also printed as an annotation, so it shows on the run page without signing in to read logs.
 
 - `scripts\setup_and_check.bat` (double-click: install, test, check) and `python -m utils.windows_check`, which exercises the real Windows integrations (UIA, loopback, foreground tracker, SAPI rate, QR) with PASS/FAIL output.
 
 **Fixes**
+- Meeting copilot: Windows' speaker loopback sends no data at all while nothing plays (found by `utils.windows_check` on a real PC). The other side's timestamps drifted, and their last sentence before a pause waited for the next sound. Quiet streams are now padded with silence on the wall clock (0.25 s ticker).
 - Windows: a file found by name was shown with a lowercased path (`c:\users\…`) in the delete/move confirmation, because search walked the case-folded permission roots. Search now walks folders in their real letter case; permission checks stay case-insensitive. Caught by the first Windows CI run.
 
 ## v4.2.0 — Web, tools, vision and your language

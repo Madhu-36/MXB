@@ -5,8 +5,8 @@ The test suites replace Windows with fakes so they run anywhere. This does the o
 the real Windows pieces MXB v4.3 depends on, one at a time, and prints PASS / FAIL / SKIP for each.
 
 Safe to run on your own PC: it presses no keys, clicks nothing, speaks nothing and saves nothing.
-It listens to your speakers' loopback for one second (nothing is stored), and it never prints
-window titles or on-screen text, only types, counts and device names.
+It plays one second of silence and listens to your speakers' loopback meanwhile (nothing is stored),
+and it never prints window titles or on-screen text, only types, counts and device names.
 """
 import importlib
 import platform
@@ -120,26 +120,31 @@ def _probe():
 
 @check("speaker loopback (1 s, not saved)", windows_only=True)
 def _loopback():
+    """Windows sends loopback audio only while something plays, so this plays 1 s of silence meanwhile."""
     import numpy as np
+    import sounddevice as sd
     from engine.meetings import LoopbackSource
     blocks = []
     src = LoopbackSource()
-    src.start(blocks.append)
-    try:
-        time.sleep(1.2)
-    finally:
-        src.stop()
+    with sd.OutputStream(samplerate=48000, channels=1, dtype="float32") as speaker:
+        src.start(blocks.append)
+        try:
+            quiet = np.zeros(4800, dtype=np.float32)
+            end = time.time() + 1.2
+            while time.time() < end:
+                speaker.write(quiet)                 # 100 ms of silence: keeps the speakers' audio engine running
+        finally:
+            src.stop()
     if not blocks:
-        raise RuntimeError("the loopback stream delivered no audio")
+        raise RuntimeError("no loopback audio even while playing silence")
     audio = np.concatenate(blocks)
-    rms = float(np.sqrt(np.mean(audio ** 2))) if len(audio) else 0.0
     import pyaudiowpatch as pyaudio
     pa = pyaudio.PyAudio()
     try:
         name = pa.get_default_wasapi_loopback()["name"]
     finally:
         pa.terminate()
-    return f"{len(blocks)} blocks, {len(audio) / 16000:.1f} s at 16 kHz, level {rms:.4f} ({'sound playing' if rms > 0.001 else 'silence'}) from '{name}'"
+    return f"{len(blocks)} blocks, {len(audio) / 16000:.1f} s at 16 kHz from '{name}'"
 
 
 @check("microphone device")

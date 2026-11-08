@@ -172,8 +172,20 @@ def safe_title(title: str) -> str:
     return re.sub(r"\s+", " ", t)[:60] or "Meeting"
 
 
+GAP_FILL_AFTER = 0.5   # seconds a stream may lag the wall clock before its missing time counts as silence
+
+
 class MeetingSession:
-    def __init__(self, title: str, transcribe, folder: Path, sources: dict, clock=time.time):
+    """
+    Records each source as its own stream, cut at pauses and transcribed in the background.
+
+    Windows' speaker loopback sends NO data while nothing is playing (found on real hardware), so a quiet
+    stream is padded with silence on the wall clock. Otherwise its timestamps would drift behind the mic's,
+    and its last sentence before a pause would wait until the next sound to be transcribed.
+    """
+
+    def __init__(self, title: str, transcribe, folder: Path, sources: dict, clock=time.time,
+                 tick: float | None = 0.25):
         self.title = (title or "Meeting").strip()
         self.transcribe = transcribe
         self.sources = sources
@@ -184,15 +196,50 @@ class MeetingSession:
         self.path = folder / f"{stamp} {safe_title(self.title)}.md"
         self.lines: list[tuple[float, str, str]] = []
         self.segmenters = {name: Segmenter() for name in sources}
+        self._fed = {name: 0.0 for name in sources}      # seconds of audio given to each segmenter
+        self._feed_lock = threading.Lock()
         self._jobs: queue.Queue = queue.Queue()
         self._lock = threading.Lock()
         self._worker = threading.Thread(target=self._work, name="mxb-meeting-asr", daemon=True)
+        self.tick = tick
+        self._stop_tick = threading.Event()
+        self._ticker = threading.Thread(target=self._tick_loop, name="mxb-meeting-gaps", daemon=True)
         self.path.write_text(f"# {self.title}\n\n_{time.strftime('%A %d %B %Y, %H:%M', time.localtime(self.started_at))}"
                              " · notes by MXB_\n\n## Transcript\n\n", encoding="utf-8")
 
+    def _feed_raw(self, name: str, samples) -> list:
+        self._fed[name] += len(samples) / float(SAMPLE_RATE)
+        return [(start, name, audio) for start, audio in self.segmenters[name].feed(samples)]
+
     def _on_audio(self, name: str, block):
-        for start, audio in self.segmenters[name].feed(block):
-            self._jobs.put((start, name, audio))
+        """A block of audio that just arrived; time the stream skipped since its last block is filled with silence."""
+        block = np.asarray(block, dtype=np.float32)
+        with self._feed_lock:
+            now = self.clock() - self.started_at
+            gap = now - len(block) / float(SAMPLE_RATE) - self._fed[name]
+            jobs = self._feed_raw(name, np.zeros(int(gap * SAMPLE_RATE), dtype=np.float32)) if gap > GAP_FILL_AFTER else []
+            jobs += self._feed_raw(name, block)
+        for job in jobs:
+            self._jobs.put(job)
+
+    def fill_gaps(self):
+        """Feeds silence to every stream that has sent nothing lately, so a finished sentence gets cut and sent."""
+        jobs = []
+        with self._feed_lock:
+            now = self.clock() - self.started_at
+            for name in self.segmenters:
+                gap = now - GAP_FILL_AFTER - self._fed[name]     # leave a margin for audio still in flight
+                if gap > 0:
+                    jobs += self._feed_raw(name, np.zeros(int(gap * SAMPLE_RATE), dtype=np.float32))
+        for job in jobs:
+            self._jobs.put(job)
+
+    def _tick_loop(self):
+        while not self._stop_tick.wait(self.tick):
+            try:
+                self.fill_gaps()
+            except Exception as e:
+                log.warning(f"Meeting: gap filling failed: {e}")
 
     def start(self):
         self._worker.start()
@@ -200,6 +247,8 @@ class MeetingSession:
         for name, source in self.sources.items():
             source.start(lambda block, n=name: self._on_audio(n, block))
             started.append(name)
+        if self.tick:
+            self._ticker.start()
         return started
 
     def _work(self):
@@ -234,14 +283,18 @@ class MeetingSession:
                 f.write(f"**[{clock_text(start)}] {speaker}:** {text}\n\n")
 
     def stop(self, timeout: float = 120.0):
+        self._stop_tick.set()
+        if self._ticker.is_alive():
+            self._ticker.join(2)
         for source in self.sources.values():
             try:
                 source.stop()
             except Exception:
                 pass
-        for name, seg in self.segmenters.items():
-            for start, audio in seg.flush():
-                self._jobs.put((start, name, audio))
+        with self._feed_lock:
+            for name, seg in self.segmenters.items():
+                for start, audio in seg.flush():
+                    self._jobs.put((start, name, audio))
         self._jobs.put(None)
         self._worker.join(timeout)
         self._rewrite_sorted()

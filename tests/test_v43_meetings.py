@@ -140,6 +140,54 @@ class TestSessionAndNotes(unittest.TestCase):
         self.assertIsNone(summarize(transcript, None))
 
 
+class ManualSource:
+    """A device that only sends audio when the test says so (like Windows loopback, silent = no data)."""
+
+    def start(self, on_audio):
+        self.send = on_audio
+
+    def stop(self):
+        pass
+
+
+class TestQuietStreams(unittest.TestCase):
+    def test_a_stream_that_goes_quiet_is_padded_on_the_wall_clock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            now = {"t": 1000.0}
+            src = ManualSource()
+            session = MeetingSession("Lecture", by_amplitude({0.2: "first point", 0.4: "second point"}), Path(tmp),
+                                     {"Others": src}, clock=lambda: now["t"], tick=None)
+            session.start()
+            now["t"] += 1.0
+            src.send(tone(1.0, 0.2))                 # speech, then the speakers fall silent: no more blocks
+            now["t"] += 2.0
+            session.fill_gaps()                      # what the 0.25 s ticker does in the app
+            deadline = time.time() + 3
+            while not session.lines and time.time() < deadline:
+                time.sleep(0.01)
+            self.assertEqual([(round(t), tx) for t, _, tx in session.lines], [(0, "first point")])   # not stuck
+            now["t"] += 7.0                          # 7 s of nothing, then the next sentence arrives
+            src.send(tone(1.0, 0.4))
+            now["t"] += 2.0
+            session.fill_gaps()
+            session.stop(timeout=5)
+            times = [round(t) for t, _, _ in session.lines]
+            self.assertEqual(times, [0, 9])          # wall-clock time, not "1 s after the first sentence"
+
+    def test_continuous_streams_are_not_padded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            now = {"t": 50.0}
+            src = ManualSource()
+            session = MeetingSession("Call", lambda audio: "", Path(tmp), {"You": src}, clock=lambda: now["t"], tick=None)
+            session.start()
+            for _ in range(30):                      # 3 s of 100 ms blocks arriving on time
+                now["t"] += 0.1
+                src.send(silence(0.1))
+                session.fill_gaps()
+            session.stop(timeout=5)
+            self.assertAlmostEqual(session._fed["You"], 3.0, places=3)
+
+
 class TestCopilot(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
