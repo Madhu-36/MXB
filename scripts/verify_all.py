@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import unittest
@@ -38,6 +39,23 @@ PORTABLE_SUITES = [
     "tests.test_v43_focus",
     "tests.test_v43_integration",
 ]
+
+
+def _escape(text: str) -> str:
+    return text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def annotate_failures(mod_name: str, res, limit: int = 10) -> list[str]:
+    """On GitHub Actions, prints each failing test as an ::error annotation. Annotations show on the run's
+    summary page (no log download needed), so a failure is readable at a glance, even from a phone."""
+    lines = []
+    for test, trace in (res.failures + res.errors)[:limit]:
+        tail = [ln.strip() for ln in trace.strip().splitlines() if ln.strip() and not ln.startswith("Traceback")][-4:]
+        lines.append(f"::error title={_escape(mod_name)}::{_escape(test.id() + ': ' + ' | '.join(tail))[:1500]}")
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        for line in lines:
+            print(line, flush=True)
+    return lines
 
 
 def run_all_verifications(mode: str = "all"):
@@ -101,6 +119,7 @@ def run_all_verifications(mode: str = "all"):
         suite = unittest.defaultTestLoader.loadTestsFromName(mod_name)
         runner = unittest.TextTestRunner(verbosity=1)
         res = runner.run(suite)
+        annotate_failures(mod_name, res)
         total_tests += res.testsRun
         total_failures += len(res.failures)
         total_errors += len(res.errors)
