@@ -6,9 +6,12 @@ Downloads the small on-device models MXB's voice features use, with SHA-256 chec
 - kws      : open-vocabulary keyword spotter (zipformer, GigaSpeech, 18 MB). Hears "MXB" in the audio
              itself, so nothing is transcribed until you say it.
 
-Both come from the sherpa-onnx GitHub releases (Apache-2.0) and run on the CPU.
+- turn     : Smart Turn v3.2 (Pipecat, BSD-2-Clause, 9 MB): has the user finished their sentence?
 
-    python -m utils.fetch_models voice_id kws
+voice_id and kws come from the sherpa-onnx GitHub releases (Apache-2.0), turn from Hugging Face.
+All run on the CPU.
+
+    python -m utils.fetch_models voice_id kws turn
 """
 import hashlib
 import shutil
@@ -26,6 +29,12 @@ MODELS = {
         "sha256": "ad4a1802485d8b34c722d2a9d04249662f2ece5d28a7a039063ca22f515a789e",
         "files": ["nemo_en_titanet_small.onnx"],
         "mb": 40,
+    },
+    "turn": {
+        "url": "https://huggingface.co/pipecat-ai/smart-turn-v3/resolve/main/smart-turn-v3.2-cpu.onnx",
+        "sha256": "2bb026316b14a660486a75b1733cd3fbab8c2fd0314dc9af7be49f8cca967e4f",
+        "files": ["smart-turn-v3.2-cpu.onnx"],
+        "mb": 9,
     },
     "kws": {
         "url": f"{_RELEASES}/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2",

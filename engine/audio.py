@@ -103,6 +103,10 @@ class VoicePipeline(QThread):
                                                float(listen_cfg.get("kws_boost", 1.5)))
         # v4.4: only the owner's voice may command MXB once it has been enrolled
         self.voice_id = getattr(getattr(self.bus, "executor", None), "voice_id", None)
+        # v4.4: end turns on meaning (Smart Turn), not only on silence
+        from engine.turn_detector import TurnDetector
+        self.turn = TurnDetector(config if isinstance(config, dict) else {})
+        self.last_end_of_turn = (0, "")        # (ms of silence before the turn ended, why)
 
     def _get_vad_model(self):
         if self._vad_model is None:
@@ -470,6 +474,10 @@ class VoicePipeline(QThread):
         log.info(f"Pipeline: barge-in mode = {self.barge_in_mode} (mic: {device_info.get('name', '?')})")
         if self.wake_engine is not None and not self.wake_engine.load():
             self.wake_engine = None
+        self.turn.load()
+        turn_probe_frames = max(1, int(self.turn.probe_seconds / 0.032))
+        turn_hold_frames = max(1, int(self.turn.hold_seconds / 0.032))
+        turn_decision = None          # per pause: None (not asked yet), True (complete), False (keep listening)
 
         use_software_resample = False
         stream_rate = 16000
@@ -599,6 +607,7 @@ class VoicePipeline(QThread):
                             buffer.append(chunk)
                             speech_frames_count += 1
                             silence_frames = 0
+                            turn_decision = None
                             if len(buffer) >= max_utterance_frames:
                                 # A TV or people talking can keep "speech" going for minutes: transcribe
                                 # in pieces instead of waiting for a pause that never comes.
@@ -620,8 +629,25 @@ class VoicePipeline(QThread):
                                     base_threshold=silence_threshold
                                 )
 
-                                if silence_frames > adaptive_silence_target:
+                                # Ask Smart Turn once per pause whether the sentence is finished.
+                                if (turn_decision is None and silence_frames >= turn_probe_frames and not speaking_now
+                                        and speech_frames_count >= min_speech_frames and self.turn.ready):
+                                    turn_decision = self.turn.is_complete(np.concatenate(buffer))
+                                    if turn_decision is False:
+                                        log.info("Pipeline: sentence sounds unfinished; still listening.")
+                                if turn_decision is True:
+                                    end_turn = True
+                                elif turn_decision is False:
+                                    end_turn = silence_frames > max(adaptive_silence_target, turn_hold_frames)
+                                else:
+                                    end_turn = silence_frames > adaptive_silence_target
+
+                                if end_turn:
                                     is_speaking = False
+                                    # How long MXB waited after the user stopped talking (benchmarks read it).
+                                    self.last_end_of_turn = (round(silence_frames * 32), "smart turn" if turn_decision
+                                                             else "silence")
+                                    turn_decision = None
 
                                     if speech_frames_count < min_speech_frames:
                                         buffer = []

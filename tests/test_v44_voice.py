@@ -167,8 +167,10 @@ class TestModelDownloads(unittest.TestCase):
 
     def test_pinned_models(self):
         for name, spec in fetch_models.MODELS.items():
-            self.assertTrue(spec["url"].startswith("https://github.com/k2-fsa/sherpa-onnx/releases/"), name)
+            self.assertTrue(spec["url"].startswith(("https://github.com/k2-fsa/sherpa-onnx/releases/",
+                                                     "https://huggingface.co/pipecat-ai/")), name)
             self.assertEqual(len(spec["sha256"]), 64)
+            int(spec["sha256"], 16)
 
 
 class TestVoiceCommands(unittest.TestCase):

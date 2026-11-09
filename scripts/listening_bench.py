@@ -241,6 +241,7 @@ def main(argv=None) -> int:
     ap.add_argument("--noise-wav", default=None, help="reuse a saved room-noise WAV (same noise for a before/after)")
     ap.add_argument("--save-noise", default=str(ROOT / "logs" / "room_noise.wav"), help="where to save the recording")
     ap.add_argument("--snr", type=float, default=None, help="speech this many dB above the room noise (overrides --level)")
+    ap.add_argument("--turn", choices=["on", "off"], default=None, help="Smart Turn end-of-turn detection on or off")
     ap.add_argument("--wav", nargs="*", default=None, help="your own 16-bit WAV recordings instead of Windows' voice")
     ap.add_argument("--expect", nargs="*", default=None, help="expected command for each --wav (after the wake word)")
     ap.add_argument("--out", default=str(ROOT / "logs" / "listening_bench.json"))
@@ -252,6 +253,8 @@ def main(argv=None) -> int:
     config.setdefault("engine", {})
     if args.gain is not None:
         config["engine"]["input_gain"] = args.gain
+    if args.turn is not None:
+        config.setdefault("turn_detection", {})["enabled"] = args.turn == "on"
     gain_setting = config["engine"].get("input_gain", "auto")
 
     try:
@@ -389,8 +392,9 @@ def main(argv=None) -> int:
                     commands.append(command)
         rest = " ".join(commands)
         ok = bool(found and covers(rest, expected, fuzz))
+        waited = getattr(pipe, "last_end_of_turn", (None, ""))
         results.append({"phrase": label, "expected": expected, "heard": [t for _, t in bus.heard], "wake_word": found,
-                        "command": rest, "ok": ok,
+                        "command": rest, "ok": ok, "end_of_turn_ms": waited[0], "end_of_turn_by": waited[1],
                         "vad_median": round(float(np.median(speech_probs)), 3) if speech_probs.size else None,
                         "vad_detected": round(float((speech_probs >= 0.35).mean()), 3) if speech_probs.size else None})
 
@@ -417,6 +421,11 @@ def main(argv=None) -> int:
         found_pct = f"{r['vad_detected'] * 100:.0f}%" if r["vad_detected"] is not None else "-"
         print(f"{r['phrase'][:34]:34s} {heard[:42]:42s} {'yes' if r['wake_word'] else 'no ':4s} "
               f"{'yes' if r['ok'] else 'NO ':4s} {vad:>7s}  {found_pct:>6s}")
+    waits = [r["end_of_turn_ms"] for r in results if r.get("end_of_turn_ms")]
+    if waits:
+        by_turn = sum(r.get("end_of_turn_by") == "smart turn" for r in results)
+        print(f"MXB stopped listening {int(np.median(waits))} ms after you stopped talking (median; "
+              f"{by_turn}/{len(results)} turns ended by Smart Turn)")
     print(f"\nUnderstood {summary['understood']}/{summary['total']} commands"
           + (f"; input gain ended at {summary['gain_db_end']:+.1f} dB" if agc else "; (this version has no input gain)"))
     out = Path(args.out)
