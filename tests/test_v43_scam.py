@@ -59,6 +59,18 @@ class TestRules(unittest.TestCase):
             with self.subTest(text=text[:50]):
                 self.assertEqual(s.check_text(text).level, "none", s.check_text(text).reasons)
 
+    def test_upi_mandate_collect_request_flagged(self):
+        s = shield()
+        cases = [
+            "Please approve the collect request on PhonePe to receive your cashback reward.",
+            "Accept autopay request in GPay to claim Rs 2000 refund.",
+            "Open Paytm and accept request to get cash back immediately.",
+        ]
+        for msg in cases:
+            res = s.check_text(msg)
+            self.assertEqual(res.level, "high")
+            self.assertTrue(any("collect request" in r or "DEBITS" in r for r in res.reasons), res.reasons)
+
     def test_summary_and_advice(self):
         v = shield().check_text(SCAMS_HIGH[1])
         text = v.summary()
