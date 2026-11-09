@@ -52,8 +52,8 @@ _INJECTION_PATTERNS = [
     (r"\b(?:ignore|disregard|forget|override)\b[^.\n]{0,40}\b(?:previous|prior|above|earlier|all|any|your)\b[^.\n]{0,25}"
      r"\b(?:instructions?|rules|prompts?|directions|guidelines)\b", "override-instructions"),
     (r"\b(?:new|updated|real|actual)\s+(?:instructions?|task|orders|system prompt)\b", "new-instructions"),
-    (r"\byou are (?:now|no longer)\b|\bact as\b[^.\n]{0,30}\b(?:admin|developer|system|jailbreak)", "role-change"),
-    (r"\bsystem\s*prompt\b|<\|im_start\|>|\[\s*system\s*\]|###\s*system|\bBEGIN SYSTEM\b", "fake-system"),
+    (r"\byou are (?:now|no longer)\b|\bact as\b[^.\n]{0,30}\b(?:admin|developer|system|jailbreak)|\b(?:DAN mode|jailbreak mode|unrestricted mode|bypass (?:all )?safety)\b", "role-change"),
+    (r"\bsystem\s*prompt\b|<\|im_start\|>|<\|im_end\|>|<\|system\|>|<system>|\[\s*system\s*\]|###\s*system|\bBEGIN SYSTEM\b|\[INST\]|\[/INST\]|<<SYS>>|<tool_call>|```tool_call|\[TOOL_CALL:", "fake-system"),
     (r"\b(?:assistant|ai|agent|mxb|claude|chatgpt|model)\s*[,:]\s*(?:please\s+)?(?:ignore|open|read|type|send|run|delete|"
      r"download|upload|visit|go to|navigate)\b", "addresses-agent"),
     (r"\b(?:send|upload|email|post|forward|paste|exfiltrate|leak|reveal|share)\b[^.\n]{0,40}\b(?:password|credentials?|api key|"
@@ -71,6 +71,17 @@ def detect_injection(text: str) -> list[str]:
         if regex.search(text or "") and label not in found:
             found.append(label)
     return found
+
+
+def sanitize_tool_argument(arg: str) -> str:
+    """Strips dangerous control tokens and fake delimiters from tool argument strings."""
+    if not isinstance(arg, str):
+        return arg
+    # Strip null bytes and non-printable control characters
+    cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", arg)
+    # Neutralize unescaped fence attempts
+    cleaned = _FENCE.sub("[marker removed]", cleaned)
+    return cleaned
 
 
 # ---------------------------------------------------------------------------
