@@ -1,3 +1,27 @@
+## v4.3.2 (2026-11-09) — Performance, Safety Hardening & System Observability
+- **Safety Policy & Injection Defense**:
+  - Added prompt injection detection for forged tool-calling tokens (`<tool_call>`, ````tool_call`, `[TOOL_CALL:`) and jailbreak instructions (`DAN mode`, `unrestricted mode`).
+  - Added `sanitize_tool_argument` to neutralize embedded fake fences and strip unprintable control characters from tool payloads.
+- **Scam Shield & UPI Fraud Signatures**:
+  - Expanded phishing regex database with latest known UPI fraud patterns: fake collect requests, auto-debit authorizations, and mandate approval tricks (`upi_mandate`).
+- **Meeting Copilot Export**:
+  - Implemented `export_meeting_markdown` generating executive markdown summaries with metadata timestamps, key decisions, action item checklists with assignees, and open questions.
+- **UI Automation & Grounding Performance**:
+  - Implemented active-turn UIA bounding box caching (`cache_ttl = 0.75s`) with automatic invalidation on user interaction, reducing consecutive UIA tree scan latency.
+- **Audio Pipeline Resilience**:
+  - Added real-time audio queue overflow guard and dropped-frame telemetry counter, preventing silent data starvation under burst CPU loads.
+  - Safe fallback for `miniaudio` under Windows App Control / WDAC policies.
+- **Command Bus Latency Telemetry**:
+  - Added bus dispatch latency tracking across action and info lanes (`dispatch_metrics`, `average_dispatch_latency`).
+- **Focus & Productivity Metrics**:
+  - Added `calculate_productivity_metrics` and `productivity_score` computing 0-100 productivity scores and categorized focus breakdowns.
+- **Accessibility & System Tray Enhancements**:
+  - Added high-contrast speech cues toggle (`set_high_contrast_cues`).
+  - Added live status tooltip in system tray (`refresh_status_tooltip`) displaying active focus sessions, meeting recordings, and mic state.
+- **Verification Suite & Diagnostics**:
+  - Enhanced `scripts/verify_all.py` with per-suite execution timing and automatic reporting of the top slowest suites.
+  - Test suite passes 100% green across 421 portable and architectural tests.
+
 ## v4.3.1 — Listening fixes, measured on a real laptop
 The report: MXB missed most voice commands, didn't run tools, and needed to hear better. Its own log on the laptop (Realtek mic through the Windows Sound Mapper, llama3.2:1b on the CPU) showed speech arriving at RMS ~0.004 (-48 dBFS), the voice detector scoring it ~0.09, 58 of 60 detections coming from a fixed loudness rule instead, Whisper repeating its prompt back on noise, missed wake words, "open notebook" finding no app, and the local model timing out three times in a row (136 s) before giving up.
 
