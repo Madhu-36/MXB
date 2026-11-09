@@ -8,6 +8,7 @@ from engine.executor import OSExecutionManager
 from engine.tts import VoiceSynthesizer
 from engine.memory import memory_bank
 from engine.actions_catalog import planner_system_prompt, plan_tool_schema, relevant_actions, validate_plan
+from engine.persona import Persona, detect_mood, parse_call_me
 from engine.llm_client import LLMClient, parse_json_reply
 from engine.streaming import ReplyStreamer
 from engine.semantic_memory import extract_preference
@@ -65,6 +66,7 @@ class IntentRouter:
         self.config_path = Path(config_path) if config_path else app_config_path()
         self.config = self._load_config()
         self.llm = LLMClient(self.config)
+        self.persona = Persona(self.config)
 
     def _load_config(self) -> dict:
         try:
@@ -101,13 +103,28 @@ class IntentRouter:
 
         # 0.1. Greetings & Identity Fast-Path (<1ms)
         if clean_text in _GREETINGS:
-            reply = "Hello! MXB executive brain is online and ready for your commands."
+            reply = self.persona.greeting()
             self.tts.speak(reply)
             self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}"
 
         if clean_text in _IDENTITY_WORDS:
-            reply = "I am MXB, your AI desktop executive assistant. I can control your mouse, keyboard, windows, apps, files, and read your screen by voice."
+            reply = self.persona.identity()
+            self.tts.speak(reply)
+            self.history.append({"user": clean_text, "mxb": reply})
+            return f"MXB: {reply}"
+
+        # 0.15. "call me S10": how MXB addresses the user from now on
+        new_name = parse_call_me(original_text)
+        if new_name:
+            reply = self.persona.set_user_name(new_name)
+            saver = getattr(self.executor, "save_setting", None)
+            if callable(saver):
+                saver("persona", "user_name", new_name)
+            try:
+                self.executor.semantic.add(f"The user wants to be called {new_name}", kind="preference")
+            except Exception:
+                pass
             self.tts.speak(reply)
             self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}"
@@ -580,7 +597,13 @@ class IntentRouter:
             # 4. Environmental context (cached) + clock
             env_context = f"{EnvironmentContext.get_weather_and_location()}\nLocal time: {time.strftime('%A %d %B %Y, %I:%M %p')}\n\n"
 
-            augmented_prompt = f"{memory_context}{history_context}{active_window_context}{env_context}User Command: '{text}'"
+            # 5. Mood (frustrated / in a hurry) shapes this one reply; nothing is stored
+            mood = detect_mood(text, [turn.get("user", "") for turn in self.history])
+            note = Persona.mood_note(mood)
+            mood_context = f"{note}\n\n" if note else ""
+
+            augmented_prompt = (f"{memory_context}{history_context}{active_window_context}{env_context}{mood_context}"
+                                f"User Command: '{text}'")
 
             if feedback_callback:
                 feedback_callback("Thinking...")
@@ -659,6 +682,9 @@ class IntentRouter:
         """
         tools = self.planner_tools(query)
         system = planner_system_prompt(only=tools)
+        persona = getattr(self, "persona", None)
+        if persona is not None:
+            system += "\n\n" + persona.prompt()
         llm_cfg = self.config.get("llm", {})
         speaking = True
         try:

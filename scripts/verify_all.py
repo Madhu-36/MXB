@@ -43,6 +43,7 @@ PORTABLE_SUITES = [
     "tests.test_v44_voice",
     "tests.test_v44_turn",
     "tests.test_v44_proactive",
+    "tests.test_v44_persona",
 ]
 
 
