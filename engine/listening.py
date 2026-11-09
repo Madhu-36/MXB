@@ -210,6 +210,41 @@ def clean_transcript(text: str | None) -> str | None:
     return text
 
 
+class BackgroundModel:
+    """
+    Loads a replacement speech model in the background and hands it over when it's ready, so
+    "speak in Kannada" works without restarting MXB (the English-only model can't hear Kannada).
+    """
+
+    def __init__(self, loader):
+        self.loader = loader              # fn(name) -> model
+        self.wanted = None
+        self.ready = None                 # (name, model) once loaded
+        self.error = None
+        self._thread = None
+
+    def request(self, name: str) -> bool:
+        """Starts loading `name` unless it is loading or loaded already. True when a load started."""
+        if self.wanted == name:
+            return False
+        self.wanted, self.ready, self.error = name, None, None
+
+        def work():
+            try:
+                self.ready = (name, self.loader(name))
+            except Exception as e:      # stays on the current model
+                self.error = e
+        import threading
+        self._thread = threading.Thread(target=work, name="speech-model-loader", daemon=True)
+        self._thread.start()
+        return True
+
+    def take(self):
+        """(name, model) once, after it finished loading; otherwise None."""
+        ready, self.ready = self.ready, None
+        return ready
+
+
 def max_tokens_for(seconds: float) -> int:
     """Enough tokens for fast speech of this length (~4 words/s), so noise can't run on for 448."""
     return int(min(224, 24 + 8 * max(0.0, seconds)))

@@ -247,8 +247,18 @@ class OSExecutionManager:
         return f"{'Double-clicked' if action == 'double_click_visual' else 'Clicked'} '{desc}' at {hit.x}, {hit.y}."
 
     def set_language(self, name: str) -> str:
-        """'speak in kannada' -> MXB listens for and replies in Kannada (saved for next time)."""
-        from engine.indic import LANGUAGES, code_for, set_preferred_language
+        """'speak in kannada' -> MXB listens for and replies in Kannada (saved for next time).
+        'kannada, hindi and telugu' -> it listens for any of them (and English) and replies in the one you used."""
+        from engine.indic import LANGUAGES, code_for, parse_language_list, set_preferred_language
+        several = parse_language_list(name)
+        if len(several) > 1 or (several and re.search(r",|\band\b", name or "")):
+            codes = ["en"] + [c for c in several if c != "en"]
+            set_preferred_language("auto")
+            self.save_setting("voice", "language", "auto")
+            self.save_setting("voice", "languages", codes)
+            names = ", ".join(LANGUAGES[c].name for c in codes)
+            return (f"Okay, I'll listen for {names} and reply in whichever you use. The first time, I load the "
+                    "multilingual speech model in the background; that takes about a minute.")
         code = code_for(name)
         if code is None:
             names = ", ".join(lang.name for lang in LANGUAGES.values())
@@ -271,7 +281,8 @@ class OSExecutionManager:
         whisper = str(self.config.get("engine", {}).get("whisper_model", "base.en"))
         from utils.credentials import CredentialsManager
         if whisper.endswith(".en") and not CredentialsManager.get_secret("SARVAM_API_KEY"):
-            note = " For speech in that language, restart MXB so I can load the multilingual speech model, or add a SARVAM_API_KEY."
+            note = (" I'm loading the multilingual speech model in the background (about a minute the first time). "
+                    "For the best accuracy in Indian languages, add a SARVAM_API_KEY.")
         return f"Okay, I'll talk to you in {lang.name} ({lang.native}).{note}"
 
     def _grounding_fallback_on(self) -> bool:

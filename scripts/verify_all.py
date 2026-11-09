@@ -44,6 +44,7 @@ PORTABLE_SUITES = [
     "tests.test_v44_turn",
     "tests.test_v44_proactive",
     "tests.test_v44_persona",
+    "tests.test_v44_languages",
 ]
 
 

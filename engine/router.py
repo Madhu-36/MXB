@@ -909,6 +909,12 @@ class IntentRouter:
             re.match(r"^(?:switch|change|set)\s+(?:your\s+|the\s+)?language\s+to\s+(?P<lang>[a-z]+)$", t)
         if m:
             return self._act(t, "set_language", m.group("lang"), speak_result=True)
+        m = re.match(r"^(?:i (?:speak|talk in|also speak)|listen (?:for|to)|my languages are|understand)\s+"
+                     r"(?P<langs>[a-z]+(?:\s*(?:,|and|&)\s*[a-z]+)+)$", t)
+        if m:
+            from engine.indic import parse_language_list
+            if len(parse_language_list(m.group("langs"))) >= 2:
+                return self._act(t, "set_language", m.group("langs"), speak_result=True)
 
         # ---------------- Phone remote ----------------
         phone = r"(?:phone|mobile)\s+(?:remote|control|access|app)"

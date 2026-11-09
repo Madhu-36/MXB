@@ -227,6 +227,30 @@ def preferred_language(config: dict | None = None) -> str:
     return (((config or {}).get("voice") or {}).get("language") or "en").lower()
 
 
+def allowed_languages(config: dict | None = None) -> list[str]:
+    """voice.languages, e.g. ["en", "kn", "hi", "te"]: the only languages auto-detection may pick."""
+    codes = ((config or {}).get("voice") or {}).get("languages") or []
+    return [c for c in (str(x).lower() for x in codes) if c in LANGUAGES]
+
+
+def pick_language(all_probs, allowed: list[str]) -> str | None:
+    """Whisper's language probabilities -> the most likely of the user's languages (None if none listed)."""
+    if not allowed:
+        return None
+    probs = dict(all_probs or [])
+    return max(allowed, key=lambda code: probs.get(code, 0.0))
+
+
+def parse_language_list(text: str) -> list[str]:
+    """'kannada, hindi and telugu' -> ['kn', 'hi', 'te'] (unknown words ignored, order kept)."""
+    out = []
+    for part in re.split(r",|\band\b|&|/|\s+", (text or "").lower()):
+        code = code_for(part.strip()) if part.strip() else None
+        if code and code != "auto" and code not in out:
+            out.append(code)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Translation bridge
 # ---------------------------------------------------------------------------

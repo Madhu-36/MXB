@@ -12,8 +12,8 @@ from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
 from engine.barge_in import BargeInDetector, is_probable_echo, resolve_mode
-from engine.listening import (InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech, max_tokens_for,
-                              whisper_options)
+from engine.listening import (BackgroundModel, InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech,
+                              max_tokens_for, whisper_options)
 from utils.credentials import CredentialsManager
 from utils.logger import log
 
@@ -356,7 +356,7 @@ class VoicePipeline(QThread):
 
         text = None
         self.last_language = None
-        from engine.indic import LANGUAGES, preferred_language
+        from engine.indic import LANGUAGES, allowed_languages, pick_language, preferred_language
         mode = preferred_language(self.config)   # "en", "auto" or an Indian language code
 
         # 0. Indian languages: Sarvam turns speech straight into English and says which language it was.
@@ -372,6 +372,20 @@ class VoicePipeline(QThread):
                 log.warning(f"NVIDIA Build ASR fallback: {e}")
                 text = None
 
+        # 1b. "Speak in Kannada" while the English-only model is loaded: fetch the multilingual one in
+        # the background and switch to it when it's ready (no restart).
+        if mode != "en" and getattr(self, "_whisper_english_only", False):
+            swap = getattr(self, "_model_swap", None)
+            if swap is None:
+                swap = self._model_swap = BackgroundModel(
+                    lambda name: WhisperModel(name, device="cpu", compute_type="int8"))
+            if swap.request(self.config.get("engine", {}).get("whisper_model_multilingual", "small")):
+                log.info("Pipeline: loading the multilingual speech model in the background.")
+            ready = swap.take()
+            if ready:
+                self.whisper_model, self._whisper_english_only = ready[1], False
+                log.info(f"Pipeline: switched to the multilingual speech model ({ready[0]}).")
+
         # 2. Local Faster-Whisper Fallback
         if text is None and self.whisper_model:
             try:
@@ -380,27 +394,39 @@ class VoicePipeline(QThread):
                 lang_kwargs = {}
                 if mode != "en" and not getattr(self, "_whisper_english_only", False):
                     lang_kwargs["language"] = None if mode == "auto" else mode
-                segments, info = self.whisper_model.transcribe(
-                    audio_data,
-                    beam_size=5,
-                    **lang_kwargs,
-                    vad_filter=True,
-                    vad_parameters=dict(
-                        threshold=0.35,
-                        min_speech_duration_ms=100,
-                        min_silence_duration_ms=300,
-                        speech_pad_ms=adaptive_speech_pad
-                    ),
-                    condition_on_previous_text=False,
-                    # No initial prompt: Whisper repeated the old one ("open app, close window...") on noise.
-                    initial_prompt=None,
-                    no_speech_threshold=0.60,
-                    # One decode, no fallback ladder: noise was re-decoded at up to 6 temperatures.
-                    temperature=0.0,
-                    **whisper_options(self.whisper_model, self.config.get("engine", {}).get("whisper_hotwords", ""),
-                                      max_new_tokens=max_tokens_for(audio_len_s)),
-                )
+                allowed = allowed_languages(self.config) if mode == "auto" else []
+
+                def decode(kwargs):
+                    return self.whisper_model.transcribe(
+                        audio_data,
+                        beam_size=5,
+                        **kwargs,
+                        vad_filter=True,
+                        vad_parameters=dict(
+                            threshold=0.35,
+                            min_speech_duration_ms=100,
+                            min_silence_duration_ms=300,
+                            speech_pad_ms=adaptive_speech_pad
+                        ),
+                        condition_on_previous_text=False,
+                        # No initial prompt: Whisper repeated the old one ("open app, close window...") on noise.
+                        initial_prompt=None,
+                        no_speech_threshold=0.60,
+                        # One decode, no fallback ladder: noise was re-decoded at up to 6 temperatures.
+                        temperature=0.0,
+                        **whisper_options(self.whisper_model, self.config.get("engine", {}).get("whisper_hotwords", ""),
+                                          max_new_tokens=max_tokens_for(audio_len_s)),
+                    )
+                segments, info = decode(lang_kwargs)
                 detected = getattr(info, "language", None)
+                if allowed and detected not in allowed:
+                    # Whisper picked a language the user doesn't speak (short Kannada heard as Tamil, Hindi
+                    # as Urdu): decode again as the likeliest of the user's own languages.
+                    better = pick_language(getattr(info, "all_language_probs", None), allowed)
+                    if better:
+                        log.info(f"Pipeline: heard as '{detected}', not one of {allowed}; decoding as '{better}'.")
+                        segments, info = decode(dict(lang_kwargs, language=better))
+                        detected = better
                 if detected in LANGUAGES and detected != "en":
                     self.last_language = detected
                 filtered_segments = []
