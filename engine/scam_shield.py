@@ -35,6 +35,10 @@ RULES = [
         r"\b(enter|type)\b.{0,20}\bpin\b.{0,50}\b(receive|get|credit|refund|cashback)\b",
         r"\bscan\b.{0,25}\b(qr|code)\b.{0,50}\b(receive|get|credit|refund|cashback|prize|payment from)\b",
         r"\b(receive|get|claim)\b.{0,40}\bscan\b.{0,15}\b(qr|code)\b"]),
+    ("upi_mandate", 50, "Asks you to approve a collect request, mandate or autopay to receive money. Approving any request in UPI always DEBITS your account.", [
+        r"\b(approve|accept)\b.{0,30}\b(collect request|mandate|autopay)\b.{0,30}\b(receive|claim|credit|refund|cashback)\b",
+        r"\b(phonepe|gpay|google pay|paytm|bhim)\b.{0,30}\b(approve|accept)\b.{0,25}\b(to receive|to claim|get cash)\b",
+        r"\b(approve|accept)\b.{0,25}\b(request|autopay)\b.{0,25}\b(in|on)\b.{0,15}\b(phonepe|gpay|paytm|bhim)\b.{0,25}\b(receive|get)\b"]),
     ("remote_access", 40, "Asks you to install a screen-sharing or remote-control app. That gives a stranger control of your phone or PC.", [
         r"\b(anydesk|any desk|teamviewer|team viewer|quick ?support|rustdesk|ultraviewer|airdroid|alpemix)\b",
         r"\b(screen[- ]?shar(e|ing)|remote (access|control|support)) (app|application|software)\b"]),
