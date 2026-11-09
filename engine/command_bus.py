@@ -148,6 +148,13 @@ class CommandBus(QObject):
         self._action_busy = threading.Event()
         self.current_task = ""
         self._workers: list[threading.Thread] = []
+        self._metrics_lock = threading.Lock()
+        self._dispatch_metrics = {
+            "total_dispatches": 0,
+            "total_dispatch_time": 0.0,
+            "max_dispatch_time": 0.0,
+            "last_dispatch_time": 0.0,
+        }
         if start:
             self.start()
 
@@ -267,6 +274,17 @@ class CommandBus(QObject):
                 q.put_nowait(None)
             except queue.Full:
                 pass
+
+    @property
+    def dispatch_metrics(self) -> dict:
+        with self._metrics_lock:
+            return dict(self._dispatch_metrics)
+
+    @property
+    def average_dispatch_latency(self) -> float:
+        with self._metrics_lock:
+            count = self._dispatch_metrics["total_dispatches"]
+            return (self._dispatch_metrics["total_dispatch_time"] / count) if count > 0 else 0.0
 
     @property
     def busy(self) -> bool:
@@ -433,7 +451,14 @@ class CommandBus(QObject):
                 self.feedback.emit("Reasoning & Planning...")
                 started = time.time()
                 result = self.router.route(text, feedback_callback=self.feedback.emit)
-                log.info(f"CommandBus[{lane}] '{text}' -> {result!r} ({time.time() - started:.2f}s)")
+                elapsed = time.time() - started
+                with self._metrics_lock:
+                    self._dispatch_metrics["total_dispatches"] += 1
+                    self._dispatch_metrics["total_dispatch_time"] += elapsed
+                    self._dispatch_metrics["last_dispatch_time"] = elapsed
+                    if elapsed > self._dispatch_metrics["max_dispatch_time"]:
+                        self._dispatch_metrics["max_dispatch_time"] = elapsed
+                log.info(f"CommandBus[{lane}] '{text}' -> {result!r} ({elapsed:.2f}s)")
                 reply = format_result(result)
                 if lang:
                     reply = self.indic.from_english(reply, lang)
