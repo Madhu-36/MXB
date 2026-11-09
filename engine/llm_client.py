@@ -78,6 +78,9 @@ def parse_json_reply(raw: str) -> dict | None:
     return None
 
 
+THINKING_FAMILIES = ("qwen3", "deepseek-r1", "magistral")
+
+
 def estimate_tokens(*texts) -> int:
     """Rough prompt size for English/JSON text (about 4 characters per token)."""
     return sum(len(t or "") for t in texts) // 4 + 1
@@ -109,6 +112,8 @@ class LLMClient:
         self.local_timeout = float(cfg.get("local_timeout_sec", 40))
         self.num_ctx = int(cfg.get("num_ctx", 4096))
         self.local_retry_after = float(cfg.get("local_retry_after_sec", 30))
+        self.structured_output = bool(cfg.get("structured_output", True))
+        self.local_think = cfg.get("local_think", False)
         self.use_tool_calling = bool(cfg.get("use_tool_calling", True))
         self._tools_unsupported = {"nvidia": False, "ollama": False}
         self._local_failed_at = None      # time.monotonic() of the last Ollama timeout / connection failure
@@ -208,12 +213,14 @@ class LLMClient:
             return None
         return resp.json()["choices"][0]["message"]["content"]
 
-    def _ollama(self, system: str, user: str, max_tokens: int, json_mode: bool, image_png: bytes | None) -> str | None:
+    def _ollama(self, system: str, user: str, max_tokens: int, json_mode: bool, image_png: bytes | None,
+                schema: dict | None = None) -> str | None:
         messages, model = self._ollama_messages(system, user, image_png)
         payload = {"model": model, "messages": messages, "stream": False, "keep_alive": "2h",
                    "options": self._ollama_options(max_tokens)}
         if json_mode:
-            payload["format"] = "json"
+            payload["format"] = self._format(schema)
+        self._no_thinking(payload, model)
         try:
             resp = self._post_ollama(payload)
         except Exception as e:
@@ -227,11 +234,14 @@ class LLMClient:
 
     # ------------------------------------------------------------------ public: plain
     def chat(self, system: str, user: str, max_tokens: int | None = None, json_mode: bool = True,
-             image_png: bytes | None = None) -> str | None:
+             image_png: bytes | None = None, schema: dict | None = None) -> str | None:
+        """schema: JSON schema the local model's output is constrained to (Ollama structured outputs)."""
         max_tokens = max_tokens or self.max_tokens
-        for name, fn in (("NVIDIA", self._nvidia), ("Ollama", self._ollama)):
+        calls = (("NVIDIA", lambda: self._nvidia(system, user, max_tokens, json_mode, image_png)),
+                 ("Ollama", lambda: self._ollama(system, user, max_tokens, json_mode, image_png, schema)))
+        for name, fn in calls:
             try:
-                out = fn(system, user, max_tokens, json_mode, image_png)
+                out = fn()
                 if out:
                     return out
             except Exception as e:
@@ -239,8 +249,23 @@ class LLMClient:
         return None
 
     def chat_json(self, system: str, user: str, max_tokens: int | None = None,
-                  image_png: bytes | None = None) -> dict | None:
-        return parse_json_reply(self.chat(system, user, max_tokens, True, image_png) or "")
+                  image_png: bytes | None = None, schema: dict | None = None) -> dict | None:
+        return parse_json_reply(self.chat(system, user, max_tokens, True, image_png, schema) or "")
+
+    # ------------------------------------------------------------------ local-model helpers
+    def _format(self, schema: dict | None):
+        """
+        Ollama "format": a JSON schema makes decoding grammar-constrained, so even a small model can
+        only produce a valid plan with real action names (Ollama >= 0.5). llm.structured_output: false
+        falls back to plain JSON mode.
+        """
+        return schema if schema and self.structured_output else "json"
+
+    def _no_thinking(self, payload: dict, model: str):
+        """Hybrid thinking models (qwen3, deepseek-r1) spend seconds "thinking" before a plan; MXB doesn't need it."""
+        name = (model or "").lower()
+        if self.local_think is False and any(f in name for f in THINKING_FAMILIES) and "instruct" not in name:
+            payload["think"] = False
 
     # ------------------------------------------------------------------ public: tool calling
     def plan_with_tools(self, system: str, user: str, tool: dict, max_tokens: int | None = None,
@@ -299,7 +324,7 @@ class LLMClient:
 
     # ------------------------------------------------------------------ public: streaming
     def stream_chat(self, system: str, user: str, on_delta=None, max_tokens: int | None = None,
-                    json_mode: bool = True) -> str:
+                    json_mode: bool = True, schema: dict | None = None) -> str:
         """
         Streams tokens, calling on_delta(text) as they arrive. Returns the full text
         ("" if no provider answered).
@@ -324,7 +349,8 @@ class LLMClient:
             payload = {"model": model, "messages": messages, "stream": True, "keep_alive": "2h",
                        "options": self._ollama_options(max_tokens)}
             if json_mode:
-                payload["format"] = "json"
+                payload["format"] = self._format(schema)
+            self._no_thinking(payload, model)
             with self._post_ollama(payload, stream=True) as resp:
                 if resp.status_code == 200:
                     out = self._consume_ndjson(resp.iter_lines(decode_unicode=True), on_delta)

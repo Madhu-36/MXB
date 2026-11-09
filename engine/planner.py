@@ -1,6 +1,33 @@
+import re
 import time
 import threading
 from utils.logger import log
+
+# Steps that act on whatever window is in front. After a failed step, or before the app a plan just
+# opened has come to the front, running them could type into the wrong window.
+INPUT_ACTIONS = {"type_text", "press_key", "shortcut", "paste_text", "select_all", "copy_text", "save_file", "undo",
+                 "left_click", "right_click", "double_click", "click_element", "click_text", "click_mark",
+                 "type_into", "type_mark", "search_on_screen", "focus_search_box", "manage_window"}
+_FAILURE = re.compile(r"\b(could not|couldn't|cannot|can't|failed|failure|error|not found|no app|unable|"
+                      r"don't have access|denied|refused|blocked|no window|not running|isn't running)\b", re.I)
+
+
+def step_failed(result) -> bool:
+    """Executor results are sentences; these are the ways they say a step didn't happen."""
+    text = str(result or "")
+    return bool(_FAILURE.search(text)) and not text.lower().startswith(("done", "ok"))
+
+
+def foreground_window() -> int:
+    """Handle of the window in front (0 when unknown, e.g. not on Windows)."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        user32.GetForegroundWindow.restype = wintypes.HWND
+        return int(user32.GetForegroundWindow() or 0)
+    except Exception:
+        return 0
 
 
 class ActionPlanner:
@@ -13,12 +40,29 @@ class ActionPlanner:
     in parallel (info lane) can never inject keystrokes into the middle of a plan.
     """
 
-    def __init__(self, executor):
+    def __init__(self, executor, launch_wait_s: float = 6.0):
         self.executor = executor
         self._abort_event = threading.Event()
         self._depth = 0
         self._depth_lock = threading.Lock()
         self.current_step = ""
+        self.launch_wait_s = launch_wait_s
+        self.foreground = foreground_window          # replaceable in tests
+
+    def _wait_for_new_window(self, before: int) -> bool:
+        """After launching an app: wait (abortably) until a different window is in front."""
+        if not before:
+            return True                                # can't tell on this platform; don't block
+        deadline = time.monotonic() + self.launch_wait_s
+        while time.monotonic() < deadline:
+            if self._abort_event.is_set():
+                return False
+            now = self.foreground()
+            if now and now != before:
+                time.sleep(0.3)                       # let it finish drawing before keystrokes arrive
+                return True
+            time.sleep(0.1)
+        return False
 
     @property
     def is_busy(self) -> bool:
@@ -105,14 +149,32 @@ class ActionPlanner:
                     continue
 
                 # Standard OS action via Executor
+                later_input = any(str(s.get("action", "")).lower() in INPUT_ACTIONS
+                                  for s in steps[idx:] if isinstance(s, dict))
+                before = self.foreground() if action == "open_app" and later_input else 0
                 try:
                     res = self.executor.execute_action(action, target)
                     results.append(res)
                 except Exception as e:
-                    err_msg = f"Failed step {idx} ({action}): {e}"
-                    log.error(f"ActionPlanner: {err_msg}")
-                    results.append(err_msg)
-                    continue
+                    res = f"Failed step {idx} ({action}): {e}"
+                    log.error(f"ActionPlanner: {res}")
+                    results.append(res)
+
+                if later_input and step_failed(res):
+                    msg = (f"Stopped after step {idx} ({action} {target}) didn't work, so I didn't type or click "
+                           f"into whatever window is open instead.")
+                    log.warning(f"ActionPlanner: {msg} Result was: {res}")
+                    results.append(msg)
+                    break
+                if before and not self._wait_for_new_window(before):
+                    if self._abort_event.is_set():
+                        results.append("Execution aborted by user interrupt.")
+                        break
+                    msg = (f"{target} didn't come to the front within {self.launch_wait_s:.0f} seconds, "
+                           f"so I stopped before typing into another window.")
+                    log.warning(f"ActionPlanner: {msg}")
+                    results.append(msg)
+                    break
 
                 # Micro-delay between desktop interactions (checking abort)
                 self._sleep_abortable(0.15)

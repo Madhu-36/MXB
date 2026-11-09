@@ -108,6 +108,10 @@ def main():
     if health.get("ollama_running") and not bus.router.llm.cloud_available():
         import threading
         threading.Thread(target=bus.router.llm.warm_up, name="llm-warmup", daemon=True).start()
+        from utils.model_setup import is_too_small
+        if is_too_small(bus.router.llm.local_model):
+            log.warning(f"LLM: {bus.router.llm.local_model} is too small to plan multi-step requests reliably. "
+                        "Run scripts\\upgrade_brain.bat for a 4B model (benchmarked before it switches).")
 
     # 6. Core Voice Pipeline (feeds transcripts into the bus, keeps listening while MXB works)
     voice_pipeline = VoicePipeline(config, bus=bus)
