@@ -42,6 +42,11 @@ WINDOWS_ONLY = [
     "winrt.windows.devices.radios", "pyaudiowpatch",
 ]
 
+# Gracefully fall back if blocked by App Control policy or absent
+OPTIONAL_MODULES = {
+    "miniaudio",
+}
+
 
 def default_modules() -> list[str]:
     mods = OWN_MODULES + THIRD_PARTY
@@ -96,7 +101,7 @@ def run(report_path: str | None = None, modules: list[str] | None = None, vad: b
         }
         if vad:
             report["files"]["silero_vad"] = check_vad()
-        failures = [k for section in ("modules", "files") for k, v in report[section].items() if v != "ok"]
+        failures = [k for section in ("modules", "files") for k, v in report[section].items() if v != "ok" and k not in OPTIONAL_MODULES]
         report["failures"] = failures
         report["ok"] = not failures
     except BaseException as e:
