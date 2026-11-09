@@ -153,11 +153,21 @@ def summarize_elements(elements: list[UIElement], limit: int = 40) -> list[dict]
 # Windows UIA access
 # ---------------------------------------------------------------------------
 class UIAutomation:
-    def __init__(self, max_nodes: int = 2500, time_budget: float = 2.5):
+    def __init__(self, max_nodes: int = 2500, time_budget: float = 2.5, cache_ttl: float = 0.75):
         self.max_nodes = max_nodes
         self.time_budget = time_budget
+        self.cache_ttl = cache_ttl
         self._local = threading.local()
         self._available = None
+        self._cache = None
+        self._cache_hits = 0
+
+    def invalidate_cache(self):
+        self._cache = None
+
+    @property
+    def cache_hits(self) -> int:
+        return self._cache_hits
 
     def available(self) -> bool:
         if self._available is None:
@@ -216,6 +226,12 @@ class UIAutomation:
         hwnd = hwnd or self.foreground_hwnd()
         if not hwnd:
             return [], 0
+        now = time.time()
+        if self._cache is not None:
+            c_hwnd, c_time, c_elems, c_top = self._cache
+            if c_hwnd == hwnd and (now - c_time) < self.cache_ttl:
+                self._cache_hits += 1
+                return c_elems, c_top
         try:
             root = UIAElementInfo(hwnd)
             window_top = int(root.rectangle.top)
@@ -242,6 +258,7 @@ class UIAutomation:
             if el is not None:
                 found.append(el)
         log.info(f"UIAutomation: scanned {visited} nodes, kept {len(found)} on-screen elements.")
+        self._cache = (hwnd, time.time(), found, window_top)
         return found, window_top
 
     @staticmethod
