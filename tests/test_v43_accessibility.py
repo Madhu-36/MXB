@@ -298,5 +298,14 @@ class TestSpeechRate(unittest.TestCase):
         self.assertEqual(piper.length_scale, 0.8)
 
 
+    def test_high_contrast_speech_cues_toggle(self):
+        mode = make()[0]
+        self.assertFalse(mode.high_contrast_cues)
+        self.assertEqual(mode.set_high_contrast_cues(True), "High-contrast speech cues enabled.")
+        self.assertTrue(mode.high_contrast_cues)
+        self.assertEqual(mode.set_high_contrast_cues(), "High-contrast speech cues disabled.")
+        self.assertFalse(mode.high_contrast_cues)
+
+
 if __name__ == "__main__":
     unittest.main()
