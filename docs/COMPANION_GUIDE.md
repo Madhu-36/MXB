@@ -243,7 +243,7 @@ Privacy: nothing is tracked until you ask. `activity.db` in the data folder stor
 ### v4.4: voice ID, briefings, persona, languages
 | Say | Does |
 | :--- | :--- |
-| "learn my voice", "only listen to me" | Four short sentences of yours become a voiceprint; after that only your voice gives commands. Other voices show up in the chat as "ignored: another voice". "stop" and "cancel" work from anyone |
+| "learn my voice", "only listen to me" | Four short sentences of yours become a voiceprint; after that only your voice gives commands. When another voice is ignored, the chat says "Ignored a voice that isn't yours". "stop" and "cancel" work from anyone |
 | "voice id off" / "voice id on", "listen to everyone", "voice id status", "forget my voice" | Pause, resume, check or delete the voiceprint |
 | "brief me", "what's my day like", "give me my morning briefing" | Time, weather, today's events, unread email and reminders |
 | "what's on my calendar today", "… tomorrow", "do i have any meetings" | Your agenda from the connected calendar |
@@ -255,7 +255,7 @@ Privacy: nothing is tracked until you ask. `activity.db` in the data folder stor
 
 MXB speaks first only for three things: the morning briefing (once a day, after `proactive.briefing_time`, when you've used the PC in the last 5 minutes), meeting alerts (`proactive.meeting_alert_minutes` before), and low battery. Nothing is spoken during quiet hours or while you're in a meeting or focus session; meeting alerts still appear in the chat. Google Calendar: *Settings → your calendar → Integrate calendar → Secret address in iCal format*. Outlook: *Settings → Calendar → Shared calendars → Publish a calendar → ICS link*. Email works with an app password: Gmail (turn on 2-step verification, then *myaccount.google.com/apppasswords*), Yahoo, iCloud, Zoho. Microsoft accounts (Outlook.com, Hotmail, Live, and Microsoft 365 school or work mail) allow only OAuth sign-in, which MXB doesn't support yet. Setup reads the calendar and signs in to the mailbox before saving anything, so a wrong link or password is caught right there.
 
-Turn detection: when you pause, a small model (Smart Turn v3.2) judges whether your sentence is finished. If it is, MXB answers at once; if not ("open the file called…"), it waits up to `turn_detection.hold_seconds` for the rest. Compare both on your PC with `scripts\listening_bench.bat --turn on` and `--turn off`.
+Turn detection: when you pause, a small model (Smart Turn v3.2) judges whether your sentence sounds finished. If it does, MXB starts transcribing straight away and acts as soon as the pause is confirmed (about half a second sooner); if you keep talking, that early transcript is thrown away. If it sounds unfinished ("open the file called…"), MXB waits up to `turn_detection.hold_seconds` for the rest. `logs\mxb_core.log` shows each judgement (`end of sentence? p=0.97 -> complete`). Compare on your PC with `scripts\listening_bench.bat --turn on` and `--turn off`.
 
 Wake word in the audio: set `"listening": {"engine": "kws"}` and MXB spots "MXB" / "hey MXB" in the sound itself (any phrase in `listening.wake_words`, no training). Raise `listening.kws_threshold` if it wakes by mistake, lower it if it misses you.
 
@@ -354,7 +354,8 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `voice_id.short_seconds` / `voice_id.short_floor` | `1.0` / `0.2` | Utterances shorter than this need only the lower score |
 | `listening.engine` | `"transcript"` | `"kws"` = keyword spotter in the audio, `"openwakeword"` = pretrained offline phrases |
 | `listening.kws_threshold` / `listening.kws_boost` | `0.2` / `1.5` | Keyword spotter: trigger score, and how strongly it looks for the wake words |
-| `turn_detection.enabled` / `turn_detection.threshold` | `true` / `0.5` | Smart Turn end-of-sentence model; a pause scoring at least this ends the turn |
+| `turn_detection.enabled` | `true` | Smart Turn end-of-sentence model (downloads 9 MB on first use) |
+| `turn_detection.complete_threshold` / `turn_detection.unfinished_threshold` | `0.5` / `0.5` | At or above the first: start recognition early. Below the second: wait up to `hold_seconds`. Set them apart (e.g. `0.9` / `0.3`) to let the silence timer alone decide in between |
 | `turn_detection.probe_seconds` / `turn_detection.hold_seconds` | `0.2` / `1.5` | When to ask the model after you pause; how long to wait when you sound unfinished |
 | `proactive.enabled` / `proactive.briefing_time` | `true` / `"08:30"` | Speak first; earliest time for the daily briefing |
 | `proactive.quiet_hours` | `"22:30-07:30"` | Nothing spoken in this window |
@@ -395,7 +396,7 @@ The live suite works in a sandbox folder (`Documents\MXB-Bench-<time>`) with its
 - **The openWakeWord engine** ships with pretrained phrases ("hey jarvis", "alexa", "hey mycroft"). For "MXB" in the audio use `listening.engine: "kws"`, which needs no training.
 - **Voice ID** compares voices, it isn't security: a recording of your voice passes, and a cold or a new mic can lower your score (say "learn my voice" again). Very short phrases are judged on less audio, so they get a lower bar.
 - **Proactive alerts** come from a private iCal link (re-read every 15 minutes) and IMAP with an app password. Microsoft mail accounts need OAuth, which isn't supported yet; their calendars still work through the published ICS link.
-- **Smart Turn** is trained on 23 languages, including English, Hindi, Bengali and Marathi, but not Kannada or Telugu. If it cuts you off or keeps you waiting in those, set `turn_detection.enabled` to `false`.
+- **Smart Turn** is trained on 23 languages, including English, Hindi, Bengali and Marathi, but not Kannada or Telugu. It can't cut you off (the silence timer still ends turns), but if it keeps you waiting in those languages, set `turn_detection.enabled` to `false`.
 - **Local hashing embeddings** match by keywords and phrases, not deep meaning. Run `ollama pull nomic-embed-text` for real semantic recall.
 - **Unsigned installer.** SmartScreen may warn on first install (*More info → Run anyway*). The update checksum catches corrupted or tampered downloads, but only code signing protects against a compromised release account.
 - **Injection detection is pattern-based.** A clever page may not trip it; the per-goal allowlist and confirmations are what actually stop harm.

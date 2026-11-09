@@ -12,6 +12,7 @@ from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
 from engine.barge_in import BargeInDetector, is_probable_echo, resolve_mode
+from engine.turn_detector import SpeculativeTurn
 from engine.listening import (BackgroundModel, InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech,
                               max_tokens_for, whisper_options)
 from utils.credentials import CredentialsManager
@@ -240,18 +241,25 @@ class VoicePipeline(QThread):
             if utterance_item is None:
                 break
 
-            audio_data, agc_target, max_gain, during_tts = (tuple(utterance_item) + (False,))[:4]
+            audio_data, agc_target, max_gain, during_tts, speculative = (tuple(utterance_item) + (False, None))[:5]
 
             try:
                 vid = self.voice_id
                 if vid is not None and vid.enrolling:
                     # Learning the owner's voice: these utterances are samples, not commands.
+                    if speculative is not None and not speculative.wait():
+                        continue
                     reply = vid.add_sample(audio_data)
                     if reply:
                         self.router.tts.speak(reply)
                     self.vad_status_changed.emit("Idle")
                     continue
                 text = self._transcribe_audio(audio_data, agc_target, max_gain)
+                if speculative is not None and not speculative.wait():
+                    # Transcribed during the pause, but the user went on talking: the whole sentence
+                    # arrives as its own utterance, so this part is dropped.
+                    log.info(f"Pipeline: dropped the early transcript '{text}'; the sentence went on.")
+                    continue
                 if text and vid is not None and vid.ready():
                     allowed, why = vid.check(audio_data, text)
                     if not allowed:
@@ -503,7 +511,8 @@ class VoicePipeline(QThread):
         self.turn.load()
         turn_probe_frames = max(1, int(self.turn.probe_seconds / 0.032))
         turn_hold_frames = max(1, int(self.turn.hold_seconds / 0.032))
-        turn_decision = None          # per pause: None (not asked yet), True (complete), False (keep listening)
+        turn_verdict = None           # per pause: None (not asked yet), "complete", "unfinished" or "unsure"
+        speculative = None            # SpeculativeTurn being transcribed while the silence timer runs
 
         use_software_resample = False
         stream_rate = 16000
@@ -633,7 +642,12 @@ class VoicePipeline(QThread):
                             buffer.append(chunk)
                             speech_frames_count += 1
                             silence_frames = 0
-                            turn_decision = None
+                            turn_verdict = None
+                            if speculative is not None:
+                                # The pause wasn't the end: drop the early transcript, keep one sentence.
+                                speculative.cancel()
+                                speculative = None
+                                self.vad_status_changed.emit("Active (Listening...)")
                             if len(buffer) >= max_utterance_frames:
                                 # A TV or people talking can keep "speech" going for minutes: transcribe
                                 # in pieces instead of waiting for a pause that never comes.
@@ -655,15 +669,19 @@ class VoicePipeline(QThread):
                                     base_threshold=silence_threshold
                                 )
 
-                                # Ask Smart Turn once per pause whether the sentence is finished.
-                                if (turn_decision is None and silence_frames >= turn_probe_frames and not speaking_now
+                                # Ask Smart Turn once per pause whether the sentence is finished. "Finished"
+                                # starts recognition now, while the silence timer still decides the turn.
+                                if (turn_verdict is None and silence_frames >= turn_probe_frames and not speaking_now
                                         and speech_frames_count >= min_speech_frames and self.turn.ready):
-                                    turn_decision = self.turn.is_complete(np.concatenate(buffer))
-                                    if turn_decision is False:
-                                        log.info("Pipeline: sentence sounds unfinished; still listening.")
-                                if turn_decision is True:
-                                    end_turn = True
-                                elif turn_decision is False:
+                                    turn_verdict = self.turn.verdict(np.concatenate(buffer)) or "unsure"
+                                    log.info(f"Pipeline: end of sentence? p={self.turn.last_probability or 0:.2f} "
+                                             f"-> {turn_verdict}")
+                                    if turn_verdict == "complete":
+                                        speculative = SpeculativeTurn()
+                                        if not self._dispatch_utterance(list(buffer), started_during_tts, agc_target_level,
+                                                                        agc_max_gain, speculative=speculative):
+                                            speculative = None
+                                if turn_verdict == "unfinished":
                                     end_turn = silence_frames > max(adaptive_silence_target, turn_hold_frames)
                                 else:
                                     end_turn = silence_frames > adaptive_silence_target
@@ -671,16 +689,22 @@ class VoicePipeline(QThread):
                                 if end_turn:
                                     is_speaking = False
                                     # How long MXB waited after the user stopped talking (benchmarks read it).
-                                    self.last_end_of_turn = (round(silence_frames * 32), "smart turn" if turn_decision
-                                                             else "silence")
-                                    turn_decision = None
+                                    # How long the silence lasted, and how soon recognition started (benchmarks).
+                                    self.last_end_of_turn = (round(silence_frames * 32), {
+                                        "complete": "silence; transcribing since %d ms" % (turn_probe_frames * 32),
+                                        "unfinished": "smart turn waited"}.get(turn_verdict or "", "silence"))
+                                    turn_verdict = None
 
-                                    if speech_frames_count < min_speech_frames:
+                                    if speculative is not None:
+                                        speculative.confirm()           # already transcribed or transcribing
+                                        speculative = None
+                                        self.vad_status_changed.emit("Transcribing...")
+                                    elif speech_frames_count < min_speech_frames:
                                         buffer = []
                                         self.vad_status_changed.emit("Idle")
                                         continue
-
-                                    self._dispatch_utterance(buffer, started_during_tts, agc_target_level, agc_max_gain)
+                                    else:
+                                        self._dispatch_utterance(buffer, started_during_tts, agc_target_level, agc_max_gain)
                                     buffer = []
                                     self.preroll_buffer.clear()
                     else:
@@ -690,16 +714,19 @@ class VoicePipeline(QThread):
             log.error(error_msg)
             self.vad_status_changed.emit(error_msg)
 
-    def _dispatch_utterance(self, buffer, started_during_tts: bool, agc_target: float, max_gain: float):
-        """Hands an utterance to the ASR worker without ever blocking the microphone loop."""
+    def _dispatch_utterance(self, buffer, started_during_tts: bool, agc_target: float, max_gain: float,
+                            speculative=None) -> bool:
+        """Hands an utterance to the ASR worker without ever blocking the microphone loop. With
+        `speculative`, the worker transcribes now but acts only once the loop confirms the turn ended."""
         # With the offline wake engine, nothing is transcribed until the wake word is heard
         # (except while MXB is busy/speaking, so "stop" still works).
         if (self.wake_engine is not None and not self.bus.wake.engaged
                 and not self.bus.busy and not self.is_tts_speaking):
-            self.vad_status_changed.emit("Idle")
-            return
+            if speculative is None:
+                self.vad_status_changed.emit("Idle")
+            return False
         item = (np.concatenate(buffer).flatten(), agc_target, max_gain,
-                started_during_tts and self.barge_in_mode == "speaker")
+                started_during_tts and self.barge_in_mode == "speaker", speculative)
         try:
             self.utterance_queue.put_nowait(item)
         except queue.Full:
@@ -714,9 +741,12 @@ class VoicePipeline(QThread):
             try:
                 self.utterance_queue.put_nowait(item)
             except queue.Full:
-                return
-        self.vad_status_changed.emit("Transcribing...")
-        log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames). Mic stays listening!")
+                return False
+        if speculative is None:
+            self.vad_status_changed.emit("Transcribing...")
+        log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames"
+                 f"{', early: the sentence sounds finished' if speculative is not None else ''}). Mic stays listening!")
+        return True
 
     def _log_gain(self, every_s: float = 30.0, min_change_db: float = 3.0):
         """One log line when the microphone gain settles somewhere new (for diagnosing quiet mics)."""

@@ -6,11 +6,20 @@ complete sentence and cuts people off mid-thought ("open the... uhh... downloads
 In natural conversation the gap between one speaker finishing and the next starting averages
 about 200 ms.
 
-Smart Turn v3.2 (Pipecat, BSD-2-Clause; Whisper-Tiny encoder + classifier, 8.7 MB int8 ONNX, ~10-65 ms
-on a CPU) listens to the last 8 s of the utterance, intonation included, and says whether the turn
-is complete. MXB asks it once per pause, ~0.2 s into the silence:
-- complete    -> transcribe now (about 0.3-0.6 s sooner than before)
-- incomplete  -> keep listening up to turn_detection.hold_seconds (1.5 s) of silence
+Smart Turn v3.2 (Pipecat, BSD-2-Clause; Whisper-Tiny encoder + classifier, 8.7 MB int8 ONNX, ~50 ms
+on one CPU core) listens to the last 8 s of the utterance, intonation included, and gives the
+probability that the turn is complete. MXB asks it once per pause, 0.2 s into the silence:
+- p >= complete_threshold (0.5): sounds finished. Recognition starts right away, in parallel with
+  the silence timer, and the command is released when the timer confirms the pause. If the user
+  keeps talking first, that early transcript is thrown away and the sentence continues as one.
+- p <  unfinished_threshold (0.5): sounds unfinished. Keep listening up to hold_seconds (1.5 s).
+- in between (only when the two thresholds differ): the silence timer alone decides.
+
+Why the model never ends a turn by itself (measured in v4.4 through MXB's real mic loop with
+synthetic voices, Whisper faked): ending the turn at 0.2 s on "finished" split 15 of 40 complete
+commands, mostly right after "MXB," (a name alone sounds finished), which made MXB say "Yes?" over
+the rest of the sentence. The old timer split none. Starting recognition early gives the same speed-up
+(the 0.3-0.5 s the timer waits overlaps transcription) without ever cutting a sentence.
 
 Features match the reference (transformers WhisperFeatureExtractor, chunk_length=8, normalized
 waveform) to within 7e-6, computed with faster-whisper's numpy extractor, so no transformers/torch.
@@ -41,11 +50,34 @@ def turn_features(audio: np.ndarray) -> np.ndarray:
     return _extractor()(x, padding=0)[np.newaxis].astype(np.float32)
 
 
+class SpeculativeTurn:
+    """An utterance handed to recognition before the silence timer confirmed that the turn is over.
+    The microphone loop decides; the recognition thread waits for the decision before acting on it."""
+
+    def __init__(self):
+        self._decided = threading.Event()
+        self.keep = False
+
+    def confirm(self):
+        self.keep = True
+        self._decided.set()
+
+    def cancel(self):
+        self.keep = False
+        self._decided.set()
+
+    def wait(self, timeout: float = 5.0) -> bool:
+        """True once confirmed; False if cancelled or undecided after timeout (never act on a guess)."""
+        return self._decided.wait(timeout) and self.keep
+
+
 class TurnDetector:
     def __init__(self, config: dict | None = None, session=None):
         cfg = (config or {}).get("turn_detection", {})
         self.enabled = bool(cfg.get("enabled", True))
-        self.threshold = float(cfg.get("threshold", 0.5))
+        self.complete_threshold = float(cfg.get("complete_threshold", 0.5))
+        self.unfinished_threshold = float(cfg.get("unfinished_threshold", 0.5))
+        self.last_probability: float | None = None
         self.probe_seconds = float(cfg.get("probe_seconds", 0.2))
         self.hold_seconds = float(cfg.get("hold_seconds", 1.5))
         self._session = session
@@ -79,12 +111,23 @@ class TurnDetector:
             out = self._session.run(None, {"input_features": turn_features(audio)})
         return float(np.asarray(out[0]).reshape(-1)[0])
 
-    def is_complete(self, audio: np.ndarray) -> bool | None:
-        """True / False, or None when it can't tell (not loaded, or the model failed)."""
+    def verdict(self, audio: np.ndarray) -> str | None:
+        """'complete', 'unfinished' or 'unsure'; None when the model isn't loaded or failed."""
         if not self.ready:
             return None
         try:
-            return self.complete_probability(audio) >= self.threshold
+            p = self.complete_probability(audio)
         except Exception as e:
             log.warning(f"TurnDetector: {e}; ending this turn on silence.")
             return None
+        self.last_probability = p
+        if p >= self.complete_threshold:
+            return "complete"
+        if p < self.unfinished_threshold:
+            return "unfinished"
+        return "unsure"
+
+    def is_complete(self, audio: np.ndarray) -> bool | None:
+        """True (finished), False (unfinished), or None (unsure, not loaded, or the model failed)."""
+        v = self.verdict(audio)
+        return True if v == "complete" else False if v == "unfinished" else None
