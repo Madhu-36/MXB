@@ -349,7 +349,7 @@ class MCPManager:
                 schema = schema.model_dump()
             action = action_name(server, tool_name)
             desc = str(_attr(tool, "title", default="") or _attr(tool, "description", default="") or tool_name)
-            desc = re.split(r"(?<=[.!?])\s", desc.strip(), 1)[0][:140]
+            desc = re.split(r"(?<=[.!?])\s", desc.strip(), maxsplit=1)[0][:140]
             spec = ActionSpec(action, schema_summary(schema), f"[{server}] {desc}", "mcp", risk=tool_risk(trust, tool))
             self._register(spec)
             self.actions[action] = (server, tool_name, schema)
