@@ -26,3 +26,7 @@ build/
 bench/results/
 .build-venv/
 packaging/mxb.ico
+*.lock
+mxb.lock
+update_state.json
+activity.db*
