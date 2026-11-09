@@ -113,8 +113,29 @@ class MXBTray(QSystemTrayIcon):
         self.menu.addAction(self.exit_action)
 
         self.setContextMenu(self.menu)
+        self.menu.aboutToShow.connect(self.refresh_status_tooltip)
+        self.refresh_status_tooltip()
         if self.chat is not None:
             self.activated.connect(self._on_activated)
+
+    def refresh_status_tooltip(self):
+        """Updates the tray tooltip with live status of focus session, meeting copilot, and mic state."""
+        parts = ["Machine eXecutive Brain (MXB)"]
+        if self.bus is not None:
+            executor = getattr(self.bus, "executor", None)
+            if executor is not None:
+                coach = getattr(executor, "coach", None)
+                if coach is not None and getattr(coach, "session", None) is not None:
+                    rem = int(max(0, coach.session.remaining(coach.clock()) / 60))
+                    parts.append(f"Focus: {coach.session.name} ({rem}m left)")
+                copilot = getattr(executor, "meeting_copilot", None)
+                if copilot is not None and getattr(copilot, "active", False):
+                    parts.append(f"Meeting Notes: {copilot.session.title}")
+            if getattr(self.bus, "busy", False):
+                parts.append("Bus: Busy")
+        if self.engine is not None and not getattr(self.engine, "is_listening", True):
+            parts.append("Mic: Paused")
+        self.setToolTip("\n".join(parts))
 
     def _on_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
