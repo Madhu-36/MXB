@@ -7,6 +7,7 @@ from pathlib import Path
 
 import tests._stubs  # noqa: F401
 from engine.focus_coach import (
+    calculate_productivity_metrics,
     DISTRACTION, FOCUS, IDLE, MEETING, NEUTRAL, ActivityStore, ActivityTracker, FocusCoach, Sample, classify,
     label_mentioned, minutes_text, parse_session_request,
 )
@@ -273,6 +274,27 @@ class TestCoach(unittest.TestCase):
         self.run_for(120)
         self.assertEqual(self.said, [])
 
+    def test_productivity_score_calculation(self):
+        # Empty rows
+        self.assertEqual(calculate_productivity_metrics([])["score"], 100)
+
+        # 40m focus, 10m distraction -> 40 / 50 = 80%
+        rows = [("VS Code", FOCUS, 2400.0), ("YouTube", DISTRACTION, 600.0)]
+        metrics = calculate_productivity_metrics(rows)
+        self.assertEqual(metrics["score"], 80)
+        self.assertEqual(metrics["ratio"], 0.8)
+        self.assertEqual(metrics["total_seconds"], 3000.0)
+
+        # 100% distraction
+        d_metrics = calculate_productivity_metrics([("YouTube", DISTRACTION, 1000.0)])
+        self.assertEqual(d_metrics["score"], 0)
+
+        # Via coach
+        self.coach.set_tracking(True)
+        self.run_for(30 * 60)
+        res = self.coach.productivity_score("today")
+        self.assertGreaterEqual(res["score"], 90)
+
     def test_sample_dataclass(self):
         s = Sample(at=1.0, label="VS Code", category=FOCUS, seconds=5.0)
         self.assertEqual(s.hwnd, 0)
@@ -293,6 +315,9 @@ class TestCoachBackground(unittest.TestCase):
             coach.shutdown()
         finally:
             tmp.cleanup()
+
+
+
 
 
 if __name__ == "__main__":
