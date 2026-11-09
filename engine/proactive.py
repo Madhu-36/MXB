@@ -236,16 +236,17 @@ class ProactiveEngine:
                     self.announce(text)
                 elif plugged or percent > self.battery_percent + 10:
                     self._battery_warned = False
-        if "briefing" not in self.muted and self._last_briefing != now.date() and \
+        # Unasked, only with something to tell: no daily "your calendar isn't connected" nag.
+        if "briefing" not in self.muted and (self.calendar or self.mail) and self._last_briefing != now.date() and \
                 (now.hour, now.minute) >= self.briefing_at and self.idle_seconds() < 300:
             self._last_briefing = now.date()
-            text = self.briefing(now)
+            text = self.briefing(now, asked=False)
             said.append(("briefing", text))
             self.announce(text)
         return said
 
     # ------------------------------------------------------------------ the briefing
-    def briefing(self, now: datetime | None = None) -> str:
+    def briefing(self, now: datetime | None = None, asked: bool = True) -> str:
         now = now or self.clock()
         part = "morning" if now.hour < 12 else "afternoon" if now.hour < 17 else "evening"
         name = f", {self.user_name}" if self.user_name else ""
@@ -257,7 +258,8 @@ class ProactiveEngine:
                     lines.append(w if w.endswith(".") else w + ".")
             except Exception:
                 pass
-        lines.append(self.agenda(now))
+        if self.calendar or asked:
+            lines.append(self.agenda(now))
         if self.mail and "email" not in self.muted:
             lines.append(self.email_summary())
         if self.reminders:

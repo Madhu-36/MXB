@@ -252,6 +252,13 @@ class TestProactiveEngine(unittest.TestCase):
         self.clock.now = TODAY + timedelta(days=1)
         self.assertIn("briefing", [k for k, _ in self.engine.tick()])
 
+    def test_no_unasked_briefing_without_a_calendar_or_email(self):
+        self.engine.calendar = None
+        self.assertNotIn("briefing", [k for k, _ in self.engine.tick()])
+        asked = self.engine.briefing(TODAY)                       # "brief me" still works, with the hint
+        self.assertIn("Bengaluru 24°C", asked)
+        self.assertIn("connect my calendar", asked)
+
     def test_no_briefing_while_away_or_before_time(self):
         self.engine.idle_seconds = lambda: 3600
         self.assertNotIn("briefing", [k for k, _ in self.engine.tick()])
