@@ -139,6 +139,15 @@ class TestTTSThreadPrefetch(unittest.TestCase):
 
 
 
+def _audio_importable() -> bool:
+    try:
+        import engine.audio  # noqa: F401  (needs PortAudio, which Linux CI runners don't have)
+        return True
+    except Exception:
+        return False
+
+
+@unittest.skipUnless(_audio_importable(), "engine.audio needs PortAudio (sounddevice)")
 class TestAudioBufferOverflow(unittest.TestCase):
     def test_audio_callback_overflow_guard(self):
         from unittest.mock import MagicMock

@@ -61,6 +61,17 @@ def routing_markdown(main: dict, heldout: dict) -> str:
     return "\n".join(lines)
 
 
+def brain_markdown(brain: dict) -> str:
+    s = brain["summary"]
+    lines = [f"### Brain: everyday requests to actions ({s['model']})", "",
+             f"**{s['accuracy']}%** of {s['cases']} plans right · {s['fast_path']} handled instantly · "
+             f"{s['model_failures']} model failures · planning p50 {s['p50_s']} s, p95 {s['p95_s']} s", "",
+             "| Category | Right |", "| :--- | :--- |"]
+    for name, c in sorted(brain["categories"].items()):
+        lines.append(f"| {name} | {c['passed']}/{c['cases']} |")
+    return "\n".join(lines)
+
+
 def live_markdown(live: dict) -> str:
     if live.get("error"):
         return f"### Live desktop tasks\n\n{live['error']}"
@@ -90,7 +101,9 @@ def update_readme(markdown: str, readme: Path = ROOT / "README.md") -> bool:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="MXB-Bench")
-    parser.add_argument("--suite", choices=["routing", "live", "all"], default="routing")
+    parser.add_argument("--suite", choices=["routing", "brain", "live", "all"], default="routing")
+    parser.add_argument("--model", default="", help="brain suite: local model to test, e.g. qwen3:4b")
+    parser.add_argument("--local-only", action="store_true", help="brain suite: ignore the NVIDIA key")
     parser.add_argument("--llm", action="store_true", help="use the real LLM (NVIDIA key or Ollama required)")
     parser.add_argument("--only", default="", help="comma-separated live task id prefixes, e.g. screen,files.read")
     parser.add_argument("--json", dest="json_out", default="")
@@ -131,6 +144,19 @@ def main(argv=None) -> int:
         if args.min_precision and m["precision"] < args.min_precision * 100:
             print(f"FAIL: tuned-set precision {m['precision']}% < {args.min_precision * 100:.1f}%")
             exit_code = 1
+
+    if args.suite in ("brain", "all"):
+        from bench.brain import run_brain
+        brain = run_brain(model=args.model or None, local_only=args.local_only)
+        report["brain"] = brain
+        sections.append(brain_markdown(brain))
+        b = brain["summary"]
+        print(f"Brain ({b['model']}): {b['passed']}/{b['cases']} plans right ({b['accuracy']}%), "
+              f"{b['fast_path']} by the fast path, {b['model_failures']} model failures, "
+              f"planning p50 {b['p50_s']} s, p95 {b['p95_s']} s")
+        for row in brain["rows"]:
+            if not row["passed"]:
+                print(f"   x {row['phrase'][:48]:48} {row['reason']}")
 
     if args.suite in ("live", "all"):
         from bench.live import LiveHarness

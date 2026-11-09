@@ -221,17 +221,17 @@ class UIAutomation:
         """Walks the foreground window's UIA tree (breadth-first, time-boxed)."""
         if not self.available():
             return [], 0
-        self._ensure_com()
-        from pywinauto.uia_element_info import UIAElementInfo
         hwnd = hwnd or self.foreground_hwnd()
         if not hwnd:
             return [], 0
         now = time.time()
-        if self._cache is not None:
+        if self._cache is not None:                     # a cache hit needs no COM or UIA at all
             c_hwnd, c_time, c_elems, c_top = self._cache
             if c_hwnd == hwnd and (now - c_time) < self.cache_ttl:
                 self._cache_hits += 1
                 return c_elems, c_top
+        self._ensure_com()
+        from pywinauto.uia_element_info import UIAElementInfo
         try:
             root = UIAElementInfo(hwnd)
             window_top = int(root.rectangle.top)

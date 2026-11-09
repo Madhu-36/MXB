@@ -26,6 +26,28 @@ _CLICK_WORDS = frozenset({"click", "left click", "click mouse", "click here"})
 _RIGHT_CLICK_WORDS = frozenset({"right click", "context menu"})
 _DOUBLE_CLICK_WORDS = frozenset({"double click"})
 
+# "open spotify and then minimize it": a second command after the first. Single-action fast paths
+# must not swallow it as the app name; the planner gets the whole request instead.
+_COMPOUND = re.compile(
+    r"\b(?:and then|then|and|after that|also)\s+(?:please\s+)?(?:open|launch|start|close|quit|minimi[sz]e|maximi[sz]e|"
+    r"type|write|search|play|pause|go to|turn|switch|set|save|send|click|press|connect|take|read|show|find|"
+    r"create|make|move|copy|delete|rename|search for|look up|put)\b")
+# "kill the internet connection" is not an app called "internet connection".
+_NOT_APPS = {"internet", "wifi", "wi-fi", "connection", "bluetooth", "network", "music", "song", "video", "sound",
+             "volume", "noise", "lights", "light", "screen", "brightness", "mic", "microphone", "timer", "focus",
+             "notifications", "it", "that", "this"}
+_VOLUME_NUMBER = re.compile(r"\bvolume\b\D{0,24}?\b(\d{1,3})\s*(?:%|percent)?\b|\b(\d{1,3})\s*(?:%|percent)\s+volume\b")
+
+
+def is_compound(text: str) -> bool:
+    return bool(_COMPOUND.search(text))
+
+
+def names_an_app(target: str) -> bool:
+    words = set(re.findall(r"[a-z0-9-]+", target.lower()))
+    return bool(words) and not (words & _NOT_APPS)
+
+
 class IntentRouter:
     """
     Two-Tier Intent Routing Engine for MXB.
@@ -347,7 +369,15 @@ class IntentRouter:
             res = self.executor.execute_action("press_key", "escape")
             return f"Action: {res}"
 
-        # 7. Media & Volume Controls
+        # 7. Media & Volume Controls ("bring the volume down to 30" means 30, not "a bit lower")
+        vol = _VOLUME_NUMBER.search(clean_text)
+        if vol and not is_compound(clean_text):
+            level = max(0, min(100, int(vol.group(1) or vol.group(2))))
+            reply = f"Setting volume to {level}."
+            self.tts.speak(reply)
+            res = self.executor.execute_action("set_volume", str(level))
+            return f"MXB: {reply}\nAction: {res}"
+
         if any(p in clean_text for p in ["volume up", "turn up volume", "louder", "increase volume"]):
             reply = "Turning volume up."
             self.tts.speak(reply)
@@ -383,7 +413,7 @@ class IntentRouter:
         # 9. App Launching
         launch_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:open|launch|start|pull up|bring up|fire up)\s+(?:up\s+)?'
                                  r'(?:the\s+|my\s+)?([a-zA-Z0-9\s]+?)(?:\s+app)?$', clean_text)
-        if launch_match:
+        if launch_match and not is_compound(clean_text):
             app_name = launch_match.group(1).strip()
             if app_name and app_name not in ["the door", "a tab", "window", "folder"]:
                 reply = f"Opening {app_name} for you."
@@ -393,7 +423,7 @@ class IntentRouter:
 
         # 10. App Closing
         close_match = re.search(r'^(?:please\s+)?(?:can you\s+)?(?:close|kill|quit|terminate|exit)\s+(?:the\s+|my\s+)?([a-zA-Z0-9\s]+)$', clean_text)
-        if close_match:
+        if close_match and not is_compound(clean_text) and names_an_app(close_match.group(1)):
             target_app = close_match.group(1).strip()
             if target_app and target_app not in ["window", "this window", "active window"]:
                 reply = f"Closing {target_app}."
@@ -635,16 +665,18 @@ class IntentRouter:
             speaking = bool(self.tts.speaking_enabled())
         except Exception:
             pass
+        tool = plan_tool_schema(names=tools)
+        schema = tool["function"]["parameters"]       # local models: output constrained to valid plans
         if llm_cfg.get("streaming", True) and speaking:
             streamer = ReplyStreamer(self.tts.speak)
-            raw = self.llm.stream_chat(system, prompt, on_delta=streamer.feed)
+            raw = self.llm.stream_chat(system, prompt, on_delta=streamer.feed, schema=schema)
             streamer.finish()
             data = parse_json_reply(raw) if raw else None
             if data:
                 return data, streamer.spoke
-        data = self.llm.plan_with_tools(system, prompt, plan_tool_schema(names=tools))
+        data = self.llm.plan_with_tools(system, prompt, tool)
         if not data:
-            data = self.llm.chat_json(system, prompt)
+            data = self.llm.chat_json(system, prompt, schema=schema)
         return data, False
 
     # =========================================================================
