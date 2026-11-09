@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import tests._stubs  # noqa: F401
-from engine.embeddings import Embedder, hash_embed
+from engine.embeddings import Embedder, hash_embed, cosine_similarity, top_k_similar
 from engine.semantic_memory import SemanticMemory, extract_preference
 from engine.knowledge import KnowledgeBase, chunk_text, keyword_score
 from engine.file_ops import FileOperationsManager
@@ -19,6 +19,25 @@ def local_embedder():
 
 
 class TestEmbeddings(unittest.TestCase):
+    def test_vectorized_cosine_similarity_and_top_k(self):
+        docs = hash_embed(["python programming code", "grocery list items", "python machine learning"])
+        q = hash_embed(["write python script"])[0]
+        scores = cosine_similarity(q, docs)
+        self.assertEqual(len(scores), 3)
+        self.assertGreater(scores[0], scores[1])
+        self.assertGreater(scores[2], scores[1])
+
+        ranked = top_k_similar(q, docs, k=2)
+        self.assertEqual(len(ranked), 2)
+        top_indices = [idx for idx, _ in ranked]
+        self.assertIn(0, top_indices)
+        self.assertIn(2, top_indices)
+        self.assertNotIn(1, top_indices)
+
+        empty_scores = cosine_similarity(q, np.zeros((0, 512)))
+        self.assertEqual(len(empty_scores), 0)
+        self.assertEqual(top_k_similar(q, np.zeros((0, 512))), [])
+
     def test_hash_embed_is_stable_normalized_and_semantic_ish(self):
         a, b, c = hash_embed(["python code editor", "python code editor", "grocery shopping list"])
         self.assertTrue(np.allclose(a, b))
