@@ -7,7 +7,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import tests._stubs  # noqa: F401
-from engine.proactive import CalendarSource, MailSource, ProactiveEngine, _local, build_sources
+from engine import proactive
+from engine.proactive import (CalendarSource, MailSource, ProactiveEngine, _local, build_sources, imap_host_for,
+                              needs_oauth)
 
 TODAY = datetime(2026, 11, 9, 9, 0)        # a Monday
 
@@ -143,6 +145,73 @@ class TestMail(unittest.TestCase):
         self.assertEqual(latest, [("Ravi Kumar", "Placement drive — Friday"), ("hr@company.example", "Interview slot")])
         self.assertEqual(made[0].selected, ("INBOX", True))
         self.assertTrue(made[0].logged_out)
+
+
+class FakeVault:
+    def __init__(self):
+        self.secrets = {}
+
+    def set_secret(self, key, value):
+        self.secrets[key] = value
+
+
+class TestSetup(unittest.TestCase):
+    """`scripts\\setup_proactive.bat`: nothing is saved until the account actually works."""
+
+    def test_providers(self):
+        self.assertEqual(imap_host_for("S10@Gmail.com"), "imap.gmail.com")
+        self.assertEqual(imap_host_for("me@yahoo.co.in"), "imap.mail.yahoo.com")
+        self.assertEqual(imap_host_for("me@college.edu.in"), "")
+        self.assertTrue(needs_oauth("me@outlook.com"))
+        self.assertTrue(needs_oauth("me@hotmail.com"))
+        self.assertFalse(needs_oauth("me@gmail.com"))
+
+    def _email(self, answers, password, unread):
+        vault, config, saved = FakeVault(), {}, []
+        with patch("builtins.input", side_effect=answers), patch("getpass.getpass", return_value=password), \
+                patch.object(proactive.MailSource, "unread", unread), patch("builtins.print"):
+            proactive._setup_email(vault, config, saved.append)
+        return vault, config, saved
+
+    def test_working_gmail_is_saved_with_the_password_in_the_vault(self):
+        vault, config, saved = self._email(["me@gmail.com", ""], "abcd efgh ijkl mnop", lambda self, limit=3: (2, []))
+        self.assertEqual(config["proactive"], {"imap_host": "imap.gmail.com", "imap_user": "me@gmail.com"})
+        self.assertEqual(vault.secrets[proactive.IMAP_PASSWORD_KEY], "abcd efgh ijkl mnop")
+        self.assertNotIn("abcd", str(config))
+        self.assertEqual(len(saved), 1)
+
+    def test_failed_sign_in_saves_nothing(self):
+        def refuse(self, limit=3):
+            raise proactive.imaplib.IMAP4.error("[AUTHENTICATIONFAILED] Invalid credentials")
+        vault, config, saved = self._email(["me@gmail.com", ""], "wrong", refuse)
+        self.assertEqual((vault.secrets, config, saved), ({}, {}, []))
+
+    def test_outlook_is_refused_before_asking_for_a_password(self):
+        asked = MagicMock()
+        with patch("builtins.input", side_effect=["me@outlook.com"]), patch("getpass.getpass", asked), \
+                patch("builtins.print"):
+            proactive._setup_email(FakeVault(), {}, lambda c: None)
+        asked.assert_not_called()
+
+    def test_mail_server_has_a_timeout(self):
+        with patch.object(proactive.imaplib, "IMAP4_SSL") as ssl:
+            ssl.return_value = FakeIMAP("imap.gmail.com", 993)
+            MailSource("imap.gmail.com", "me@gmail.com", lambda: "app-pass").unread()
+        self.assertEqual(ssl.call_args.kwargs.get("timeout"), 15)
+
+    @unittest.skipUnless(HAS_ICAL, "needs icalendar + recurring-ical-events")
+    def test_calendar_link_is_checked_before_saving(self):
+        vault = FakeVault()
+        with patch("getpass.getpass", return_value="https://calendar.example/private-x/basic.ics"), \
+                patch.object(proactive.CalendarSource, "_ics", side_effect=OSError("404")), patch("builtins.print"):
+            proactive._setup_calendar(vault)
+        self.assertEqual(vault.secrets, {})
+        with tempfile.TemporaryDirectory() as tmp:
+            ics = Path(tmp) / "cal.ics"
+            ics.write_text(ICS, encoding="utf-8")
+            with patch("getpass.getpass", return_value=str(ics)), patch("builtins.print"):
+                proactive._setup_calendar(vault)
+        self.assertEqual(vault.secrets[proactive.CALENDAR_KEY], str(ics))
 
 
 @unittest.skipUnless(HAS_ICAL, "needs icalendar + recurring-ical-events")

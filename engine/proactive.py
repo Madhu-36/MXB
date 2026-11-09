@@ -11,8 +11,10 @@ Each kind can be muted by voice ("stop the battery alerts"), and nothing repeats
 Calendar: your calendar's private iCal link (Google Calendar: Settings > your calendar > Integrate
 calendar > "Secret address in iCal format"; Outlook: Publish calendar > ICS), or a local .ics file.
 The link is a password, so it is kept in MXB's encrypted vault, not in config.json.
-Email: IMAP with an app password (Gmail: turn on 2-step verification, then create an app password),
-also in the vault. Read-only: MXB peeks at sender and subject and never marks anything as read.
+Email: IMAP with an app password (Gmail: turn on 2-step verification, then create one at
+myaccount.google.com/apppasswords; Yahoo and iCloud have app passwords too), also in the vault.
+Outlook.com / Hotmail / Live accept only OAuth sign-in since 16 September 2024, which MXB doesn't do yet.
+Read-only: MXB peeks at sender and subject and never marks anything as read.
 
     python -m engine.proactive --setup       # asks for the calendar link and email, stores them
     python -m engine.proactive --briefing    # prints today's briefing
@@ -33,6 +35,24 @@ from utils.logger import log
 CALENDAR_KEY = "proactive_calendar_ics"
 IMAP_PASSWORD_KEY = "proactive_imap_password"
 KINDS = ("briefing", "meetings", "battery", "email")
+
+IMAP_HOSTS = {
+    "gmail.com": "imap.gmail.com", "googlemail.com": "imap.gmail.com",
+    "yahoo.com": "imap.mail.yahoo.com", "yahoo.co.in": "imap.mail.yahoo.com", "ymail.com": "imap.mail.yahoo.com",
+    "icloud.com": "imap.mail.me.com", "me.com": "imap.mail.me.com", "mac.com": "imap.mail.me.com",
+    "zoho.com": "imap.zoho.com", "zohomail.in": "imap.zoho.in",
+}
+# Microsoft turned off password (basic) sign-in for these on 16 September 2024; app passwords are refused too.
+OAUTH_ONLY_DOMAINS = ("outlook.com", "hotmail.com", "live.com", "msn.com", "outlook.in", "live.in", "hotmail.co.in")
+
+
+def imap_host_for(address: str) -> str:
+    """The IMAP server for well-known providers ('' when unknown, e.g. a college or company domain)."""
+    return IMAP_HOSTS.get((address or "").rsplit("@", 1)[-1].strip().lower(), "")
+
+
+def needs_oauth(address: str) -> bool:
+    return (address or "").rsplit("@", 1)[-1].strip().lower() in OAUTH_ONLY_DOMAINS
 
 
 @dataclass
@@ -102,10 +122,11 @@ def _decode(value: str) -> str:
 
 class MailSource:
     def __init__(self, host: str, user: str, password_getter, port: int = 993, folder: str = "INBOX",
-                 imap_factory=imaplib.IMAP4_SSL):
+                 imap_factory=None, timeout: float = 15):
         self.host, self.user, self.port, self.folder = host, user, port, folder
         self.password_getter = password_getter
-        self.imap_factory = imap_factory
+        # A hung mail server must not stall the briefing thread or a voice command.
+        self.imap_factory = imap_factory or (lambda h, p: imaplib.IMAP4_SSL(h, p, timeout=timeout))
 
     def unread(self, limit: int = 3) -> tuple[int, list[tuple[str, str]]]:
         """(number of unread messages, [(sender, subject), ...] newest first). Read-only."""
@@ -352,9 +373,54 @@ def battery_reading():
         return None
 
 
+def _setup_calendar(vault) -> None:
+    import getpass
+    link = getpass.getpass("Calendar's private iCal link (input hidden; Enter to skip): ").strip()
+    if not link:
+        return
+    try:
+        now = datetime.now()
+        found = CalendarSource(link).events(now - timedelta(days=1), now + timedelta(days=30))
+    except Exception as e:
+        print(f"Couldn't read that calendar ({type(e).__name__}: {e}). Not saved; check the link and run setup again.")
+        return
+    vault.set_secret(CALENDAR_KEY, link)
+    print(f"Calendar connected: {len(found)} event(s) in the next 30 days. The link is in the vault.")
+
+
+def _setup_email(vault, config: dict, save_config) -> None:
+    import getpass
+    address = input("Email address for unread-mail summaries (Enter to skip): ").strip()
+    if not address:
+        return
+    if needs_oauth(address):
+        print("Outlook.com, Hotmail and Live accounts only allow OAuth sign-in since September 2024, and MXB "
+              "doesn't support that yet. Skipping email; a Gmail, Yahoo or iCloud address works.")
+        return
+    default = imap_host_for(address)
+    host = input(f"IMAP server [{default or 'e.g. imap.gmail.com'}]: ").strip() or default
+    if not host:
+        print("No IMAP server given; skipping email.")
+        return
+    if host == "imap.gmail.com":
+        print("Gmail: use an app password from myaccount.google.com/apppasswords (needs 2-step verification), "
+              "not your Google password.")
+    password = getpass.getpass("App password (input hidden): ").strip()
+    if not password:
+        return
+    try:
+        count, _ = MailSource(host, address, lambda: password).unread(limit=1)
+    except Exception as e:
+        print(f"Couldn't sign in to {host} ({type(e).__name__}: {e}). Not saved; check the app password.")
+        return
+    vault.set_secret(IMAP_PASSWORD_KEY, password)
+    config.setdefault("proactive", {}).update({"imap_host": host, "imap_user": address})
+    save_config(config)
+    print(f"Email connected: {count} unread. The app password is in the vault.")
+
+
 def main(argv=None) -> int:
     import argparse
-    import getpass
     ap = argparse.ArgumentParser(description="MXB proactive companion")
     ap.add_argument("--setup", action="store_true", help="connect your calendar link and email")
     ap.add_argument("--briefing", action="store_true", help="print today's briefing")
@@ -363,19 +429,12 @@ def main(argv=None) -> int:
     config = load_config()
     vault = _vault()
     if args.setup:
-        link = getpass.getpass("Calendar's private iCal link (input hidden; Enter to skip): ").strip()
-        if link and vault:
-            vault.set_secret(CALENDAR_KEY, link)
-            print("Calendar link saved in the vault.")
-        host = input("IMAP server (imap.gmail.com for Gmail; Enter to skip): ").strip()
-        if host:
-            user = input("Email address: ").strip()
-            password = getpass.getpass("App password (input hidden): ").strip()
-            if vault and password:
-                vault.set_secret(IMAP_PASSWORD_KEY, password)
-                config.setdefault("proactive", {}).update({"imap_host": host, "imap_user": user})
-                save_config(config)
-                print("Email saved (password in the vault).")
+        if vault is None:
+            print("MXB's encrypted vault isn't available on this PC, so nothing can be stored safely. "
+                  "Install the requirements (pip install -r requirements.txt) and try again.")
+            return 1
+        _setup_calendar(vault)
+        _setup_email(vault, config, save_config)
     cal, mail = build_sources(config, vault)
     if args.briefing or args.setup:
         engine = ProactiveEngine(config, calendar=cal, mail=mail, battery=battery_reading)
