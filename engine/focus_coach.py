@@ -96,6 +96,36 @@ class Sample:
     hwnd: int = 0
 
 
+def calculate_productivity_metrics(rows: list[tuple[str, str, float]]) -> dict:
+    """Calculates granular focus, distraction, and 0-100 productivity score from activity rows."""
+    if not rows:
+        return {"total_seconds": 0.0, "focus_seconds": 0.0, "distraction_seconds": 0.0, "score": 100, "ratio": 1.0}
+
+    total = sum(sec for _, _, sec in rows)
+    by_cat: dict[str, float] = {}
+    for _, cat, sec in rows:
+        by_cat[cat] = by_cat.get(cat, 0.0) + sec
+
+    focus_sec = by_cat.get(FOCUS, 0.0) + by_cat.get(MEETING, 0.0)
+    distract_sec = by_cat.get(DISTRACTION, 0.0)
+    denom = focus_sec + distract_sec
+    if denom > 0:
+        score = int(round((focus_sec / denom) * 100))
+        ratio = round(focus_sec / denom, 2)
+    else:
+        score = 100 if total == 0 or distract_sec == 0 else 50
+        ratio = 1.0 if distract_sec == 0 else 0.5
+
+    return {
+        "total_seconds": round(total, 1),
+        "focus_seconds": round(focus_sec, 1),
+        "distraction_seconds": round(distract_sec, 1),
+        "score": score,
+        "ratio": ratio,
+        "breakdown": {k: round(v, 1) for k, v in by_cat.items()}
+    }
+
+
 def _strip_browser(title: str) -> str:
     text = title.replace("​", "").strip()
     low = text.lower()
@@ -620,6 +650,25 @@ class FocusCoach:
         return "Deleted all saved screen-time and focus-session data."
 
     # ------------------------------------------------------------------ reports
+    def productivity_score(self, target: str = "today") -> dict:
+        if self.store is None:
+            return {"score": 0, "error": "store_unavailable"}
+        self.tracker.flush()
+        text = (target or "today").lower()
+        now = self.clock()
+        midnight = time.mktime(time.localtime(now)[:3] + (0, 0, 0, 0, 0, -1))
+        day = 86400
+        if "yesterday" in text:
+            since, until = midnight - day, midnight
+        elif "week" in text:
+            since, until = midnight - 6 * day, now + 1
+        else:
+            since, until = midnight, now + 1
+        first = time.strftime("%Y-%m-%d", time.localtime(since + 3600))
+        last = time.strftime("%Y-%m-%d", time.localtime(until - 3600 if until <= midnight else now))
+        rows = self.store.usage(first, last)
+        return calculate_productivity_metrics(rows)
+
     def report(self, target: str = "today") -> str:
         if self.store is None:
             return "Screen-time storage isn't available."
