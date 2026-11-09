@@ -50,6 +50,7 @@ datas += optional(collect_data_files, "playwright")       # the Playwright drive
 binaries = []
 binaries += optional(collect_dynamic_libs, "ctranslate2")  # Whisper inference DLLs
 binaries += optional(collect_dynamic_libs, "onnxruntime")
+binaries += optional(collect_dynamic_libs, "sherpa_onnx")  # v4.4 voice ID + keyword spotting
 
 hiddenimports = []
 for pkg in ("engine", "safety", "utils", "ui"):
@@ -65,6 +66,7 @@ hiddenimports += [
     "send2trash", "miniaudio", "qrcode.image.pil", "pypdf", "docx",
     "sounddevice", "onnxruntime",
     "zxingcpp", "pyaudiowpatch",   # v4.3: QR decoding, meeting loopback audio (imported lazily)
+    "sherpa_onnx", "icalendar", "recurring_ical_events",   # v4.4: voice ID, wake word, calendar
 ]
 
 excludes = [

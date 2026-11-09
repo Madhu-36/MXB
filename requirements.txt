@@ -74,3 +74,10 @@ mcp>=1.23,<3
 zxing-cpp>=2.2
 # v4.3: meeting copilot hears the other side of a call (WASAPI loopback of your speakers/headset)
 PyAudioWPatch>=0.2.12; sys_platform == "win32"
+
+# v4.4: voice ID (only your voice can command MXB) and "MXB" heard in the audio (keyword spotting).
+# Models (40 MB + 18 MB) download on first use from the sherpa-onnx GitHub releases, SHA-256 checked.
+sherpa-onnx>=1.12
+# v4.4: proactive companion reads your calendar from its private iCal link
+icalendar>=6.0
+recurring-ical-events>=3.3

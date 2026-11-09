@@ -40,6 +40,7 @@ PORTABLE_SUITES = [
     "tests.test_v43_integration",
     "tests.test_v43_listening",
     "tests.test_v44_brain",
+    "tests.test_v44_voice",
 ]
 
 

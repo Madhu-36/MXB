@@ -30,3 +30,6 @@ packaging/mxb.ico
 mxb.lock
 update_state.json
 activity.db*
+
+# On-device voice models (downloaded by utils/fetch_models.py)
+models/

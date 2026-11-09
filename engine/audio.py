@@ -88,12 +88,21 @@ class VoicePipeline(QThread):
         self.barge_detector = BargeInDetector()
         listen_cfg = config.get("listening", {}) if isinstance(config, dict) else {}
         self.wake_engine = None
-        if listen_cfg.get("engine", "transcript") == "openwakeword":
+        engine_name = listen_cfg.get("engine", "transcript")
+        if engine_name == "openwakeword":
             from engine.wake_engine import OpenWakeWordEngine, wake_phrase_words
             model = listen_cfg.get("openwakeword_model", "hey_jarvis")
             self.wake_engine = OpenWakeWordEngine(model, float(listen_cfg.get("openwakeword_threshold", 0.5)))
             for phrase in wake_phrase_words(model):
                 self.bus.wake.add_wake_word(phrase)
+        elif engine_name == "kws":
+            # v4.4: "MXB" spotted in the audio (sherpa-onnx), no training and no transcription until heard
+            from engine.kws_engine import SherpaKWSEngine
+            self.wake_engine = SherpaKWSEngine(listen_cfg.get("wake_words") or ["mxb", "hey mxb"],
+                                               float(listen_cfg.get("kws_threshold", 0.2)),
+                                               float(listen_cfg.get("kws_boost", 1.5)))
+        # v4.4: only the owner's voice may command MXB once it has been enrolled
+        self.voice_id = getattr(getattr(self.bus, "executor", None), "voice_id", None)
 
     def _get_vad_model(self):
         if self._vad_model is None:
@@ -230,7 +239,22 @@ class VoicePipeline(QThread):
             audio_data, agc_target, max_gain, during_tts = (tuple(utterance_item) + (False,))[:4]
 
             try:
+                vid = self.voice_id
+                if vid is not None and vid.enrolling:
+                    # Learning the owner's voice: these utterances are samples, not commands.
+                    reply = vid.add_sample(audio_data)
+                    if reply:
+                        self.router.tts.speak(reply)
+                    self.vad_status_changed.emit("Idle")
+                    continue
                 text = self._transcribe_audio(audio_data, agc_target, max_gain)
+                if text and vid is not None and vid.ready():
+                    allowed, why = vid.check(audio_data, text)
+                    if not allowed:
+                        log.info(f"Pipeline: ignored '{text}': {why}.")
+                        self.action_feedback.emit(f"(Ignored a voice that isn't yours: \"{text[:40]}\")")
+                        self.vad_status_changed.emit("Idle")
+                        continue
                 if text and during_tts:
                     tts = self.router.tts
                     spoken = tts.recent_spoken() if callable(getattr(tts, "recent_spoken", None)) else []

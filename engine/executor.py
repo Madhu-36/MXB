@@ -50,6 +50,8 @@ def _split_target(target, parts: int = 2) -> list[str]:
     return pieces
 
 
+V44_ACTIONS = frozenset({"voice_id"})
+
 V43_ACTIONS = frozenset({
     "meeting_start", "meeting_stop", "meeting_status", "meeting_list", "meeting_recap",
     "accessibility_mode", "describe_screen", "where_am_i", "read_this", "navigate_screen", "activate_element",
@@ -104,6 +106,7 @@ class OSExecutionManager:
         self._meetings = None
         self._access = None
         self._coach = None
+        self._voice_id = None
         self.extension_handlers: dict = {}   # dynamic actions (MCP tools): name -> fn(target) -> str
         self.marks: dict = {}
         self.ui_hooks: dict = {}          # "show_marks", "hide_marks", "show_qr" -> thread-safe callables
@@ -406,6 +409,27 @@ class OSExecutionManager:
                                      save_setting=lambda key, value: self.save_setting("focus", key, value),
                                      meeting_active=lambda: self._meetings is not None and self._meetings.active)
         return self._coach
+
+    @property
+    def voice_id(self):
+        if self._voice_id is None:
+            from engine.voice_id import VoiceID
+            self._voice_id = VoiceID(self.config, speak=lambda text: self.speak(text))
+        return self._voice_id
+
+    def v44_action(self, action: str, target: str) -> str:
+        t = (target or "").strip().lower()
+        if action == "voice_id":
+            if t in ("enroll", "enrol", "learn", "train", "setup", "set up"):
+                return self.voice_id.start_enrollment()
+            if t in ("forget", "delete", "reset", "remove"):
+                return self.voice_id.forget()
+            if t in ("on", "off", "enable", "disable"):
+                on = t in ("on", "enable")
+                self.save_setting("voice_id", "enabled", on)
+                return self.voice_id.set_enabled(on)
+            return self.voice_id.status()
+        return f"Unknown action {action}."
 
     def _speak_now(self, text: str):
         """Focus changes must be heard at once: cut off the previous sentence, then speak."""
@@ -1193,6 +1217,9 @@ class OSExecutionManager:
 
             elif action in V43_ACTIONS:
                 return self.v43_action(action, str(target or ""))
+
+            elif action in V44_ACTIONS:
+                return self.v44_action(action, str(target or ""))
 
             elif action == "set_language":
                 return self.set_language(str(target or ""))

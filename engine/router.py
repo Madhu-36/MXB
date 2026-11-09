@@ -699,6 +699,10 @@ class IntentRouter:
             self.tts.speak(reply)
             return f"MXB: {reply}"
 
+        v44 = self._route_v44(t, o)
+        if v44 is not None:
+            return v44
+
         v43 = self._route_v43(t, o)
         if v43 is not None:
             return v43
@@ -899,6 +903,25 @@ class IntentRouter:
     _MEETING = r"(?:meeting|call|lecture|class|interview|standup|stand-up|webinar|session)"
     _NAV_KINDS = (r"(?:button|link|field|text field|edit box|box|checkbox|check box|radio button|menu item|element|"
                   r"control|image|item|tab)")
+
+    # =========================================================================
+    # MXB v4.4 FAST-PATHS: voice ID, proactive companion, persona
+    # =========================================================================
+    _VOICE_ID = [
+        (re.compile(r"^(?:learn|remember|train on|enrol+|register|save)\s+my\s+voice$|^only (?:listen to|obey|take commands from) me$"),
+         "enroll"),
+        (re.compile(r"^(?:forget|delete|reset|remove)\s+my\s+voice$"), "forget"),
+        (re.compile(r"^(?:turn|switch) (?:off|on) voice id$|^voice id (?:off|on)$|^listen to everyone$"), None),
+        (re.compile(r"^(?:voice id(?: status)?|do you know my voice|whose voice do you (?:listen to|obey))$"), "status"),
+    ]
+
+    def _route_v44(self, t: str, o: str) -> str | None:
+        for pattern, target in self._VOICE_ID:
+            if pattern.search(t):
+                if target is None:
+                    target = "off" if (" off" in f" {t}" or "everyone" in t) else "on"
+                return self._act(t, "voice_id", target)
+        return None
 
     def _route_v43(self, t: str, o: str) -> str | None:
         # ---------------- v4.3: scam shield ----------------

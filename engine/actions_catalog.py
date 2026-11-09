@@ -214,6 +214,8 @@ CATALOG: tuple[ActionSpec, ...] = (
     # ---------------- v4.2: MCP tools & language ----------------
     ActionSpec("mcp_tools", '""', "List connected MCP servers and their tools", "mcp"),
     ActionSpec("mcp_reload", '""', "Reconnect to the MCP servers in config", "mcp"),
+    ActionSpec("voice_id", '"enroll", "forget", "on", "off" or "status"',
+               "Learn the user's voice so only they can command MXB (enroll), forget it, or check it", "voice"),
     ActionSpec("set_language", '"kannada", "hindi", "telugu", "tamil", "malayalam", "marathi", "bengali", "gujarati", "english" or "auto"', "Choose the language MXB listens and replies in", "voice"),
 
     ActionSpec("wait", "seconds e.g. '1.5'", "Pause between steps (e.g. while an app opens)", "control"),
