@@ -21,7 +21,7 @@ What a companion still lacked after v4.3.2: a measure of whether whole tasks suc
 - `python scripts/install_hooks.py`: every push first runs the CI checks (fatal lint, portable suites, routing gate). A pull request template, and CONTRIBUTING rules that apply to AI coding agents too: own branch, pull request, review. CI now installs faster-whisper and the calendar packages, so those tests run there.
 
 **Quality**
-- 6 new suites; 520 portable tests (from 421). Routing bench unchanged: tuned set 100% precision / 99.5% coverage, held-out 85.7% / 48.6%.
+- 6 new suites; 523 portable tests (v4.3.2: 433, two of which error on Linux CI because the UI Automation cache test needs Windows COM and the audio-buffer test needs PortAudio; both fixed here). Routing bench unchanged: tuned set 100% precision / 99.5% coverage, held-out 85.7% / 48.6%.
 
 **Not measured yet** (needs the laptop): brain-suite accuracy of llama3.2:1b vs Qwen3-4B, voice ID, the keyword spotter and Smart Turn with your own voice, mic and room (`scripts\listening_bench.bat --turn on` / `--turn off` with `--wav` recordings).
 
