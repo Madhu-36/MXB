@@ -113,13 +113,17 @@ def run_all_verifications(mode: str = "all"):
     total_tests = 0
     total_failures = 0
     total_errors = 0
+    suite_timings = []
     t0 = time.time()
 
     for mod_name in test_modules:
         print(f"\n[RUNNING] {mod_name}...")
+        t_mod = time.time()
         suite = unittest.defaultTestLoader.loadTestsFromName(mod_name)
         runner = unittest.TextTestRunner(verbosity=1)
         res = runner.run(suite)
+        mod_elapsed = time.time() - t_mod
+        suite_timings.append((mod_name, res.testsRun, mod_elapsed))
         annotate_failures(mod_name, res)
         total_tests += res.testsRun
         total_failures += len(res.failures)
@@ -129,6 +133,10 @@ def run_all_verifications(mode: str = "all"):
     print("\n" + "=" * 65)
     print(f"VERIFICATION SUMMARY: {total_tests} tests in {elapsed:.2f}s")
     print(f"Failures: {total_failures} | Errors: {total_errors}")
+    if suite_timings:
+        slowest = sorted(suite_timings, key=lambda s: s[2], reverse=True)[:3]
+        slow_lines = ", ".join(f"{name.split('.')[-1]} ({t:.1f}s)" for name, _, t in slowest)
+        print(f"Top suites by duration: {slow_lines}")
     print("=" * 65)
 
     if total_failures == 0 and total_errors == 0:
