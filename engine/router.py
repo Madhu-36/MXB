@@ -19,6 +19,13 @@ from utils.weather import WeatherProbe
 from utils.logger import log
 from utils.paths import config_path as app_config_path
 
+_STOP_WORDS = frozenset({"stop", "cancel", "halt", "pause", "abort", "freeze", "stop executing", "cancel action", "shut up"})
+_GREETINGS = frozenset({"hello", "hi", "hey", "hey mxb", "hello mxb", "welcome", "good morning", "good evening", "good afternoon"})
+_IDENTITY_WORDS = frozenset({"who are you", "what are you", "what can you do"})
+_CLICK_WORDS = frozenset({"click", "left click", "click mouse", "click here"})
+_RIGHT_CLICK_WORDS = frozenset({"right click", "context menu"})
+_DOUBLE_CLICK_WORDS = frozenset({"double click"})
+
 class IntentRouter:
     """
     Two-Tier Intent Routing Engine for MXB.
@@ -62,7 +69,7 @@ class IntentRouter:
         # =========================================================================
 
         # 0. Emergency Voice Interruption (<1ms)
-        if clean_text in ["stop", "cancel", "halt", "pause", "abort", "freeze", "stop executing", "cancel action", "shut up"]:
+        if clean_text in _STOP_WORDS:
             log.warning("Router: Emergency Voice Interruption Triggered!")
             audio_feedback.play("abort")
             self.executor.abort_current_action()
@@ -71,13 +78,13 @@ class IntentRouter:
             return f"MXB: {reply}"
 
         # 0.1. Greetings & Identity Fast-Path (<1ms)
-        if clean_text in ["hello", "hi", "hey", "hey mxb", "hello mxb", "welcome", "good morning", "good evening", "good afternoon"]:
+        if clean_text in _GREETINGS:
             reply = "Hello! MXB executive brain is online and ready for your commands."
             self.tts.speak(reply)
             self.history.append({"user": clean_text, "mxb": reply})
             return f"MXB: {reply}"
 
-        if clean_text in ["who are you", "what are you", "what can you do"]:
+        if clean_text in _IDENTITY_WORDS:
             reply = "I am MXB, your AI desktop executive assistant. I can control your mouse, keyboard, windows, apps, files, and read your screen by voice."
             self.tts.speak(reply)
             self.history.append({"user": clean_text, "mxb": reply})
@@ -234,15 +241,15 @@ class IntentRouter:
                 return f"MXB: {reply}\nAction: {res}"
 
         # 4. Mouse Controls
-        if clean_text in ["click", "left click", "click mouse", "click here"]:
+        if clean_text in _CLICK_WORDS:
             res = self.executor.execute_action("left_click")
             return f"Action: {res}"
 
-        if clean_text in ["right click", "context menu"]:
+        if clean_text in _RIGHT_CLICK_WORDS:
             res = self.executor.execute_action("right_click")
             return f"Action: {res}"
 
-        if clean_text in ["double click"]:
+        if clean_text in _DOUBLE_CLICK_WORDS:
             res = self.executor.execute_action("double_click")
             return f"Action: {res}"
 
