@@ -294,6 +294,14 @@ class MCPManager:
         inner = getattr(e, "exceptions", None)
         if inner:
             return MCPManager._error_text(inner[0])
+        if isinstance(e, FileNotFoundError):
+            return f"executable not found: {e.filename or e}"
+        if isinstance(e, (BrokenPipeError, ConnectionResetError)):
+            return "server closed connection unexpectedly"
+        if isinstance(e, ProcessLookupError):
+            return "server process terminated prematurely"
+        if isinstance(e, (asyncio.TimeoutError, TimeoutError)):
+            return "server timed out"
         return (str(e).strip().splitlines() or [type(e).__name__])[0][:200] or type(e).__name__
 
     async def _start_one(self, name: str, spec: dict):
