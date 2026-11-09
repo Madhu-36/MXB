@@ -166,6 +166,7 @@ class AccessibilityMode:
         self.speak = speak                      # fn(text): cuts off what MXB was saying, then speaks
         self.use_vision = cfg.get("describe_with_vision", True)
         self.move_mouse = cfg.get("move_mouse", True)
+        self.high_contrast_cues = bool(cfg.get("high_contrast_cues", False))
         self.poll = poll
         self.clock = clock
         self.enabled = False
@@ -201,6 +202,14 @@ class AccessibilityMode:
             self._thread.start()
         return ("Accessibility mode is on. I'll read whatever gets focus. Say 'what's on my screen', "
                 "'next button', 'read this', 'where am I', 'activate', or 'speak faster'.")
+
+    def set_high_contrast_cues(self, on: bool | None = None) -> str:
+        if on is None:
+            self.high_contrast_cues = not self.high_contrast_cues
+        else:
+            self.high_contrast_cues = bool(on)
+        state = "enabled" if self.high_contrast_cues else "disabled"
+        return f"High-contrast speech cues {state}."
 
     def disable(self) -> str:
         self.enabled = False
