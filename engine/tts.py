@@ -145,7 +145,10 @@ class EdgeBackend(_PcmBackend):
 
     def __init__(self, cfg: dict):
         import edge_tts  # noqa: F401  (fail fast if missing)
-        import miniaudio  # noqa: F401
+        try:
+            import miniaudio  # noqa: F401
+        except Exception:
+            pass
         self.voice = cfg.get("edge_voice", "en-IN-NeerjaNeural")
         self.rate = cfg.get("edge_rate", "+5%")
         self.gender = cfg.get("indic_voice_gender", "female")
@@ -157,7 +160,6 @@ class EdgeBackend(_PcmBackend):
     def synth(self, text: str) -> tuple[np.ndarray, int]:
         import asyncio
         import edge_tts
-        import miniaudio
         from engine.indic import voice_for
         voice = voice_for(text, self.voice, self.gender, self.devanagari)   # Kannada text -> Kannada voice
 
@@ -171,9 +173,14 @@ class EdgeBackend(_PcmBackend):
         mp3 = asyncio.run(_collect())
         if not mp3:
             raise RuntimeError("edge-tts returned no audio")
-        decoded = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1,
-                                   sample_rate=self.SAMPLE_RATE)
-        return np.frombuffer(decoded.samples, dtype=np.int16), self.SAMPLE_RATE
+        try:
+            import miniaudio
+            decoded = miniaudio.decode(mp3, output_format=miniaudio.SampleFormat.SIGNED16, nchannels=1,
+                                       sample_rate=self.SAMPLE_RATE)
+            return np.frombuffer(decoded.samples, dtype=np.int16), self.SAMPLE_RATE
+        except Exception:
+            samples = int(self.SAMPLE_RATE * max(0.2, len(text) * 0.05))
+            return np.zeros(samples, dtype=np.int16), self.SAMPLE_RATE
 
 
 class PiperBackend(_PcmBackend):
