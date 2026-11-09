@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock
 
 import tests._stubs  # noqa: F401
-from engine.ui_automation import UIElement, pick_search_box, pick_element, summarize_elements, fallback_search_shortcut
+from engine.ui_automation import UIAutomation, UIElement, pick_search_box, pick_element, summarize_elements, fallback_search_shortcut
 from engine.hardware import (parse_on_off, parse_level, volume_key_presses, parse_netsh_interfaces,
                              parse_netsh_networks, summarize_pnp_devices, match_device_name,
                              BLUETOOTH_DEVICE_INFO, BLUETOOTH_DEVICE_SEARCH_PARAMS, _GUID)
@@ -171,3 +171,27 @@ class TestJsonRepair(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestUIAutomationCaching(unittest.TestCase):
+    def test_cache_hits_and_invalidation(self):
+        import time
+        client = UIAutomation(cache_ttl=1.0)
+        client._available = True
+        sample_elements = [el("Search YouTube", rect=(10, 10, 200, 40))]
+
+        with unittest.mock.patch.object(client, "foreground_hwnd", return_value=12345):
+            # Seed the cache
+            client._cache = (12345, time.time(), sample_elements, 10)
+
+            # Consecutive queries hit cache
+            elems, top = client.collect()
+            self.assertEqual(elems, sample_elements)
+            self.assertEqual(client.cache_hits, 1)
+
+            elems2, top2 = client.collect()
+            self.assertEqual(client.cache_hits, 2)
+
+            # Invalidation resets cache
+            client.invalidate_cache()
+            self.assertIsNone(client._cache)
