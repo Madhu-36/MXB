@@ -56,6 +56,13 @@ class TestMCPLogic(unittest.TestCase):
         self.assertTrue(format_result({"content": [{"type": "text", "text": "x" * 5000}]}).endswith("…(truncated)"))
         self.assertEqual(format_result({"content": []}), "(the tool returned nothing)")
 
+    def test_error_text_formatting(self):
+        from engine.mcp_client import MCPManager
+        self.assertIn("executable not found", MCPManager._error_text(FileNotFoundError(2, "No such file", "server.exe")))
+        self.assertEqual(MCPManager._error_text(BrokenPipeError("Pipe closed")), "server closed connection unexpectedly")
+        self.assertEqual(MCPManager._error_text(ProcessLookupError()), "server process terminated prematurely")
+        self.assertEqual(MCPManager._error_text(TimeoutError()), "server timed out")
+
     def test_trust_levels(self):
         ro = {"name": "t", "annotations": {"read_only_hint": True}}
         destructive = {"name": "t", "annotations": {"readOnlyHint": False, "destructiveHint": True}}
