@@ -53,6 +53,47 @@ def normalize_rows(mat: np.ndarray) -> np.ndarray:
     return mat / norms
 
 
+def cosine_similarity(query_vec: np.ndarray, doc_vecs: np.ndarray) -> np.ndarray:
+    """
+    Computes fast vectorized cosine similarity between a query vector and a matrix of document vectors.
+    Returns 1D array of similarity scores in [-1.0, 1.0].
+    """
+    q = np.asarray(query_vec, dtype=np.float32)
+    docs = np.asarray(doc_vecs, dtype=np.float32)
+    if docs.ndim == 1:
+        docs = docs.reshape(1, -1)
+    if docs.shape[0] == 0:
+        return np.zeros(0, dtype=np.float32)
+
+    if q.ndim == 2:
+        if q.shape[0] == 1:
+            q = q.squeeze(0)
+
+    q_norm = np.linalg.norm(q)
+    if q_norm > 0:
+        q = q / q_norm
+
+    doc_norms = np.linalg.norm(docs, axis=1)
+    doc_norms[doc_norms == 0] = 1.0
+
+    dots = docs.dot(q)
+    return (dots / doc_norms).astype(np.float32)
+
+
+def top_k_similar(query_vec: np.ndarray, doc_vecs: np.ndarray, k: int = 5) -> list[tuple[int, float]]:
+    """Returns top-k (index, score) pairs sorted by descending similarity."""
+    scores = cosine_similarity(query_vec, doc_vecs)
+    if len(scores) == 0:
+        return []
+    k = min(k, len(scores))
+    if k < len(scores):
+        top_indices = np.argpartition(-scores, k)[:k]
+        top_indices = top_indices[np.argsort(-scores[top_indices])]
+    else:
+        top_indices = np.argsort(-scores)
+    return [(int(idx), float(scores[idx])) for idx in top_indices]
+
+
 class Embedder:
     def __init__(self, config: dict | None = None):
         cfg = (config or {}).get("memory", {}) if isinstance(config, dict) else {}
