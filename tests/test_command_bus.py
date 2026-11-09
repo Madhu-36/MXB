@@ -130,6 +130,18 @@ class TestCommandBus(unittest.TestCase):
         QApplication.processEvents()
         self.assertTrue(any("free" in r for r in self.replies))
 
+    def test_dispatch_latency_metrics_tracking(self):
+        self.assertEqual(self.bus.dispatch_metrics["total_dispatches"], 0)
+        self.assertEqual(self.bus.average_dispatch_latency, 0.0)
+
+        self.bus.submit("open notepad", "text")
+        self.assertTrue(wait_for(lambda: self.bus.dispatch_metrics["total_dispatches"] >= 1, timeout=3.0))
+
+        metrics = self.bus.dispatch_metrics
+        self.assertGreaterEqual(metrics["total_dispatches"], 1)
+        self.assertGreaterEqual(metrics["total_dispatch_time"], 0.0)
+        self.assertGreaterEqual(self.bus.average_dispatch_latency, 0.0)
+
 
 class TestModalityTTS(unittest.TestCase):
     def test_thread_local_speaking(self):
