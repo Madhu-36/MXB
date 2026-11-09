@@ -1,3 +1,30 @@
+## v4.4.0 — Knows your voice, plans better, speaks first
+What a companion still lacked after v4.3.2: a measure of whether whole tasks succeed, a local brain big enough to plan them, a way to tell its owner from the TV, turns that end when the sentence does, a reason to speak first, one personality, a switch between your languages, and rules that stop two agents from breaking each other's work.
+
+**Brain**
+- New suite `python -m bench.run --suite brain`: 43 everyday requests (apps, multi-step, files, settings, memory, talk-only, risky) scored on the whole plan, in order. A destructive step the request didn't ask for fails the case. Nothing runs: actions are recorded, not executed. Its first run found four fast-path bugs, now fixed: "fire up spotify and then minimize it" and "open youtube and play arijit singh songs" opened the whole phrase as an app, "kill the internet connection" closed an app, and "bring the volume down to 30" only nudged the volume.
+- Ollama plans are constrained to the tool's JSON schema (structured outputs, Ollama ≥ 0.5), so a small model can't return broken JSON. Hybrid thinking models (qwen3, deepseek-r1, magistral) are called with thinking off for speed (`llm.local_think`).
+- Plans check their steps: after a failed step MXB doesn't type or click into whatever window happens to be open, and after opening an app it waits up to 6 s for that app's window before the next step.
+- `scripts\upgrade_brain.bat` picks a local model for this PC's RAM (Qwen3-4B-Instruct-2507 from 8 GB, Qwen3-1.7B below), downloads it, runs the brain suite on the current and the new model, and switches unless the new one plans worse. MXB warns at startup when the local model is a 1B.
+
+**Voice**
+- Voice ID: say "learn my voice" and four short sentences, and only your voice gives commands. TV, calls and other people are ignored ("ignored: another voice" in the chat). "Stop" and "cancel" still work from anyone. TitaNet-small speaker embeddings through sherpa-onnx (40 MB, ~37 ms per 3 s of audio on the CPU). On public multi-speaker recordings the owner scored 0.39 above the closest other speaker; through the full pipeline with synthetic voices, the owner scored 0.85–0.93 and other voices -0.08 to 0.33 (threshold 0.38). "forget my voice", "voice id off".
+- Wake word in the audio (`listening.engine: "kws"`): an open-vocabulary keyword spotter (zipformer, 18 MB) hears "MXB" and "hey MXB" without transcribing first. Synthetic test: 30/32 wake phrases across 8 voices, 0/48 false alarms on look-alike phrases, no false wakes in 1.8 minutes of other speech. The transcript wake word stays the default until it's measured on the laptop mic.
+- Turns end on meaning (Smart Turn v3.2, 9 MB, `turn_detection.*`): at each pause MXB asks whether the sentence is finished. Finished: it answers at once instead of waiting out the silence. Unfinished ("open the file called…"): it keeps listening up to 1.5 s. Without the model, turns end on silence as before. `scripts\listening_bench.bat --turn on` / `--turn off` measures the difference on your PC.
+- Several languages at once: "I speak Kannada, Hindi and English". Recognition only chooses among your languages, so Kannada can't come out as Tamil or Sinhala, and the multilingual speech model loads in the background without a restart while English keeps working.
+
+**Companion**
+- MXB speaks first (`proactive.*`): a morning briefing (time, weather, today's events, unread email, reminders) once a day after 08:30 when you're at the PC; "meeting in 10 minutes" alerts; a battery warning at 15%. Quiet hours 22:30–07:30, and nothing is spoken during a meeting or focus session. Calendar from your private iCal link (Google or Outlook); email read-only over IMAP with an app password (Gmail, Yahoo, iCloud; Microsoft accounts allow only OAuth, not supported yet), so nothing gets marked as read. `scripts\setup_proactive.bat` reads the calendar and signs in before saving anything, and keeps the link and the app password in the encrypted vault. "brief me", "what's on my calendar tomorrow", "check my email", "mute battery alerts", "stop proactive alerts".
+- One persona (`persona.name`, `persona.style`: warm, crisp or playful) for greetings, "who are you" and the planner's replies. "call me S10" and MXB uses your name. When you sound frustrated ("it's still not working", or the same request twice), the reply is one sentence that goes straight to the fix.
+
+**Release discipline**
+- `python scripts/install_hooks.py`: every push first runs the CI checks (fatal lint, portable suites, routing gate). A pull request template, and CONTRIBUTING rules that apply to AI coding agents too: own branch, pull request, review. CI now installs faster-whisper and the calendar packages, so those tests run there.
+
+**Quality**
+- 6 new suites; 515 portable tests (from 421). Routing bench unchanged: tuned set 100% precision / 99.5% coverage, held-out 85.7% / 48.6%.
+
+**Not measured yet** (needs the laptop): brain-suite accuracy of llama3.2:1b vs Qwen3-4B, voice ID and the keyword spotter on the real mic and room, and Smart Turn's latency gain.
+
 ## v4.3.2 (2026-11-09) — Performance, Safety Hardening & System Observability
 - **Safety Policy & Injection Defense**:
   - Added prompt injection detection for forged tool-calling tokens (`<tool_call>`, ````tool_call`, `[TOOL_CALL:`) and jailbreak instructions (`DAN mode`, `unrestricted mode`).

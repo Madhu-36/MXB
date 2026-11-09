@@ -1,5 +1,5 @@
 """Single source of truth for the MXB version (installer, updater, diagnostics, README)."""
-__version__ = "4.3.1"
+__version__ = "4.4.0"
 
 
 def parse_version(text: str) -> tuple[int, ...]:

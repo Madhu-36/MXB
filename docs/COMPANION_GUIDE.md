@@ -1,4 +1,4 @@
-# MXB v4.3 Companion Guide
+# MXB v4.4 Companion Guide
 
 MXB is a Windows desktop companion you can **talk to or type to**. It keeps listening while it works, can operate any app through the mouse, keyboard and accessibility tree, controls your hardware, and works with your files. Anything destructive needs your "yes" first.
 
@@ -23,7 +23,7 @@ python -m venv .venv
 pip install -r requirements.txt
 # LLM brain (pick one or both)
 setx NVIDIA_API_KEY "nvapi-..."      # cloud: fast, best planning quality
-ollama pull llama3.1:8b               # local: private; set llm.local_model to it
+scripts\upgrade_brain.bat            # local: private; downloads Qwen3-4B and switches if it plans better
 python -u main.py
 ```
 
@@ -33,7 +33,7 @@ A source checkout keeps its data next to the code, exactly as before. The setup 
 
 **Start with Windows.** *"start with windows"*, *"don't start with windows"*, or the wizard checkbox. It's a per-user Run entry (no admin), removed on uninstall. Only one MXB runs at a time; opening it again just tells you it's already in the tray.
 
-`llama3.2:1b` (the old default) handles simple commands, but it is too small for reliable multi-step plans or agent mode. Use the NVIDIA model or a local 8B model for those.
+`llama3.2:1b` (the old default) handles simple commands, but it is too small for reliable multi-step plans or agent mode, and MXB says so at startup. `scripts\upgrade_brain.bat` downloads a 4B model (Qwen3-4B-Instruct-2507, ~2.5 GB; Qwen3-1.7B on PCs under 8 GB of RAM), runs the brain benchmark on both models without executing anything, and switches only if the new one plans at least as well. The NVIDIA model is still the strongest planner.
 
 ---
 
@@ -240,6 +240,25 @@ Commands work in the Indian languages above, and replies are spoken in your lang
 
 Privacy: nothing is tracked until you ask. `activity.db` in the data folder stores app and site names with seconds per day and your session goals, never window titles, URLs or content (a title is read for a moment to tell YouTube from LeetCode, then dropped). While the coach is running (a focus session, screen-time tracking or eye breaks), it offers once per call to take notes when you're in a Zoom, Teams or Meet call. If you study from YouTube lectures, add `"productive": ["YouTube"]` under `focus` or say "allow YouTube" for that session.
 
+### v4.4: voice ID, briefings, persona, languages
+| Say | Does |
+| :--- | :--- |
+| "learn my voice", "only listen to me" | Four short sentences of yours become a voiceprint; after that only your voice gives commands. Other voices show up in the chat as "ignored: another voice". "stop" and "cancel" work from anyone |
+| "voice id off" / "voice id on", "listen to everyone", "voice id status", "forget my voice" | Pause, resume, check or delete the voiceprint |
+| "brief me", "what's my day like", "give me my morning briefing" | Time, weather, today's events, unread email and reminders |
+| "what's on my calendar today", "… tomorrow", "do i have any meetings" | Your agenda from the connected calendar |
+| "check my email", "any new emails" | Unread count and the latest senders and subjects (nothing is marked as read) |
+| "connect my calendar", "connect my email" | Explains `scripts\setup_proactive.bat`, which stores your private iCal link and an IMAP app password in the encrypted vault |
+| "mute battery alerts", "stop meeting reminders", "no more briefing notifications", "stop proactive alerts" / "turn on proactive alerts" | Silence one kind of alert, or all of them (saved) |
+| "call me S10" | MXB uses your name in greetings and the briefing |
+| "I speak Kannada, Hindi and English", "listen for telugu and english" | Recognition chooses only among these languages and replies in whichever you used; the multilingual model loads in the background, no restart |
+
+MXB speaks first only for three things: the morning briefing (once a day, after `proactive.briefing_time`, when you've used the PC in the last 5 minutes), meeting alerts (`proactive.meeting_alert_minutes` before), and low battery. Nothing is spoken during quiet hours or while you're in a meeting or focus session; meeting alerts still appear in the chat. Google Calendar: *Settings → your calendar → Integrate calendar → Secret address in iCal format*. Outlook: *Settings → Calendar → Shared calendars → Publish a calendar → ICS link*. Email works with an app password: Gmail (turn on 2-step verification, then *myaccount.google.com/apppasswords*), Yahoo, iCloud, Zoho. Microsoft accounts (Outlook.com, Hotmail, Live, and Microsoft 365 school or work mail) allow only OAuth sign-in, which MXB doesn't support yet. Setup reads the calendar and signs in to the mailbox before saving anything, so a wrong link or password is caught right there.
+
+Turn detection: when you pause, a small model (Smart Turn v3.2) judges whether your sentence is finished. If it is, MXB answers at once; if not ("open the file called…"), it waits up to `turn_detection.hold_seconds` for the rest. Compare both on your PC with `scripts\listening_bench.bat --turn on` and `--turn off`.
+
+Wake word in the audio: set `"listening": {"engine": "kws"}` and MXB spots "MXB" / "hey MXB" in the sound itself (any phrase in `listening.wake_words`, no training). Raise `listening.kws_threshold` if it wakes by mistake, lower it if it misses you.
+
 ### v4: plugins
 Drop a Python file into `plugins/`:
 ```python
@@ -302,7 +321,6 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `voice.edge_voice` | `en-IN-NeerjaNeural` | Any edge-tts voice, e.g. `en-IN-PrabhatNeural`, `en-US-AriaNeural` |
 | `voice.piper_exe` / `voice.piper_model` | `""` | Paths for offline Piper TTS |
 | `voice.barge_in` | `"auto"` | `headset`, `speaker`, `off` |
-| `listening.engine` | `"transcript"` | `"openwakeword"` for the offline audio wake word |
 | `engine.input_gain` | `"auto"` | Mic gain before voice detection: `"auto"`, `"off"` or fixed dB like `"12"` |
 | `engine.max_input_gain_db` / `engine.input_target_rms` | `30` / `0.1` | Auto gain ceiling and the speech level it aims for |
 | `engine.max_utterance_s` | `12` | Transcribe in pieces when talk never pauses (TV, people in the room) |
@@ -330,6 +348,22 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 | `focus.track_activity` | `false` | Screen-time tracking (opt-in) |
 | `focus.eye_break_minutes` | `0` | 20-20-20 reminders (0 = off) |
 | `focus.productive` / `focus.distracting` | `[]` | Override app or site categories, e.g. `["YouTube"]` |
+| `llm.structured_output` | `true` | Constrain Ollama plans to the tool's JSON schema (Ollama ≥ 0.5) |
+| `llm.local_think` | `false` | Let hybrid thinking models (qwen3, deepseek-r1) think before planning: better on hard requests, much slower |
+| `voice_id.enabled` / `voice_id.threshold` | `true` / `0.38` | Gate commands on your voice once enrolled; higher = stricter |
+| `voice_id.short_seconds` / `voice_id.short_floor` | `1.0` / `0.2` | Utterances shorter than this need only the lower score |
+| `listening.engine` | `"transcript"` | `"kws"` = keyword spotter in the audio, `"openwakeword"` = pretrained offline phrases |
+| `listening.kws_threshold` / `listening.kws_boost` | `0.2` / `1.5` | Keyword spotter: trigger score, and how strongly it looks for the wake words |
+| `turn_detection.enabled` / `turn_detection.threshold` | `true` / `0.5` | Smart Turn end-of-sentence model; a pause scoring at least this ends the turn |
+| `turn_detection.probe_seconds` / `turn_detection.hold_seconds` | `0.2` / `1.5` | When to ask the model after you pause; how long to wait when you sound unfinished |
+| `proactive.enabled` / `proactive.briefing_time` | `true` / `"08:30"` | Speak first; earliest time for the daily briefing |
+| `proactive.quiet_hours` | `"22:30-07:30"` | Nothing spoken in this window |
+| `proactive.meeting_alert_minutes` / `proactive.battery_alert_percent` | `10` / `15` | Alert lead time; battery warning level |
+| `proactive.muted` | `[]` | Alert kinds you muted by voice (`battery`, `meetings`, `email`, `briefing`, `all`) |
+| `proactive.imap_host` / `proactive.imap_user` / `proactive.imap_port` | set by `setup_proactive.bat` / `993` | Email account (the app password is in the vault) |
+| `proactive.calendar_file` | absent | A local `.ics` file instead of the secret link |
+| `persona.name` / `persona.style` / `persona.user_name` | `"MXB"` / `"warm"` / `""` | Assistant name, tone (`warm`, `crisp`, `playful`), what it calls you |
+| `voice.languages` | absent | Languages to recognise, e.g. `["en", "kn", "hi"]` (set by "I speak …") |
 
 ---
 
@@ -338,6 +372,8 @@ To turn confirmations off entirely (not recommended), set `safety.confirm_destru
 ```powershell
 python -m bench.run                        # routing: precision, coverage, latency (tuned vs held-out set)
 python -m bench.run --suite live --yes     # 27 real desktop tasks (Windows; uses your mouse and keyboard)
+python -m bench.run --suite brain          # 43 requests planned by your LLM, scored on the whole plan (nothing runs)
+python -m bench.run --suite brain --local-only --model qwen3:4b-instruct-2507-q4_K_M   # one local model
 python -m bench.run --suite all --llm --update-readme   # everything, with the LLM, published to README
 python -m bench.run --list                 # list live tasks and what they need
 ```
@@ -356,7 +392,10 @@ The live suite works in a sandbox folder (`Documents\MXB-Bench-<time>`) with its
 - **Voice in a room with a TV or people talking:** their speech is speech too, so MXB transcribes it in 12 s pieces and the wake word picks out yours. Say "MXB" at the start of a sentence; a quiet mic under loud talk can still be missed, so move closer or use a headset.
 - **Barge-in on laptop speakers** relies on the echo filter (comparing what it heard with what it just said). Headsets interrupt instantly and are more reliable.
 - **edge-tts needs internet**; when it fails MXB switches to Windows voices for the session. Use Piper for an offline neural voice.
-- **The offline wake word** ships with pretrained phrases ("hey jarvis", "alexa", "hey mycroft"). A custom "hey MXB" needs a model trained with openWakeWord's training notebook.
+- **The openWakeWord engine** ships with pretrained phrases ("hey jarvis", "alexa", "hey mycroft"). For "MXB" in the audio use `listening.engine: "kws"`, which needs no training.
+- **Voice ID** compares voices, it isn't security: a recording of your voice passes, and a cold or a new mic can lower your score (say "learn my voice" again). Very short phrases are judged on less audio, so they get a lower bar.
+- **Proactive alerts** come from a private iCal link (re-read every 15 minutes) and IMAP with an app password. Microsoft mail accounts need OAuth, which isn't supported yet; their calendars still work through the published ICS link.
+- **Smart Turn** is trained on 23 languages, including English, Hindi, Bengali and Marathi, but not Kannada or Telugu. If it cuts you off or keeps you waiting in those, set `turn_detection.enabled` to `false`.
 - **Local hashing embeddings** match by keywords and phrases, not deep meaning. Run `ollama pull nomic-embed-text` for real semantic recall.
 - **Unsigned installer.** SmartScreen may warn on first install (*More info → Run anyway*). The update checksum catches corrupted or tampered downloads, but only code signing protects against a compromised release account.
 - **Injection detection is pattern-based.** A clever page may not trip it; the per-goal allowlist and confirmations are what actually stop harm.
