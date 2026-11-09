@@ -2,12 +2,12 @@ import sys
 import os
 import json
 import time
-from pathlib import Path
 import numpy as np
 import sounddevice as sd
 from faster_whisper.vad import get_vad_model
+from utils.paths import config_path as app_config_path
 
-CONFIG_PATH = Path(__file__).parent.parent / 'config.json'
+CONFIG_PATH = app_config_path()
 
 def load_config():
     if os.path.exists(CONFIG_PATH):

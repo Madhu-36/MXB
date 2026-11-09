@@ -11,7 +11,10 @@ import sounddevice as sd
 from faster_whisper import WhisperModel
 from faster_whisper.vad import get_vad_model
 from PySide6.QtCore import QThread, Signal
-from engine.router import IntentRouter
+from engine.barge_in import BargeInDetector, is_probable_echo, resolve_mode
+from engine.turn_detector import SpeculativeTurn
+from engine.listening import (BackgroundModel, InputAGC, StreamingVAD, clean_transcript, energy_speech_prob, is_speech,
+                              max_tokens_for, whisper_options)
 from utils.credentials import CredentialsManager
 from utils.logger import log
 
@@ -24,6 +27,10 @@ class VoicePipeline(QThread):
     3. Asynchronous ASR Worker: Transcribes speech utterances without blocking audio capture.
     4. Asynchronous Action Worker: Dispatches and executes desktop actions in parallel.
     5. Live Voice Interruption: Intercepts 'stop' / 'cancel' immediately during active actions.
+
+    v3: transcripts are handed to the shared CommandBus (same path as typed chat),
+    which owns the wake-word gate, confirmations, stop handling and the parallel
+    action/info lanes. The microphone never stops listening while MXB works.
     """
 
     vad_status_changed = Signal(str)
@@ -31,7 +38,7 @@ class VoicePipeline(QThread):
     action_feedback = Signal(str)
     mic_level_signal = Signal(float)
 
-    def __init__(self, config):
+    def __init__(self, config, bus=None):
         super().__init__()
         self.config = config
         self.is_running = True
@@ -39,7 +46,13 @@ class VoicePipeline(QThread):
         self.is_tts_speaking = False
         self.tts_finish_time = 0.0
 
-        self.router = IntentRouter()
+        if bus is None:
+            from engine.command_bus import CommandBus
+            bus = CommandBus(config)
+        self.bus = bus
+        self.router = bus.router
+        # Live step feedback from the bus also drives the HUD action line.
+        self.bus.feedback.connect(self.action_feedback.emit)
 
         # Connect TTS signals for echo suppression
         self.router.tts.started_speaking.connect(self._on_tts_started)
@@ -50,19 +63,51 @@ class VoicePipeline(QThread):
 
         # Thread-safe queues connecting the concurrent pipeline stages
         self.raw_audio_queue = queue.Queue(maxsize=150)
+        self._dropped_audio_frames = 0
         self.utterance_queue = queue.Queue(maxsize=10)
-        self.action_task_queue = queue.Queue(maxsize=15)
+        self.action_task_queue = self.bus.action_queue  # kept for backward compatibility
 
         # 800ms pre-roll audio ring buffer to preserve leading syllables
         self.preroll_buffer = collections.deque(maxlen=25)
 
-        # Silero neural VAD model lazy loader
+        # v4.3.1: microphone gain BEFORE voice detection (quiet laptop mics reached the VAD at -48 dBFS)
+        self.agc = InputAGC.from_config(config if isinstance(config, dict) else {})
+        self._gain_log = (0.0, None)          # (time, dB) of the last gain line written to the log
+
+        # Silero neural VAD model lazy loader (+ the streaming wrapper built in run())
         self._vad_model = None
+        self._vad = None
         self.whisper_model = None
 
         # Worker threads
         self._asr_thread = None
-        self._action_thread = None
+
+        # v4: barge-in (talk over MXB) and offline audio wake word
+        voice_cfg = config.get("voice", {}) if isinstance(config, dict) else {}
+        self.barge_in_setting = voice_cfg.get("barge_in", "auto")
+        self.barge_in_mode = "off"            # resolved once the microphone is known
+        self.barge_detector = BargeInDetector()
+        listen_cfg = config.get("listening", {}) if isinstance(config, dict) else {}
+        self.wake_engine = None
+        engine_name = listen_cfg.get("engine", "transcript")
+        if engine_name == "openwakeword":
+            from engine.wake_engine import OpenWakeWordEngine, wake_phrase_words
+            model = listen_cfg.get("openwakeword_model", "hey_jarvis")
+            self.wake_engine = OpenWakeWordEngine(model, float(listen_cfg.get("openwakeword_threshold", 0.5)))
+            for phrase in wake_phrase_words(model):
+                self.bus.wake.add_wake_word(phrase)
+        elif engine_name == "kws":
+            # v4.4: "MXB" spotted in the audio (sherpa-onnx), no training and no transcription until heard
+            from engine.kws_engine import SherpaKWSEngine
+            self.wake_engine = SherpaKWSEngine(listen_cfg.get("wake_words") or ["mxb", "hey mxb"],
+                                               float(listen_cfg.get("kws_threshold", 0.2)),
+                                               float(listen_cfg.get("kws_boost", 1.5)))
+        # v4.4: only the owner's voice may command MXB once it has been enrolled
+        self.voice_id = getattr(getattr(self.bus, "executor", None), "voice_id", None)
+        # v4.4: end turns on meaning (Smart Turn), not only on silence
+        from engine.turn_detector import TurnDetector
+        self.turn = TurnDetector(config if isinstance(config, dict) else {})
+        self.last_end_of_turn = (0, "")        # (ms of silence before the turn ended, why)
 
     def _get_vad_model(self):
         if self._vad_model is None:
@@ -77,31 +122,42 @@ class VoicePipeline(QThread):
 
     def _on_tts_started(self):
         self.is_tts_speaking = True
-        with self.raw_audio_queue.mutex:
-            self.raw_audio_queue.queue.clear()
+        self.barge_detector.reset()
+        if self.barge_in_mode == "off":
+            with self.raw_audio_queue.mutex:
+                self.raw_audio_queue.queue.clear()
 
     def _on_tts_finished(self):
         self.tts_finish_time = time.time()
         self.is_tts_speaking = False
-        with self.raw_audio_queue.mutex:
-            self.raw_audio_queue.queue.clear()
+        if self.barge_in_mode == "off":
+            with self.raw_audio_queue.mutex:
+                self.raw_audio_queue.queue.clear()
 
     def audio_callback(self, indata, frames, time_info, status):
         """Non-blocking low-latency sounddevice capture callback."""
-        if not self.is_listening or self.is_tts_speaking:
+        if not self.is_listening:
             return
-        if (time.time() - self.tts_finish_time) < 0.35:
-            return
+        if self.barge_in_mode == "off":
+            if self.is_tts_speaking or (time.time() - self.tts_finish_time) < 0.35:
+                return
 
         try:
             self.raw_audio_queue.put_nowait(indata.copy())
         except queue.Full:
-            # Drop oldest frame if queue is congested
+            # Drop oldest frame if queue is congested with overflow guard telemetry
+            self._dropped_audio_frames += 1
             try:
                 self.raw_audio_queue.get_nowait()
                 self.raw_audio_queue.put_nowait(indata.copy())
             except Exception:
                 pass
+            if self._dropped_audio_frames % 50 == 1:
+                log.warning(f"AudioPipeline: raw audio queue overflowed (dropped {self._dropped_audio_frames} frames)")
+
+    @property
+    def dropped_audio_frames(self) -> int:
+        return self._dropped_audio_frames
 
     @staticmethod
     def calculate_adaptive_silence_threshold(speech_frames_count: int, trailing_rms: float, base_threshold: int) -> int:
@@ -185,28 +241,49 @@ class VoicePipeline(QThread):
             if utterance_item is None:
                 break
 
-            audio_data, agc_target, max_gain = utterance_item
+            audio_data, agc_target, max_gain, during_tts, speculative = (tuple(utterance_item) + (False, None))[:5]
 
             try:
+                vid = self.voice_id
+                if vid is not None and vid.enrolling:
+                    # Learning the owner's voice: these utterances are samples, not commands.
+                    if speculative is not None and not speculative.wait():
+                        continue
+                    reply = vid.add_sample(audio_data)
+                    if reply:
+                        self.router.tts.speak(reply)
+                    self.vad_status_changed.emit("Idle")
+                    continue
                 text = self._transcribe_audio(audio_data, agc_target, max_gain)
+                if speculative is not None and not speculative.wait():
+                    # Transcribed during the pause, but the user went on talking: the whole sentence
+                    # arrives as its own utterance, so this part is dropped.
+                    log.info(f"Pipeline: dropped the early transcript '{text}'; the sentence went on.")
+                    continue
+                if text and vid is not None and vid.ready():
+                    allowed, why = vid.check(audio_data, text)
+                    if not allowed:
+                        log.info(f"Pipeline: ignored '{text}': {why}.")
+                        self.action_feedback.emit(f"(Ignored a voice that isn't yours: \"{text[:40]}\")")
+                        self.vad_status_changed.emit("Idle")
+                        continue
+                if text and during_tts:
+                    tts = self.router.tts
+                    spoken = tts.recent_spoken() if callable(getattr(tts, "recent_spoken", None)) else []
+                    if is_probable_echo(text, spoken):
+                        log.info(f"Pipeline: dropped echo of MXB's own voice: '{text}'")
+                        self.vad_status_changed.emit("Idle")
+                        continue
+                    log.info("Pipeline: barge-in — user spoke over MXB, interrupting speech.")
+                    tts.interrupt()
                 if text:
                     log.info(f"Pipeline [Parallel ASR] -> '{text}'")
                     self.transcription_ready.emit(text)
-
-                    # Check for immediate emergency voice interruption
-                    clean_lower = text.lower().strip()
-                    if clean_lower in ["stop", "cancel", "halt", "pause", "abort", "freeze"]:
-                        log.warning("Pipeline: Immediate Voice Interruption detected in ASR thread!")
-                        self.router.executor.abort_current_action()
-                        self.action_feedback.emit("INTERRUPTED: Actions aborted.")
-                        self.router.tts.speak("Stopped.")
-                        # Drain any pending queued actions
-                        with self.action_task_queue.mutex:
-                            self.action_task_queue.queue.clear()
-                        continue
-
-                    # Put recognized command into Action Execution Queue
-                    self.action_task_queue.put(text)
+                    # Stop words, confirmations and the wake word are handled instantly
+                    # in the bus; real commands are queued without blocking this thread.
+                    outcome = self.bus.submit(text, source="voice", lang=getattr(self, "last_language", None))
+                    if outcome == "ignored":
+                        self.vad_status_changed.emit("Idle")
                 else:
                     log.info("Pipeline: No recognizable speech in utterance.")
                     self.vad_status_changed.emit("Idle")
@@ -214,32 +291,6 @@ class VoicePipeline(QThread):
                 log.error(f"Pipeline: ASR Worker Exception: {e}")
             finally:
                 self.utterance_queue.task_done()
-
-    # =========================================================================
-    # WORKER 2: ASYNCHRONOUS ACTION EXECUTION THREAD (PARALLEL TO AUDIO)
-    # =========================================================================
-    def _action_worker_loop(self):
-        log.info("Pipeline: Action Execution Worker Thread started (Parallel).")
-        while self.is_running:
-            try:
-                text_cmd = self.action_task_queue.get(timeout=0.2)
-            except queue.Empty:
-                continue
-
-            if text_cmd is None:
-                break
-
-            try:
-                self.action_feedback.emit("Reasoning & Planning...")
-                action_result = self.router.route(text_cmd, feedback_callback=self.action_feedback.emit)
-                log.info(f"Pipeline [Parallel Action Result] -> {action_result}")
-                self.action_feedback.emit(action_result)
-                self.vad_status_changed.emit("Idle")
-            except Exception as e:
-                log.error(f"Pipeline: Action Worker Exception: {e}")
-                self.action_feedback.emit(f"Execution Error: {e}")
-            finally:
-                self.action_task_queue.task_done()
 
     def _audio_to_wav_bytes(self, audio_data: np.ndarray, sample_rate=16000) -> bytes:
         int16_data = (audio_data * 32767).clip(-32768, 32767).astype(np.int16)
@@ -281,6 +332,24 @@ class VoicePipeline(QThread):
             return text
         return None
 
+    def _transcribe_sarvam(self, audio_data: np.ndarray, mode: str) -> str | None:
+        """Sarvam Saaras: Indian-language speech -> English text + detected language (needs SARVAM_API_KEY)."""
+        key = CredentialsManager.get_secret("SARVAM_API_KEY")
+        if not key:
+            return None
+        try:
+            from engine.indic import SarvamSTT
+            cfg = self.config.get("speech_recognition", {})
+            stt = SarvamSTT(key, model=cfg.get("sarvam_model", "saaras:v3"), mode="translate")
+            t0 = time.time()
+            text, lang = stt.transcribe(self._audio_to_wav_bytes(audio_data, 16000), mode)
+            self.last_language = lang
+            log.info(f"Sarvam ASR ({time.time() - t0:.2f}s, {lang or 'en'}): '{text}'")
+            return text or None
+        except Exception as e:
+            log.warning(f"Sarvam ASR failed, using local recognition: {e}")
+            return None
+
     def _transcribe_audio(self, audio_data: np.ndarray, agc_target: float, max_gain: float) -> str | None:
         # Zero-center waveform by removing DC bias
         audio_data = audio_data - float(np.mean(audio_data))
@@ -294,34 +363,80 @@ class VoicePipeline(QThread):
                 audio_data = np.tanh(audio_data * 1.05)
 
         text = None
+        self.last_language = None
+        from engine.indic import LANGUAGES, allowed_languages, pick_language, preferred_language
+        mode = preferred_language(self.config)   # "en", "auto" or an Indian language code
 
-        # 1. Cloud NVIDIA Build ASR (fastest)
-        if self.config.get("speech_recognition", {}).get("provider") == "nvidia" or CredentialsManager.has_nvidia_api_key():
+        # 0. Indian languages: Sarvam turns speech straight into English and says which language it was.
+        if mode != "en":
+            text = self._transcribe_sarvam(audio_data, mode)
+
+        # 1. Cloud NVIDIA Build ASR (fastest, English only)
+        if text is None and mode == "en" and (self.config.get("speech_recognition", {}).get("provider") == "nvidia"
+                                              or CredentialsManager.has_nvidia_api_key()):
             try:
                 text = self._transcribe_nvidia_build(audio_data)
             except Exception as e:
                 log.warning(f"NVIDIA Build ASR fallback: {e}")
                 text = None
 
+        # 1b. "Speak in Kannada" while the English-only model is loaded: fetch the multilingual one in
+        # the background and switch to it when it's ready (no restart).
+        if mode != "en" and getattr(self, "_whisper_english_only", False):
+            swap = getattr(self, "_model_swap", None)
+            if swap is None:
+                swap = self._model_swap = BackgroundModel(
+                    lambda name: WhisperModel(name, device="cpu", compute_type="int8"))
+            if swap.request(self.config.get("engine", {}).get("whisper_model_multilingual", "small")):
+                log.info("Pipeline: loading the multilingual speech model in the background.")
+            ready = swap.take()
+            if ready:
+                self.whisper_model, self._whisper_english_only = ready[1], False
+                log.info(f"Pipeline: switched to the multilingual speech model ({ready[0]}).")
+
         # 2. Local Faster-Whisper Fallback
         if text is None and self.whisper_model:
             try:
                 audio_len_s = len(audio_data) / 16000.0
                 adaptive_speech_pad = min(350, max(180, int(audio_len_s * 55)))
-                segments, _ = self.whisper_model.transcribe(
-                    audio_data,
-                    beam_size=5,
-                    vad_filter=True,
-                    vad_parameters=dict(
-                        threshold=0.35,
-                        min_speech_duration_ms=100,
-                        min_silence_duration_ms=300,
-                        speech_pad_ms=adaptive_speech_pad
-                    ),
-                    condition_on_previous_text=False,
-                    initial_prompt="Desktop commands: open app, close window, check system, click, scroll down, type text.",
-                    no_speech_threshold=0.60
-                )
+                lang_kwargs = {}
+                if mode != "en" and not getattr(self, "_whisper_english_only", False):
+                    lang_kwargs["language"] = None if mode == "auto" else mode
+                allowed = allowed_languages(self.config) if mode == "auto" else []
+
+                def decode(kwargs):
+                    return self.whisper_model.transcribe(
+                        audio_data,
+                        beam_size=5,
+                        **kwargs,
+                        vad_filter=True,
+                        vad_parameters=dict(
+                            threshold=0.35,
+                            min_speech_duration_ms=100,
+                            min_silence_duration_ms=300,
+                            speech_pad_ms=adaptive_speech_pad
+                        ),
+                        condition_on_previous_text=False,
+                        # No initial prompt: Whisper repeated the old one ("open app, close window...") on noise.
+                        initial_prompt=None,
+                        no_speech_threshold=0.60,
+                        # One decode, no fallback ladder: noise was re-decoded at up to 6 temperatures.
+                        temperature=0.0,
+                        **whisper_options(self.whisper_model, self.config.get("engine", {}).get("whisper_hotwords", ""),
+                                          max_new_tokens=max_tokens_for(audio_len_s)),
+                    )
+                segments, info = decode(lang_kwargs)
+                detected = getattr(info, "language", None)
+                if allowed and detected not in allowed:
+                    # Whisper picked a language the user doesn't speak (short Kannada heard as Tamil, Hindi
+                    # as Urdu): decode again as the likeliest of the user's own languages.
+                    better = pick_language(getattr(info, "all_language_probs", None), allowed)
+                    if better:
+                        log.info(f"Pipeline: heard as '{detected}', not one of {allowed}; decoding as '{better}'.")
+                        segments, info = decode(dict(lang_kwargs, language=better))
+                        detected = better
+                if detected in LANGUAGES and detected != "en":
+                    self.last_language = detected
                 filtered_segments = []
                 for s in segments:
                     if getattr(s, "no_speech_prob", 0.0) > 0.65:
@@ -335,15 +450,15 @@ class VoicePipeline(QThread):
             except Exception as e:
                 log.error(f"Local Faster-Whisper error: {e}")
 
-        # Post-transcription noise & hallucination filter
+        # Post-transcription noise & hallucination filter: "open notepad, open notepad" -> "open notepad";
+        # loops Whisper invents from noise ("go, go, go", "open app" x6) are dropped.
         if text:
-            words = text.lower().replace(",", " ").replace("!", " ").replace(".", " ").split()
-            if len(words) >= 4 and len(set(words)) <= 2:
+            cleaned = clean_transcript(text)
+            if cleaned is None:
                 log.info(f"Pipeline: Filtered hallucinated repetition: '{text}'")
-                return None
-            if len(text) < 2:
-                return None
-
+            elif cleaned != text:
+                log.info(f"Pipeline: collapsed repeated phrase '{text}' -> '{cleaned}'")
+            return cleaned
         return text
 
     # =========================================================================
@@ -355,9 +470,14 @@ class VoicePipeline(QThread):
 
         try:
             model_size = self.config.get("engine", {}).get("whisper_model", "base.en")
+            from engine.indic import preferred_language
+            if preferred_language(self.config) != "en" and str(model_size).endswith(".en"):
+                # English-only models can't hear Kannada, Hindi...: load the multilingual one instead.
+                model_size = self.config.get("engine", {}).get("whisper_model_multilingual", "small")
             device = "cpu"
             compute_type = "int8"
             self.whisper_model = WhisperModel(model_size, device=device, compute_type=compute_type)
+            self._whisper_english_only = str(model_size).endswith(".en")
         except Exception as e:
             error_msg = f"Model Error: {e}"
             log.error(error_msg)
@@ -365,12 +485,14 @@ class VoicePipeline(QThread):
             return
 
         vad_model = self._get_vad_model()
+        # Keeps the VAD's memory between 32 ms frames (calling the model per frame reset it every time).
+        self._vad = StreamingVAD(vad_model) if vad_model is not None else None
+        if self._vad is not None:
+            log.info(f"Pipeline: streaming voice detection ({self._vad.kind}).")
 
         # Start Parallel Worker Threads
         self._asr_thread = threading.Thread(target=self._asr_worker_loop, name="MXB-Parallel-ASR", daemon=True)
-        self._action_thread = threading.Thread(target=self._action_worker_loop, name="MXB-Parallel-Action", daemon=True)
         self._asr_thread.start()
-        self._action_thread.start()
 
         self.vad_status_changed.emit("Idle")
 
@@ -381,6 +503,16 @@ class VoicePipeline(QThread):
             log.error(error_msg)
             self.vad_status_changed.emit(error_msg)
             return
+
+        self.barge_in_mode = resolve_mode(self.barge_in_setting, device_info.get("name", ""))
+        log.info(f"Pipeline: barge-in mode = {self.barge_in_mode} (mic: {device_info.get('name', '?')})")
+        if self.wake_engine is not None and not self.wake_engine.load():
+            self.wake_engine = None
+        self.turn.load()
+        turn_probe_frames = max(1, int(self.turn.probe_seconds / 0.032))
+        turn_hold_frames = max(1, int(self.turn.hold_seconds / 0.032))
+        turn_verdict = None           # per pause: None (not asked yet), "complete", "unfinished" or "unsure"
+        speculative = None            # SpeculativeTurn being transcribed while the silence timer runs
 
         use_software_resample = False
         stream_rate = 16000
@@ -404,9 +536,12 @@ class VoicePipeline(QThread):
 
         buffer = []
         is_speaking = False
+        started_during_tts = False
         silence_frames = 0
         speech_frames_count = 0
 
+        max_utterance_s = float(self.config.get("engine", {}).get("max_utterance_s", 12))
+        max_utterance_frames = max(32, int(max_utterance_s / 0.032))
         sensitivity = self.config.get("engine", {}).get("microphone_sensitivity", "high").lower()
         if sensitivity == "high":
             vad_speech_prob_threshold = 0.35
@@ -456,33 +591,71 @@ class VoicePipeline(QThread):
                         elif len(chunk) != 512:
                             chunk = np.resize(chunk, 512).astype(np.float32)
 
+                        raw_rms = float(np.sqrt(np.mean(chunk**2)))
+                        speaking_now = self.is_tts_speaking or (time.time() - self.tts_finish_time) < 0.35
+                        # Amplify quiet microphones before anything listens. MXB's own voice doesn't
+                        # train the gain (adapt=False), or it would turn the gain down for the user.
+                        chunk = self.agc.process(chunk, adapt=not speaking_now)
                         rms_volume = float(np.sqrt(np.mean(chunk**2)))
-                        self.mic_level_signal.emit(min(rms_volume * 150.0, 1.0))
+                        noise_level = self.agc.noise_after_gain
+                        self.mic_level_signal.emit(min(rms_volume / (self.agc.target * 1.4), 1.0))
+                        self._log_gain()
 
                         # Silero VAD (<0.2ms)
                         speech_prob = 0.0
-                        if vad_model is not None:
+                        if self._vad is not None:
                             try:
-                                prob_out = vad_model(chunk)
-                                speech_prob = float(prob_out[0]) if len(prob_out) > 0 else 0.0
+                                speech_prob = self._vad(chunk)
                             except Exception:
-                                speech_prob = 1.0 if rms_volume > 0.0006 else 0.0
+                                speech_prob = energy_speech_prob(rms_volume, noise_level)
                         else:
-                            speech_prob = 1.0 if rms_volume > 0.0006 else 0.0
+                            speech_prob = energy_speech_prob(rms_volume, noise_level)
 
-                        has_speech = (speech_prob >= vad_speech_prob_threshold) or (rms_volume > 0.0025)
+                        # Offline wake word: runs on raw audio, before any transcription.
+                        if self.wake_engine is not None and self.wake_engine.process(chunk):
+                            self.bus.wake.engage()
+                            self.vad_status_changed.emit("Active (Listening...)")
+                            self.action_feedback.emit("Wake word heard — listening.")
+
+                        if speaking_now and self.barge_in_mode != "off":
+                            # Stricter detection while MXB talks, so its own voice doesn't count as speech.
+                            # Raw level: the detector's thresholds were tuned before the input gain existed.
+                            barge = self.barge_detector.update(speech_prob, raw_rms)
+                            if barge and self.barge_in_mode == "headset" and self.is_tts_speaking:
+                                log.info("Pipeline: barge-in (headset) — interrupting speech immediately.")
+                                self.router.tts.interrupt()
+                            has_speech = barge or (is_speaking and speech_prob >= 0.6)
+                        else:
+                            # Relative to this room's noise floor, not a fixed level that a fan can beat.
+                            has_speech = is_speech(speech_prob, rms_volume, noise_level, vad_speech_prob_threshold)
 
                         if has_speech:
                             if not is_speaking:
                                 is_speaking = True
+                                started_during_tts = speaking_now
                                 speech_frames_count = 0
                                 self.vad_status_changed.emit("Active (Listening...)")
-                                log.info(f"Speech Detected (Prob: {speech_prob:.3f}, RMS: {rms_volume:.6f})")
+                                log.info(f"Speech Detected (Prob: {speech_prob:.3f}, RMS: {rms_volume:.4f}, "
+                                         f"raw {raw_rms:.4f}, gain {self.agc.gain_db:+.1f} dB)")
                                 buffer.extend(list(self.preroll_buffer))
 
                             buffer.append(chunk)
                             speech_frames_count += 1
                             silence_frames = 0
+                            turn_verdict = None
+                            if speculative is not None:
+                                # The pause wasn't the end: drop the early transcript, keep one sentence.
+                                speculative.cancel()
+                                speculative = None
+                                self.vad_status_changed.emit("Active (Listening...)")
+                            if len(buffer) >= max_utterance_frames:
+                                # A TV or people talking can keep "speech" going for minutes: transcribe
+                                # in pieces instead of waiting for a pause that never comes.
+                                log.info(f"Pipeline: {len(buffer) * 0.032:.0f} s without a pause; transcribing this part now.")
+                                self._dispatch_utterance(buffer, started_during_tts, agc_target_level, agc_max_gain)
+                                buffer = []
+                                speech_frames_count = 0
+                                started_during_tts = speaking_now
                         else:
                             self.preroll_buffer.append(chunk)
 
@@ -492,24 +665,46 @@ class VoicePipeline(QThread):
 
                                 adaptive_silence_target = self.calculate_adaptive_silence_threshold(
                                     speech_frames_count=speech_frames_count,
-                                    trailing_rms=rms_volume,
+                                    trailing_rms=raw_rms,
                                     base_threshold=silence_threshold
                                 )
 
-                                if silence_frames > adaptive_silence_target:
-                                    is_speaking = False
+                                # Ask Smart Turn once per pause whether the sentence is finished. "Finished"
+                                # starts recognition now, while the silence timer still decides the turn.
+                                if (turn_verdict is None and silence_frames >= turn_probe_frames and not speaking_now
+                                        and speech_frames_count >= min_speech_frames and self.turn.ready):
+                                    turn_verdict = self.turn.verdict(np.concatenate(buffer)) or "unsure"
+                                    log.info(f"Pipeline: end of sentence? p={self.turn.last_probability or 0:.2f} "
+                                             f"-> {turn_verdict}")
+                                    if turn_verdict == "complete":
+                                        speculative = SpeculativeTurn()
+                                        if not self._dispatch_utterance(list(buffer), started_during_tts, agc_target_level,
+                                                                        agc_max_gain, speculative=speculative):
+                                            speculative = None
+                                if turn_verdict == "unfinished":
+                                    end_turn = silence_frames > max(adaptive_silence_target, turn_hold_frames)
+                                else:
+                                    end_turn = silence_frames > adaptive_silence_target
 
-                                    if speech_frames_count < min_speech_frames:
+                                if end_turn:
+                                    is_speaking = False
+                                    # How long MXB waited after the user stopped talking (benchmarks read it).
+                                    # How long the silence lasted, and how soon recognition started (benchmarks).
+                                    self.last_end_of_turn = (round(silence_frames * 32), {
+                                        "complete": "silence; transcribing since %d ms" % (turn_probe_frames * 32),
+                                        "unfinished": "smart turn waited"}.get(turn_verdict or "", "silence"))
+                                    turn_verdict = None
+
+                                    if speculative is not None:
+                                        speculative.confirm()           # already transcribed or transcribing
+                                        speculative = None
+                                        self.vad_status_changed.emit("Transcribing...")
+                                    elif speech_frames_count < min_speech_frames:
                                         buffer = []
                                         self.vad_status_changed.emit("Idle")
                                         continue
-
-                                    # Hand off utterance to ASR Worker WITHOUT BLOCKING AUDIO STREAM
-                                    audio_utterance = np.concatenate(buffer).flatten()
-                                    self.utterance_queue.put((audio_utterance, agc_target_level, agc_max_gain))
-                                    self.vad_status_changed.emit("Transcribing...")
-                                    log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames). Mic stays listening!")
-
+                                    else:
+                                        self._dispatch_utterance(buffer, started_during_tts, agc_target_level, agc_max_gain)
                                     buffer = []
                                     self.preroll_buffer.clear()
                     else:
@@ -518,6 +713,50 @@ class VoicePipeline(QThread):
             error_msg = f"Audio stream error: {e}"
             log.error(error_msg)
             self.vad_status_changed.emit(error_msg)
+
+    def _dispatch_utterance(self, buffer, started_during_tts: bool, agc_target: float, max_gain: float,
+                            speculative=None) -> bool:
+        """Hands an utterance to the ASR worker without ever blocking the microphone loop. With
+        `speculative`, the worker transcribes now but acts only once the loop confirms the turn ended."""
+        # With the offline wake engine, nothing is transcribed until the wake word is heard
+        # (except while MXB is busy/speaking, so "stop" still works).
+        if (self.wake_engine is not None and not self.bus.wake.engaged
+                and not self.bus.busy and not self.is_tts_speaking):
+            if speculative is None:
+                self.vad_status_changed.emit("Idle")
+            return False
+        item = (np.concatenate(buffer).flatten(), agc_target, max_gain,
+                started_during_tts and self.barge_in_mode == "speaker", speculative)
+        try:
+            self.utterance_queue.put_nowait(item)
+        except queue.Full:
+            # Recognition is behind (long background talk): drop the OLDEST waiting utterance, so the
+            # newest one, most likely the user's command, still gets transcribed.
+            try:
+                self.utterance_queue.get_nowait()
+                self.utterance_queue.task_done()
+                log.warning("Pipeline: speech recognition is behind; dropped the oldest waiting utterance.")
+            except queue.Empty:
+                pass
+            try:
+                self.utterance_queue.put_nowait(item)
+            except queue.Full:
+                return False
+        if speculative is None:
+            self.vad_status_changed.emit("Transcribing...")
+        log.info(f"Utterance dispatched to Parallel ASR queue ({len(buffer)} frames"
+                 f"{', early: the sentence sounds finished' if speculative is not None else ''}). Mic stays listening!")
+        return True
+
+    def _log_gain(self, every_s: float = 30.0, min_change_db: float = 3.0):
+        """One log line when the microphone gain settles somewhere new (for diagnosing quiet mics)."""
+        last_t, last_db = self._gain_log
+        now = time.time()
+        db = self.agc.gain_db
+        if now - last_t >= every_s and (last_db is None or abs(db - last_db) >= min_change_db):
+            self._gain_log = (now, db)
+            log.info(f"Mic input gain {db:+.1f} dB (noise floor {self.agc.noise:.4f}, speech level {self.agc.speech:.4f}, "
+                     f"mode {self.agc.mode})")
 
     def pause_listening(self):
         self.is_listening = False
@@ -528,13 +767,17 @@ class VoicePipeline(QThread):
 
     def resume_listening(self):
         self.is_listening = True
+        if self._vad is not None:
+            self._vad.reset()               # the voice detector's memory is from before the mute
         self.vad_status_changed.emit("Idle")
+        # Unmuting is an explicit "I'm talking to you" signal: no wake word needed next.
+        self.bus.wake.engage()
         log.info("Voice Pipeline Listening Resumed.")
 
     def stop(self):
         self.is_running = False
         self.utterance_queue.put(None)
-        self.action_task_queue.put(None)
+        self.bus.shutdown()
         if hasattr(self, 'router') and hasattr(self.router, 'tts'):
             self.router.tts.stop()
         self.wait(1500)

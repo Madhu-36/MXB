@@ -1,60 +1,74 @@
+# Machine eXecutive Brain (MXB) Architecture Specification (v4.3)
 
-## Feature 1
-Added base architecture document.
+MXB is a high-performance local AI desktop executive companion designed for autonomous OS automation, privacy-first assistance, and low-latency voice interaction on Windows 10/11.
 
-## Feature 2
-Documented the QGraphicsDropShadowEffect performance.
+---
 
-## Feature 3
-Added flow for regex vs LLM routing.
+## 1. Subsystem Architecture Overview
 
-## Feature 4
-Noted the Windows WASAPI 44100Hz hardware limitation.
+```
+                                 [ User Input ]
+                                ┌──────┴──────┐
+                         [ Voice / Mic ]   [ Text / Chat ]
+                                │                 │
+                       (VoicePipeline)            │
+                        Silero VAD / AGC          │
+                                │                 │
+                                └───────┬─────────┘
+                                        ▼
+                                ┌────────────────┐
+                                │   CommandBus   │
+                                └───────┬────────┘
+                                        │
+                 ┌──────────────────────┴──────────────────────┐
+                 ▼                                             ▼
+          [ Action Lane ]                                [ Info Lane ]
+         (FIFO Execution)                             (Parallel Answering)
+                 │                                             │
+                 ├──────────────────────┬──────────────────────┤
+                 ▼                      ▼                      ▼
+        ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+        │  IntentRouter   │    │  AgentLoop      │    │  FocusCoach     │
+        │  Tier 1/2 Match │    │  Set-of-Marks   │    │  Screen-Time    │
+        └────────┬────────┘    └────────┬────────┘    └────────┬────────┘
+                 │                      │                      │
+                 ▼                      ▼                      ▼
+       [ OSExecutionManager ]  [ UIAutomation ]       [ ActivityStore ]
+       (Keyboard / Mouse)      (UIA Bounding Cache)   (SQLite Local DB)
+                 │                      │
+                 ├──────────────────────┼──────────────────────┐
+                 ▼                      ▼                      ▼
+        [ MCP Client ]         [ Scam Shield ]       [ MeetingCopilot ]
+        (Ext. Tools / Stdio)   (UPI / Phishing)      (WASAPI Loopback)
+```
 
-## Feature 5
-Documented keyword overlap math for long term memory.
+---
 
-## Feature 6
-Added Levenshtein distance thresholds to docs.
+## 2. Core Subsystems & Bus Topology
 
-## Feature 7
-Noted the 0.5s interval for CPU percent.
+### 2.1 Decoupled Dual-Lane CommandBus
+- **Action Lane (FIFO Worker)**: Sequentially executes desktop modifications, file operations, mouse/keyboard events, and agent loops to avoid race conditions.
+- **Info Lane (Parallel Worker)**: Concurrently processes informational queries ("what's the weather", "who is X") while action tasks run in the background.
+- **Telemetry**: Measures per-dispatch execution latency, maximum latency, and average response times.
 
-## Feature 8
-Documented HTML stripping and LLM summarization.
+### 2.2 Voice & Audio Ingestion Pipeline
+- **Continuous VAD**: Powered by Silero Neural VAD running sub-0.2ms chunk inferences.
+- **Microphone AGC**: Adaptive Input AGC normalizes quiet laptop microphones before VAD thresholding.
+- **Buffer Overflow Guard**: Prevents latency buildup under heavy CPU load by dropping congested frames with telemetry logging.
+- **Barge-In Echo Cancellation**: Automatically suppresses speaker audio feedback when the user speaks over TTS.
 
-## Feature 9
-Added threading model for SAPI5 pyttsx3.
+### 2.3 Intent Routing & Multi-Step Planner
+- **Tier 1 (Deterministic Fast-Path)**: Sub-millisecond matching utilizing frozenset lookups and compiled regex for emergency voice stops, window snaps, and media control.
+- **Tier 2 (Agent & LLM Planner)**: Leverages local Ollama (Llama 3.2 / Qwen 2.5) or NVIDIA Build APIs with strict schema validation and prompt injection defenses.
 
-## Feature 10
-Documented latitude/longitude extraction via IP.
+### 2.4 Prompt Injection & Sandbox Security
+- **Fenced Untrusted Wrappers**: Fences screen text and external inputs with randomized nonces.
+- **Sanitization Layer**: Strips escape delimiters (`<tool_call>`, `<<SYS>>`, fake role tags) from tool arguments.
+- **Restricted Scopes**: File system destruction, registry mutation, and privilege escalation require explicit user confirmation.
 
-## Feature 11
-Split architecture into Core, AI, and UI.
-
-## Feature 12
-Documented MD5 hashing for the Ollama model.
-
-## Feature 13
-Added pynput hotkey safety abort mechanisms.
-
-## Feature 14
-Documented threading for asynchronous toasts.
-
-## Feature 15
-Noted Qt Tool flag for taskbar hiding.
-
-## Feature 16
-Added max-length pruning logic for memory_bank.json.
-
-## Feature 17
-Documented whisper condition_on_previous_text=False.
-
-## Feature 18
-Added 8.8.8.8 ping logic to SystemDiagnostics.
-
-## Feature 19
-Mapped context injection for time and active window.
-
-## Feature 20
-Completed architecture review and locked V2.0 docs.
+### 2.5 Extended Modules (v4.0 - v4.3)
+- **Indic Language Bridge**: Native translation and TTS routing for Kannada, Hindi, Tamil, Telugu, Marathi, and Bengali.
+- **Scam Shield**: Offline heuristic and UPI rule engine guarding against collect requests, fake mandates, and digital arrest threats.
+- **Meeting Copilot**: Dual-stream loopback recording separating "You" vs "Others" with markdown summary exports and action item checklists.
+- **Focus & Study Coach**: Privacy-preserving activity tracker aggregating focus metrics into a 0-100 productivity score.
+- **Accessibility Engine**: Voice-first screen reader with virtual cursor and high-contrast speech cues.

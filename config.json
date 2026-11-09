@@ -2,24 +2,142 @@
   "audio_input_device": "auto",
   "hotkeys": {
     "push_to_talk": "ctrl+space",
-    "kill_switch": "ctrl+alt+k"
+    "kill_switch": "ctrl+alt+k",
+    "open_chat": "ctrl+alt+space"
   },
   "speech_recognition": {
     "provider": "nvidia",
     "model": "nvidia/parakeet-tdt-0.6b",
-    "api_url": "https://integrate.api.nvidia.com/v1/audio/transcriptions"
+    "api_url": "https://integrate.api.nvidia.com/v1/audio/transcriptions",
+    "sarvam_model": "saaras:v3"
   },
   "llm": {
     "provider": "nvidia",
     "model": "meta/llama-3.1-8b-instruct",
     "api_url": "https://integrate.api.nvidia.com/v1/chat/completions",
-    "local_model": "llama3.2:1b"
+    "local_model": "llama3.2:1b",
+    "vision_model": "meta/llama-3.2-11b-vision-instruct",
+    "local_vision_model": "llama3.2-vision",
+    "ollama_url": "http://localhost:11434/api/chat",
+    "max_tokens": 500,
+    "streaming": true,
+    "use_tool_calling": true
   },
   "engine": {
     "whisper_model": "base.en",
     "microphone_sensitivity": "high",
     "vad_speech_prob_threshold": 0.35,
     "agc_target_level": 0.85,
-    "max_gain": 60.0
+    "max_gain": 60.0,
+    "whisper_model_multilingual": "small"
+  },
+  "listening": {
+    "mode": "wake_word",
+    "wake_words": [
+      "mxb",
+      "m x b",
+      "mx b",
+      "max b"
+    ],
+    "follow_up_seconds": 15,
+    "engine": "transcript",
+    "openwakeword_model": "hey_jarvis",
+    "openwakeword_threshold": 0.5
+  },
+  "voice": {
+    "speak_text_replies": false,
+    "tts_engine": "auto",
+    "edge_voice": "en-IN-NeerjaNeural",
+    "edge_rate": "+5%",
+    "piper_exe": "",
+    "piper_model": "",
+    "barge_in": "auto",
+    "language": "en",
+    "indic_voice_gender": "female"
+  },
+  "safety": {
+    "confirm_destructive": true,
+    "confirmation_timeout_sec": 30
+  },
+  "files": {
+    "extra_allowed_folders": []
+  },
+  "agent": {
+    "max_steps": 8,
+    "use_vision": false,
+    "max_image_width": 1280,
+    "max_marks": 60,
+    "max_stuck_turns": 3
+  },
+  "ui": {
+    "open_chat_on_start": true,
+    "start_with_windows": false
+  },
+  "memory": {
+    "embedding_provider": "auto",
+    "ollama_embedding_model": "nomic-embed-text",
+    "nvidia_embedding_model": "nvidia/nv-embedqa-e5-v5"
+  },
+  "remote": {
+    "enabled": false,
+    "port": 8765,
+    "allow_screen": true
+  },
+  "skills": {
+    "enabled": true,
+    "disabled": []
+  },
+  "update": {
+    "check_on_start": true,
+    "repo": "Madhu-36/MXB"
+  },
+  "web": {
+    "browser": "msedge",
+    "headless": false,
+    "cdp_url": "",
+    "timeout_ms": 15000,
+    "max_elements": 80,
+    "search_url": "https://www.google.com/search?q={q}"
+  },
+  "mcp": {
+    "enabled": true,
+    "trust": "ask",
+    "claude_desktop_config": false,
+    "servers": {}
+  },
+  "grounding": {
+    "enabled": "auto",
+    "fallback": true,
+    "provider": "auto",
+    "models": {
+      "ollama": "qwen3-vl:4b",
+      "nvidia": "qwen/qwen3.5-122b-a10b"
+    },
+    "coord_mode": "auto",
+    "zoom_refine": "auto",
+    "max_image_width": 1280
+  },
+  "scam_shield": {
+    "region": "IN",
+    "check_links": true,
+    "watch_clipboard": true,
+    "ai_second_opinion": true
+  },
+  "meetings": {
+    "folder": "",
+    "capture_system_audio": true
+  },
+  "accessibility": {
+    "describe_with_vision": true,
+    "move_mouse": true
+  },
+  "focus": {
+    "default_minutes": 25,
+    "track_activity": false,
+    "eye_break_minutes": 0,
+    "offer_meeting_notes": true,
+    "idle_after_seconds": 120,
+    "productive": [],
+    "distracting": []
   }
 }

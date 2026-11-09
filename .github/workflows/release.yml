@@ -1,0 +1,83 @@
+name: Release
+
+# Push a tag that matches utils/version.py to publish a release:
+#   git tag v4.1.0 && git push origin v4.1.0
+# The job tests, freezes, smoke-tests the frozen exe, builds the installer, writes SHA256SUMS.txt
+# and publishes both to GitHub Releases, where MXB's updater finds them.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v4.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      MXB_DATA_DIR: ${{ github.workspace }}\.ci-data
+      MXB_SKIP_SETUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Tag must match utils/version.py
+        shell: pwsh
+        run: |
+          $ver = (python -c "from utils.version import __version__; print(__version__)").Trim()
+          if ($env:TAG -ne "v$ver") { throw "Tag $env:TAG doesn't match utils/version.py ($ver). Bump the version first." }
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt -r requirements-build.txt
+
+      - name: Tests and routing bench must pass before we ship
+        run: |
+          python scripts/verify_all.py --portable
+          python -m bench.run --suite routing --min-precision 0.95
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build exe + installer (includes the frozen smoke test)
+        shell: pwsh
+        run: ./packaging/build.ps1 -NoVenv
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $setup = "dist/MXB-Setup-$($env:TAG.TrimStart('v')).exe"
+          Get-Content dist/SHA256SUMS.txt
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:TAG $setup dist/SHA256SUMS.txt --clobber
+          } else {
+            gh release create $env:TAG $setup dist/SHA256SUMS.txt --title "MXB $env:TAG" --generate-notes
+          }
+
+      - name: Keep the smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: dist/smoke-report.json
+          if-no-files-found: ignore

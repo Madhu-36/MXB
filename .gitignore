@@ -9,3 +9,27 @@ llm/.modelfile_hash
 make_commits.py
 config/*.enc
 *.enc
+permissions.json
+memory_bank.export.json
+tests/_test_temp_files/
+mxb_memory.db
+mxb_knowledge.db
+undo_journal.json
+schedules.json
+routines.json
+remote.json
+audit.log.jsonl*
+.ci-data/
+dist/
+build/
+*.spec.bak
+bench/results/
+.build-venv/
+packaging/mxb.ico
+*.lock
+mxb.lock
+update_state.json
+activity.db*
+
+# On-device voice models (downloaded by utils/fetch_models.py)
+models/

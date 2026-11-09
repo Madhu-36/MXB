@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>MXB Bench Form</title>
+<style>body{font:18px Segoe UI,sans-serif;margin:60px}input{font-size:20px;padding:6px;margin:6px;width:320px}button{font-size:20px;padding:8px 24px}</style></head>
+<body>
+<h1>MXB Bench: form</h1>
+<label>Name <input id="name" aria-label="Name" placeholder="Name"></label><br>
+<label>City <input id="city" aria-label="City" placeholder="City"></label><br>
+<button id="submit">Submit</button>
+<script>
+function v(id) { return document.getElementById(id).value; }
+['name', 'city'].forEach(function (id) {
+  document.getElementById(id).addEventListener('input', function () {
+    document.title = 'Name: ' + v('name') + ' | City: ' + v('city');
+  });
+});
+document.getElementById('submit').addEventListener('click', function () {
+  document.title = 'Submitted: ' + v('name') + ', ' + v('city');
+});
+</script>
+</body></html>

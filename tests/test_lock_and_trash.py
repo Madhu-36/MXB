@@ -28,9 +28,26 @@ class TestLockAndTrash(unittest.TestCase):
     @patch.object(OSExecutionManager, "_empty_recycle_bin_native")
     def test_empty_recycle_bin(self, mock_empty):
         mock_empty.return_value = 0
+        questions = []
+        self.executor.confirm_callback = lambda q: questions.append(q) or True
         res = self.executor.execute_action("empty_recycle_bin")
         self.assertIn("emptied successfully", res.lower())
         mock_empty.assert_called_once()
+        self.assertEqual(len(questions), 1)  # v3: the user was asked first
+
+    @patch.object(OSExecutionManager, "_empty_recycle_bin_native")
+    def test_empty_recycle_bin_denied(self, mock_empty):
+        self.executor.confirm_callback = lambda q: False
+        res = self.executor.execute_action("empty_recycle_bin")
+        self.assertIn("cancelled", res.lower())
+        mock_empty.assert_not_called()
+
+    @patch.object(OSExecutionManager, "_empty_recycle_bin_native")
+    def test_destructive_action_denied_without_confirmation_channel(self, mock_empty):
+        self.executor.confirm_callback = None
+        res = self.executor.execute_action("empty_recycle_bin")
+        self.assertIn("cancelled", res.lower())
+        mock_empty.assert_not_called()
 
     @patch("subprocess.Popen")
     def test_open_task_manager(self, mock_popen):

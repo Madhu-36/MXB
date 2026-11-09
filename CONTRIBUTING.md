@@ -20,25 +20,49 @@ Welcome to MXB development! This project operates with a decoupled, parallel rea
 
 ---
 
-## Running Automated Tests
-
-Run the full regression suite using unittest:
+## Running the checks
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest discover tests
+python scripts/verify_all.py --portable     # the cross-platform suites (what Linux CI runs)
+python scripts/verify_all.py                # everything, on Windows
+python -m bench.run                         # routing gate: tuned precision must stay 100%
+python -m bench.run --suite brain           # planner accuracy with your model (plans only, nothing runs)
+scripts\listening_bench.bat                 # the voice pipeline on this PC, with your room's noise
 ```
 
-To run individual test modules:
+Install the pre-push hook once per clone; every `git push` then runs lint, the portable suites and
+the routing gate first (the same checks as CI):
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest tests.test_architecture
-.\.venv\Scripts\python.exe -m unittest tests.test_mouse_safety
-.\.venv\Scripts\python.exe -m unittest tests.test_keyboard_macros
-.\.venv\Scripts\python.exe -m unittest tests.test_config_schema
-.\.venv\Scripts\python.exe -m unittest tests.test_file_search
-.\.venv\Scripts\python.exe -m unittest tests.test_memory_export
-.\.venv\Scripts\python.exe -m unittest tests.test_executor_apps
+python scripts/install_hooks.py
 ```
+
+A test that failed before your change is the best evidence it works. Numbers beat adjectives:
+"3/6 -> 6/6 commands in the listening bench" is a better commit message than "improved listening".
+
+---
+
+## Branches, pull requests and releases
+
+- **`main` is the release branch.** It only changes through merged pull requests. Never commit to
+  it directly, never force-push it.
+- **One feature or fix per branch** (`feature/<name>`, `fix/<name>`), one pull request each, kept small
+  enough to review in one sitting. Fill in the PR template, including how it was checked.
+- **AI coding agents follow the same rules as people** (Antigravity, Claude, Copilot...): they work on
+  their own branch, open a pull request, and a person reviews it before it is merged. Two people or
+  agents never commit to the same branch at the same time: pull first, and if someone else is active
+  on a branch, use your own.
+- **Commit messages:** an imperative subject under 72 characters with a type (`feat`, `fix`, `test`,
+  `docs`, `refactor`, `perf`), and a body saying why and how it was verified.
+- **Releases:** bump `utils/version.py` and `CHANGELOG.md` in a PR, merge it, then tag `vX.Y.Z` on `main`.
+  `.github/workflows/release.yml` builds the installer and `SHA256SUMS.txt` from the tag.
+
+### Repository settings (the owner, once)
+
+GitHub > Settings > Rules > Rulesets > New branch ruleset for `main`:
+require a pull request before merging (1 approval), require status checks to pass
+(**Lint (fatal errors)**, both **Portable tests** jobs, **Windows tests**), block force pushes,
+restrict deletions. Settings > General: turn on "Automatically delete head branches".
 
 ---
 

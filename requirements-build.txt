@@ -1,0 +1,2 @@
+# Build-only tools (packaging/build.ps1 installs these on top of requirements.txt).
+pyinstaller>=6.20,<7
