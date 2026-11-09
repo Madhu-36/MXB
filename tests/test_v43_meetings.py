@@ -8,6 +8,7 @@ import numpy as np
 
 import tests._stubs  # noqa: F401
 from engine.meetings import (
+    export_meeting_markdown,
     MeetingCopilot, MeetingSession, Segmenter, notes_markdown, safe_title, spoken_notes, summarize, to_mono_16k,
 )
 
@@ -249,6 +250,25 @@ class TestCopilot(unittest.TestCase):
         copilot = MeetingCopilot({}, transcriber=lambda a: "", folder=self.folder, source_factory=boom)
         self.assertIn("couldn't start recording: no audio device", copilot.start("x"))
         self.assertFalse(copilot.active)
+
+
+    def test_export_meeting_markdown_structure(self):
+        notes = {
+            "summary": "Team agreed to ship v4.4 next week.",
+            "decisions": ["Launch date confirmed for Nov 16"],
+            "action_items": [{"owner": "Madhu", "task": "finalize changelog", "due": "Thursday"}],
+            "questions": ["Who handles social media announcement?"]
+        }
+        md = export_meeting_markdown(notes, title="Sprint Review", created_at=1731148800)
+        self.assertIn("# Sprint Review", md)
+        self.assertIn("## Executive Summary", md)
+        self.assertIn("Team agreed to ship v4.4", md)
+        self.assertIn("## Key Decisions", md)
+        self.assertIn("Launch date confirmed for Nov 16", md)
+        self.assertIn("## Action Items", md)
+        self.assertIn("- [ ] **@Madhu** finalize changelog *(due: Thursday)*", md)
+        self.assertIn("## Open Questions", md)
+        self.assertIn("- [?] Who handles social media announcement?", md)
 
 
 if __name__ == "__main__":
