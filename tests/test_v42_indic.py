@@ -204,6 +204,25 @@ class TestSpeech(unittest.TestCase):
                     backend.synth(text)
         self.assertEqual(used, ["kn-IN-SapnaNeural", "en-IN-NeerjaNeural"])
 
+    def test_edge_synth_fallback_when_miniaudio_fails(self):
+        try:
+            from engine.tts import EdgeBackend
+            backend = EdgeBackend({"edge_voice": "en-IN-NeerjaNeural"})
+        except Exception as e:
+            self.skipTest(f"edge-tts unavailable: {e}")
+
+        class FakeAudioCommunicate:
+            def __init__(self, text, voice, rate=None):
+                pass
+            async def stream(self):
+                yield {"type": "audio", "data": b"FAKE_MP3_DATA"}
+
+        with patch("edge_tts.Communicate", FakeAudioCommunicate):
+            with patch.dict("sys.modules", {"miniaudio": None}):
+                pcm, rate = backend.synth("Hello world")
+                self.assertEqual(rate, 24000)
+                self.assertGreater(len(pcm), 0)
+
 
 class TestSarvamAndLanguageSwitch(unittest.TestCase):
     def test_sarvam_request_and_response(self):
