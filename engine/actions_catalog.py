@@ -216,6 +216,11 @@ CATALOG: tuple[ActionSpec, ...] = (
     ActionSpec("mcp_reload", '""', "Reconnect to the MCP servers in config", "mcp"),
     ActionSpec("voice_id", '"enroll", "forget", "on", "off" or "status"',
                "Learn the user's voice so only they can command MXB (enroll), forget it, or check it", "voice"),
+    ActionSpec("briefing", '""', "Today's briefing: time, weather, calendar, unread email, reminders", "companion"),
+    ActionSpec("calendar", '"today" or "tomorrow"', "What's on the user's calendar", "companion"),
+    ActionSpec("email_check", '""', "Unread email count and the latest senders and subjects (read-only)", "companion"),
+    ActionSpec("proactive", '"mute battery", "unmute all", "status", "connect", ...',
+               "Control MXB speaking first (morning briefing, meeting, battery, email alerts)", "companion"),
     ActionSpec("set_language", '"kannada", "hindi", "telugu", "tamil", "malayalam", "marathi", "bengali", "gujarati", "english" or "auto"', "Choose the language MXB listens and replies in", "voice"),
 
     ActionSpec("wait", "seconds e.g. '1.5'", "Pause between steps (e.g. while an app opens)", "control"),

@@ -50,7 +50,7 @@ def _split_target(target, parts: int = 2) -> list[str]:
     return pieces
 
 
-V44_ACTIONS = frozenset({"voice_id"})
+V44_ACTIONS = frozenset({"voice_id", "briefing", "calendar", "email_check", "proactive"})
 
 V43_ACTIONS = frozenset({
     "meeting_start", "meeting_stop", "meeting_status", "meeting_list", "meeting_recap",
@@ -107,6 +107,7 @@ class OSExecutionManager:
         self._access = None
         self._coach = None
         self._voice_id = None
+        self._proactive = None
         self.extension_handlers: dict = {}   # dynamic actions (MCP tools): name -> fn(target) -> str
         self.marks: dict = {}
         self.ui_hooks: dict = {}          # "show_marks", "hide_marks", "show_qr" -> thread-safe callables
@@ -417,8 +418,80 @@ class OSExecutionManager:
             self._voice_id = VoiceID(self.config, speak=lambda text: self.speak(text))
         return self._voice_id
 
+    @property
+    def proactive(self):
+        if self._proactive is None:
+            from engine.proactive import ProactiveEngine, battery_reading, build_sources
+            calendar, mail = build_sources(self.config)
+
+            def announce(text, speak=True):
+                if self.announce:
+                    try:
+                        return self.announce(text, speak)
+                    except TypeError:
+                        return self.announce(text)
+                log.info(f"Proactive: {text}")
+
+            def reminders():
+                sched = self.services.get("scheduler")
+                if sched is None:
+                    return []
+                from datetime import datetime
+                today = datetime.now().date()
+                out = []
+                for job in sched.sorted_jobs():
+                    when = datetime.fromisoformat(job["next"])
+                    if when.date() == today and job.get("kind") == "reminder":
+                        out.append((when, job["text"]))
+                return out
+
+            def weather():
+                from utils.weather import WeatherProbe
+                return WeatherProbe.get_weather(self.config.get("proactive", {}).get("city", "")).get("summary", "")
+
+            def idle_seconds():
+                try:
+                    from engine.focus_coach import windows_probe
+                    return float(windows_probe()[2])
+                except Exception:
+                    return 0.0
+
+            def busy():
+                meeting = self._meetings is not None and self._meetings.active
+                focusing = self._coach is not None and getattr(self._coach, "session", None) is not None
+                return bool(meeting or focusing)
+
+            persona = self.config.get("persona", {})
+            self._proactive = ProactiveEngine(
+                self.config, announce=announce, calendar=calendar, mail=mail, reminders=reminders,
+                weather=weather if self.config.get("proactive", {}).get("weather", True) else None,
+                battery=battery_reading, user_name=persona.get("user_name", ""),
+                save_setting=lambda key, value: self.save_setting("proactive", key, value),
+                idle_seconds=idle_seconds, busy=busy)
+        return self._proactive
+
     def v44_action(self, action: str, target: str) -> str:
         t = (target or "").strip().lower()
+        if action == "briefing":
+            return self.proactive.briefing()
+        if action == "calendar":
+            return self.proactive.agenda(day_offset=1 if "tomorrow" in t else 0)
+        if action == "email_check":
+            return self.proactive.email_summary()
+        if action == "proactive":
+            if t.startswith(("mute", "off", "stop")):
+                return self.proactive.mute(t.split(" ", 1)[1] if " " in t else "all")
+            if t.startswith(("unmute", "on", "start")):
+                return self.proactive.unmute(t.split(" ", 1)[1] if " " in t else "all")
+            if t.startswith("connect"):
+                return ("To connect your calendar and email, run scripts\\setup_proactive.bat on this PC. "
+                        "It asks for your calendar's private iCal link and an email app password and keeps "
+                        "both in MXB's encrypted vault.")
+            p = self.proactive
+            state = "on" if p.enabled else "off"
+            muted = f", muted: {', '.join(sorted(p.muted))}" if p.muted else ""
+            return (f"Proactive alerts are {state}{muted}. Calendar {'connected' if p.calendar else 'not connected'}, "
+                    f"email {'connected' if p.mail else 'not connected'}.")
         if action == "voice_id":
             if t in ("enroll", "enrol", "learn", "train", "setup", "set up"):
                 return self.voice_id.start_enrollment()

@@ -182,7 +182,7 @@ CASES = [
     ("search google for cheap flights to goa", "search_web", "cheap flights to goa", "natural"),
     ("look up the weather in Mysuru", "LOCAL", None, "natural"),
     ("send a message to Ravi on WhatsApp", "LLM", None, "natural"),
-    ("what's on my calendar today", "LLM", None, "natural"),
+    ("what's on my calendar today", "calendar", "today", "companion"),
     ("what is my ip address", "LLM", None, "natural"),
     ("I'm going out, remind me at 6 to buy milk", "LLM", None, "natural"),
     ("please take a screenshot", "capture_screen", None, "natural"),

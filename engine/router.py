@@ -915,12 +915,40 @@ class IntentRouter:
         (re.compile(r"^(?:voice id(?: status)?|do you know my voice|whose voice do you (?:listen to|obey))$"), "status"),
     ]
 
+    _BRIEFING = re.compile(r"^(?:(?:give me |read me )?(?:my |the )?(?:morning |daily )?briefing|brief me|"
+                           r"what(?:'s| is| does) my day (?:look )?like|how(?:'s| is) my day looking)$")
+    _CALENDAR = re.compile(r"^(?:what(?:'s| is) on my calendar|do i have (?:any )?(?:meetings|events)|"
+                           r"(?:what(?:'s| is) )?my (?:schedule|agenda))(?: for)?(?: today| tomorrow)?$")
+    _EMAIL = re.compile(r"^(?:check|read)(?: my)? (?:e-?mails?|inbox|mails?)$|"
+                        r"^(?:any|do i have(?: any)?) (?:new |unread )?(?:e-?mails?|mails?)$")
+    _MUTE = re.compile(r"^(?:stop|mute|turn off|no more) (?:the |my )?(battery|meeting|email|briefing)s? "
+                       r"(?:alerts?|reminders?|notifications?)$")
+    _PROACTIVE_OFF = re.compile(r"^(?:stop|turn off|mute|disable) (?:speaking first|(?:the )?proactive alerts?)$")
+    _PROACTIVE_ON = re.compile(r"^(?:turn on|enable|unmute) (?:the )?proactive alerts?$")
+    _CONNECT = re.compile(r"^connect my (?:calendar|e-?mail|inbox)$")
+
     def _route_v44(self, t: str, o: str) -> str | None:
         for pattern, target in self._VOICE_ID:
             if pattern.search(t):
                 if target is None:
                     target = "off" if (" off" in f" {t}" or "everyone" in t) else "on"
                 return self._act(t, "voice_id", target)
+        if self._BRIEFING.search(t):
+            return self._act(t, "briefing")
+        if self._CALENDAR.search(t):
+            return self._act(t, "calendar", "tomorrow" if "tomorrow" in t else "today")
+        if self._EMAIL.search(t):
+            return self._act(t, "email_check")
+        m = self._MUTE.search(t)
+        if m:
+            kind = {"meeting": "meetings"}.get(m.group(1), m.group(1))
+            return self._act(t, "proactive", f"mute {kind}")
+        if self._PROACTIVE_OFF.search(t):
+            return self._act(t, "proactive", "mute all")
+        if self._PROACTIVE_ON.search(t):
+            return self._act(t, "proactive", "unmute all")
+        if self._CONNECT.search(t):
+            return self._act(t, "proactive", "connect")
         return None
 
     def _route_v43(self, t: str, o: str) -> str | None:

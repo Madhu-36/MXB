@@ -187,6 +187,14 @@ class CommandBus(QObject):
                     coach.start()       # only runs if the user turned on screen time or eye breaks
             except Exception as e:
                 log.warning(f"CommandBus: focus coach could not start: {e}")
+        if self.config.get("proactive", {}).get("enabled", True) and getattr(self, "_proactive_started", False) is False:
+            try:
+                engine = getattr(self.executor, "proactive", None)
+                if engine is not None and hasattr(engine, "start"):
+                    engine.start()            # briefing, meeting and battery alerts (checks once a minute)
+                    self._proactive_started = True
+            except Exception as e:
+                log.warning(f"CommandBus: proactive companion could not start: {e}")
         if scheduler and self.scheduler is None:
             from engine.scheduler import Scheduler
             self.scheduler = Scheduler(fire=self._fire_job)
@@ -263,6 +271,9 @@ class CommandBus(QObject):
             executor.shutdown()
         if self.scheduler is not None:
             self.scheduler.stop()
+        proactive = getattr(getattr(self.router, "executor", None), "_proactive", None)
+        if proactive is not None:
+            proactive.stop()
         if self.remote is not None:
             try:
                 self.remote.stop()
