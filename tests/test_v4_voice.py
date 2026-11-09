@@ -137,5 +137,31 @@ class TestTTSThreadPrefetch(unittest.TestCase):
         thread._prefetch_pool.shutdown(wait=True)
 
 
+
+
+class TestAudioBufferOverflow(unittest.TestCase):
+    def test_audio_callback_overflow_guard(self):
+        from unittest.mock import MagicMock
+        from engine.audio import VoicePipeline
+        pipeline = VoicePipeline.__new__(VoicePipeline)
+        import queue
+        pipeline.raw_audio_queue = queue.Queue(maxsize=2)
+        pipeline._dropped_audio_frames = 0
+        pipeline.is_listening = True
+        pipeline.barge_in_mode = "off"
+        pipeline.is_tts_speaking = False
+        pipeline.tts_finish_time = 0.0
+
+        # Fill queue to capacity
+        frame = np.zeros(512, dtype=np.float32)
+        pipeline.audio_callback(frame, 512, None, None)
+        pipeline.audio_callback(frame, 512, None, None)
+        self.assertEqual(pipeline.dropped_audio_frames, 0)
+
+        # Third frame exceeds capacity and triggers overflow guard
+        pipeline.audio_callback(frame, 512, None, None)
+        self.assertEqual(pipeline.dropped_audio_frames, 1)
+        self.assertEqual(pipeline.raw_audio_queue.qsize(), 2)
+
 if __name__ == "__main__":
     unittest.main()

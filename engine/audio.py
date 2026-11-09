@@ -62,6 +62,7 @@ class VoicePipeline(QThread):
 
         # Thread-safe queues connecting the concurrent pipeline stages
         self.raw_audio_queue = queue.Queue(maxsize=150)
+        self._dropped_audio_frames = 0
         self.utterance_queue = queue.Queue(maxsize=10)
         self.action_task_queue = self.bus.action_queue  # kept for backward compatibility
 
@@ -130,12 +131,19 @@ class VoicePipeline(QThread):
         try:
             self.raw_audio_queue.put_nowait(indata.copy())
         except queue.Full:
-            # Drop oldest frame if queue is congested
+            # Drop oldest frame if queue is congested with overflow guard telemetry
+            self._dropped_audio_frames += 1
             try:
                 self.raw_audio_queue.get_nowait()
                 self.raw_audio_queue.put_nowait(indata.copy())
             except Exception:
                 pass
+            if self._dropped_audio_frames % 50 == 1:
+                log.warning(f"AudioPipeline: raw audio queue overflowed (dropped {self._dropped_audio_frames} frames)")
+
+    @property
+    def dropped_audio_frames(self) -> int:
+        return self._dropped_audio_frames
 
     @staticmethod
     def calculate_adaptive_silence_threshold(speech_frames_count: int, trailing_rms: float, base_threshold: int) -> int:
