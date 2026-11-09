@@ -1,8 +1,8 @@
-# 🧠 MXB (Machine eXecutive Brain) v4.3 — Advanced AI Desktop Companion
+# 🧠 MXB (Machine eXecutive Brain) v4.3.2 — Advanced AI Desktop Companion
 > Talk, type, or use your phone. It listens while it works, sees the screen as numbered elements, remembers you, answers from your documents, runs your routines on a schedule — and asks before anything destructive.
 
 [![CI](https://github.com/Madhu-36/MXB/actions/workflows/ci.yml/badge.svg)](https://github.com/Madhu-36/MXB/actions/workflows/ci.yml)
-[![MXB Version](https://img.shields.io/badge/version-4.3.0-blue.svg)](https://github.com/Madhu-36/MXB/releases)
+[![MXB Version](https://img.shields.io/badge/version-4.3.2-blue.svg)](https://github.com/Madhu-36/MXB/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows_10%20%7C%2011-lightgrey.svg)](https://github.com/Madhu-36/MXB)
 [![AI Architecture](https://img.shields.io/badge/architecture-5--Stage%20Parallel%20Pipelines-cyan.svg)](https://github.com/Madhu-36/MXB)
 [![LLM Planner](https://img.shields.io/badge/LLM-llama3.2:1b%20%7C%20NVIDIA%20Cloud-orange.svg)](https://github.com/Madhu-36/MXB)
@@ -10,6 +10,14 @@
 **MXB** is an autonomous desktop companion for Windows. It listens continuously, understands voice **or** typed chat, and operates your computer in parallel—acting as your digital **"two hands"** (mouse, keyboard, screen, apps, files, Bluetooth, Wi-Fi, audio, display) while you keep talking to it.
 
 ---
+
+### ⚡ What's enhanced in v4.3.2 (2026-11-09)
+- **Prompt Injection Defense**: Detection for forged tool tags (`<tool_call>`, `[TOOL_CALL:`) and jailbreaks; argument sanitization.
+- **Scam Shield**: Real-time detection of UPI mandate, autopay, and collect request fraud.
+- **Meeting Copilot**: Publication-ready Markdown export with action item checklists.
+- **Grounding & UI Automation**: Active-turn UIA bounding box caching with adaptive invalidation.
+- **Audio & Bus Telemetry**: Buffer overflow guards on raw audio streams and dispatch latency profiling.
+- **Focus & Productivity**: 0-100 productivity score calculation with categorized focus breakdowns.
 
 ## 🛡️ What's new in v4.3 — Real-world problems
 
