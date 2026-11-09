@@ -15,3 +15,7 @@ qrcode[pil]>=7.4
 playwright>=1.49
 mcp>=1.23,<3
 zxing-cpp>=2.2
+# v4.4: the real Silero VAD and the Smart Turn features in the listening tests, and calendar parsing
+faster-whisper>=1.1
+icalendar>=6.0
+recurring-ical-events>=3.3

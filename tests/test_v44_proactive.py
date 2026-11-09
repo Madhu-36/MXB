@@ -1,4 +1,5 @@
 """v4.4 item 5: MXB speaks first — morning briefing, meeting and battery alerts, calendar and email."""
+import importlib.util
 import tempfile
 import unittest
 from datetime import datetime, timedelta
@@ -58,6 +59,10 @@ class FakeClock:
         return self.now
 
 
+HAS_ICAL = bool(importlib.util.find_spec("icalendar") and importlib.util.find_spec("recurring_ical_events"))
+
+
+@unittest.skipUnless(HAS_ICAL, "needs icalendar + recurring-ical-events")
 class TestCalendar(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -140,6 +145,7 @@ class TestMail(unittest.TestCase):
         self.assertTrue(made[0].logged_out)
 
 
+@unittest.skipUnless(HAS_ICAL, "needs icalendar + recurring-ical-events")
 class TestProactiveEngine(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

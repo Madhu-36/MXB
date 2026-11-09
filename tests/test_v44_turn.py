@@ -15,6 +15,7 @@ from engine.turn_detector import TurnDetector, turn_features
 from utils.fetch_models import MODELS
 
 
+@unittest.skipUnless(importlib.util.find_spec("faster_whisper"), "features use faster-whisper's extractor")
 class TestFeatures(unittest.TestCase):
     def test_shape_and_alignment(self):
         rng = np.random.default_rng(0)
