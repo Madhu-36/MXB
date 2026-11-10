@@ -317,3 +317,15 @@ To ensure responsive voice interaction even while long automation scripts execut
 All simulated mouse clicks, key events, and visual tag interactions synchronize on a re-entrant `threading.RLock()`, guaranteeing synthetic and physical input streams never interleave destructively.
 
 
+## 17. Virtual Desktop Coordinate Bounds & UIAutomation Caching
+Multi-monitor workstations present complex display configurations with mixed DPI scaling factors, negative coordinates, and virtual desktop spanning.
+
+### Virtual Desktop Coordinate Bounds
+Before injecting any mouse cursor event, MXB clamps coordinates against the virtual screen bounding box:
+
+$$x_{\text{clamped}} = \max(X_{\min}, \min(X_{\max}, x)), \quad y_{\text{clamped}} = \max(Y_{\min}, \min(Y_{\max}, y))$$
+
+### 750ms Monotonic UIA Cache
+Windows UIAutomation tree traversal is computationally expensive. MXB caches element bounding rectangles for 750ms, automatically invalidating the cache upon any mouse click or keyboard action.
+
+
