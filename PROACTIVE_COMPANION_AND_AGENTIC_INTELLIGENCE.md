@@ -116,3 +116,22 @@ class VoiceID:
 Saves are routed through unique temporary files (`tmp.{uuid}.npz`) followed by atomic rename within an acquisition lock.
 
 
+## 6. Proactive Morning Briefing & Temporal Dispatch Engine
+MXB V4.4 features a configurable proactive dispatcher that synthesizes calendar commitments, unread priority mail, and system metrics into a natural spoken briefing.
+
+### Temporal Arbitration Rules
+1. **Opt-in Activation**: Proactive alerts remain inactive until at least one data source (Calendar or Mailbox) is successfully connected.
+2. **Quiet Hours Enforcement**: No audible speech is emitted between user-configured hours (default: 22:00–07:30) or when Windows Focus Assist / Do Not Disturb is active.
+3. **Session Monotonicity**: The morning briefing is dispatched at most once per calendar day upon first user presence detection.
+
+```python
+class ProactiveEngine:
+    def should_brief(self, now: datetime) -> bool:
+        if not self.enabled or self.in_quiet_hours(now):
+            return False
+        if self._last_briefing and self._last_briefing.date() == now.date():
+            return False
+        return self.idle_seconds() < 120  # User is physically active at desktop
+```
+
+
