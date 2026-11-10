@@ -50,3 +50,24 @@ class TurnDetector:
 This eliminates dead air while allowing users to pause naturally during complex dictation.
 
 
+## 3. Acoustic Feature Extraction & Tensor Sanitization
+The turn detection pipeline requires robust, low-latency extraction of log-mel spectrogram features from raw 16 kHz mono PCM streams.
+
+### Sanitization & Flattening Pipeline
+To prevent memory explosion or NaN poisoning from audio device anomalies:
+- Input tensors are strictly flattened to 1D via `.reshape(-1)`.
+- Non-finite samples ($+\infty$, $-\infty$, $\text{NaN}$) are sanitized using `np.nan_to_num(x, copy=False, posinf=1.0, neginf=-1.0)`.
+- Short utterances are padded with reflection or zero-fill to match the required receptive field.
+
+```python
+def turn_features(audio: np.ndarray, sample_rate: int = 16000) -> np.ndarray:
+    x = np.asarray(audio, dtype=np.float32).reshape(-1)
+    if len(x) == 0:
+        return np.zeros((1, 80, 128), dtype=np.float32)
+    np.nan_to_num(x, copy=False, posinf=1.0, neginf=-1.0)
+    # 80-channel Log-Mel extraction with 25ms window and 10ms hop size
+    mel = compute_log_mel_spectrogram(x, sample_rate=sample_rate, n_mels=80)
+    return mel[np.newaxis, ...]
+```
+
+
