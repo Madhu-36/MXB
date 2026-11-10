@@ -135,3 +135,28 @@ class ProactiveEngine:
 ```
 
 
+## 7. Calendar Synchronization & iCal / CalDAV Parsing
+MXB connects to local and remote calendar services (Google Calendar, Microsoft Outlook, Apple iCloud, and Nextcloud) via standard iCalendar (RFC 5545) and CalDAV protocols.
+
+### Recurring Event Expansion
+Recurring events (`RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR`) are deterministically expanded into discrete event instances within a rolling 7-day query window:
+
+```python
+from recurring_ical_events import of as expand_ical
+
+class CalendarSource:
+    def get_upcoming_events(self, start: datetime, horizon: timedelta) -> list[CalendarEvent]:
+        raw_ics = self._fetch_calendar()
+        calendar = icalendar.Calendar.from_ical(raw_ics)
+        expanded = expand_ical(calendar).between(start, start + horizon)
+        return [
+            CalendarEvent(
+                title=str(ev.get("SUMMARY", "Busy")),
+                start=ev.decoded("DTSTART"),
+                end=ev.decoded("DTEND")
+            )
+            for ev in expanded
+        ]
+```
+
+
