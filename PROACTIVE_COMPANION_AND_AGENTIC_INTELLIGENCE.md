@@ -87,3 +87,32 @@ $$\text{Score}(\mathbf{e}_{\text{test}}, \mathbf{e}_{\text{owner}}) = \mathbf{e}
 If $\text{Score} < \tau$ (default threshold: $0.62$), the command is silently discarded or greeted with a security prompt.
 
 
+## 5. Thread-Safe Voiceprint Storage & Windows Handle Resilience
+On Windows workstations, standard atomic file replacement (`os.replace`) can fail with `WinError 32` or `WinError 5` (Access Denied) if an open file handle remains held by another thread.
+
+### Context-Managed Loading
+MXB V4.4 enforces strict context management when accessing `.npz` vector archives:
+
+```python
+class VoiceID:
+    def __init__(self, store_path: Path):
+        self._lock = threading.RLock()
+        self.store = store_path
+
+    def _load(self):
+        with self._lock:
+            if not self.store.is_file():
+                return
+            try:
+                with np.load(self.store) as data:
+                    owner = data.get("owner")
+                    if owner is not None and np.isfinite(owner).all():
+                        self.owner = np.array(owner, dtype=np.float32)
+            except Exception as e:
+                log.warning(f"VoiceID: profile corrupted ({e}); resetting.")
+                self.owner = None
+```
+
+Saves are routed through unique temporary files (`tmp.{uuid}.npz`) followed by atomic rename within an acquisition lock.
+
+
