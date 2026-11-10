@@ -339,3 +339,14 @@ At cold start, MXB queries configured MCP servers via `tools/list`:
 3. Execution routes through `mcp.call_tool(name, arguments)`, returning structured results directly into the agent reasoning trace.
 
 
+## 19. Frozen PyInstaller Distribution & Automated Smoke Testing
+Desktop deployment requires bundling complex dependencies—Python 3.12+, PySide6, CTranslate2, ONNX Runtime, and PortAudio—into a self-contained, standalone Windows package.
+
+### Automated Smoke Test Gate (`--smoke-test`)
+Before creating installer executables, MXB executes an automated frozen verification:
+- Imports all 86 project modules.
+- Verifies presence of bundled models (`silero_vad_v6.onnx`), configurations, and application icons.
+- Validates that Windows Defender Application Control (WDAC) fallback paths execute cleanly.
+- Returns exit code 0 only when all required components pass.
+
+
