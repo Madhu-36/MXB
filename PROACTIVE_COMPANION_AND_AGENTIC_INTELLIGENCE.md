@@ -234,3 +234,31 @@ class FocusCoach:
 ```
 
 
+## 12. Schema-Constrained Action Planning & ReAct Loops
+When a user command cannot be resolved through the <5ms deterministic fast path (e.g. *"Look up flight statuses, write a summary in notepad, and mute system audio"*), MXB engages the ReAct Planning Engine.
+
+### Constrained JSON-Schema Grammar
+To eliminate LLM hallucination of non-existent actions, MXB dynamically generates strict JSON schemas constraining model output:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "thought": { "type": "string" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": { "type": "string", "enum": ["launch_app", "type_text", "press_key", "media_control", "wait"] },
+          "target": { "type": "string" }
+        },
+        "required": ["action", "target"]
+      }
+    }
+  },
+  "required": ["thought", "steps"]
+}
+```
+
+
