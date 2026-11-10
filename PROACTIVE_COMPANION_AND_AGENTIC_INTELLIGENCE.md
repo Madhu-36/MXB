@@ -273,3 +273,15 @@ $$\text{Relevance}(\text{step}_i, \text{goal}) = \frac{\mathbf{e}(\text{step}_i)
 If a step proposes high-risk lateral actions (such as `win+r`, shell execution, or registry modification) when the goal was informational, execution is immediately halted with an emergency security alert.
 
 
+## 14. Real-Time Scam Shield & Financial Threat Detection
+Indian and global desktop users increasingly face social engineering attacks, including fraudulent UPI payment collect requests, digital arrest coercion, and remote desktop scams.
+
+### Scam Shield Pattern Engine
+MXB monitors visual OCR and clipboard buffers for known malicious trigger vectors:
+1. **UPI Mandate Fraud**: Intercepts requests attempting to authorize debit mandates disguised as "refunds".
+2. **Digital Arrest Scams**: Detects intimidation phrases (*"CBI warrant"*, *"customs narcotics violation"*, *"immediate Skype interrogation"*).
+3. **Phishing Homoglyphs**: Flags deceptive internationalized domain names (IDN) imitating banking portals.
+
+When triggered, MXB plays an alert chime and displays a high-contrast warning overlay.
+
+
