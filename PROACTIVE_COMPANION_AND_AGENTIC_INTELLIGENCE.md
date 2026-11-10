@@ -214,3 +214,23 @@ To ensure laptop companions do not cause battery anxiety or drain hardware durin
 - **Critical Battery <= 8%**: Audio pipeline enters low-power sleep; emergency save notification issued.
 
 
+## 11. Focus Coach, Ergonomic Breaks & Screen Time Tracking
+Prolonged computer use leads to digital eye strain and fatigue. MXB V4.4 introduces a built-in Focus Coach inspired by the 20-20-20 ergonomic rule.
+
+### Ergonomic Timer State Machine
+- Every **20 minutes** of continuous keyboard/mouse activity:
+  - MXB gently plays a soft tone or speaks: *"Look at something 20 feet away for 20 seconds."*
+  - Automatically suppresses alerts if a full-screen application or video meeting (Teams, Zoom, Meet) is active.
+
+```python
+class FocusCoach:
+    def tick(self, active_seconds: float, is_meeting: bool):
+        if is_meeting:
+            self._consecutive_work_seconds = 0
+            return
+        if active_seconds > 1200:  # 20 minutes
+            self.emit_break_reminder()
+            self._consecutive_work_seconds = 0
+```
+
+
