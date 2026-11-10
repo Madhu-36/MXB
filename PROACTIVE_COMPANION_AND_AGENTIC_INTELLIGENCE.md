@@ -285,3 +285,12 @@ MXB monitors visual OCR and clipboard buffers for known malicious trigger vector
 When triggered, MXB plays an alert chime and displays a high-contrast warning overlay.
 
 
+## 15. Multi-Lingual Indic Pipeline & Code-Switching
+MXB provides first-class support for Indian English, Kannada, Hindi, and Telugu, supporting natural conversational code-switching without requiring application restarts.
+
+### Dynamic ASR Language Routing
+- Multilingual Whisper/Sherpa models dynamically decode non-English utterances.
+- Local Indic transliteration maps Romanized input (*"namaskara"*, *"dhanyavada"*) to native Unicode scripts when typing into active applications.
+- Edge-TTS regional neural voices (`kn-IN-GaganNeural`, `hi-IN-SwaraNeural`, `te-IN-MohanNeural`) ensure native pronunciation for spoken responses.
+
+
