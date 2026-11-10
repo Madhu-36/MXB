@@ -294,3 +294,26 @@ MXB provides first-class support for Indian English, Kannada, Hindi, and Telugu,
 - Edge-TTS regional neural voices (`kn-IN-GaganNeural`, `hi-IN-SwaraNeural`, `te-IN-MohanNeural`) ensure native pronunciation for spoken responses.
 
 
+## 16. Two-Lane CommandBus Concurrency & Mutual Exclusion
+To ensure responsive voice interaction even while long automation scripts execute, MXB divides incoming work into two concurrent lanes:
+
+```
+[ Incoming User Intent ]
+           |
+           v
+  +------------------+
+  |  Lane Classifier |
+  +------------------+
+     /            \
+    / (Mutating)   \ (Read-Only)
+   v                v
+[ Action Lane ]   [ Info Lane ]
+   - Strict FIFO     - Concurrent Worker Pool
+   - _input_lock     - Non-blocking Queries
+   - Typing/Clicks   - Weather, Time, Status
+```
+
+### Hardware Input Lock (`_input_lock`)
+All simulated mouse clicks, key events, and visual tag interactions synchronize on a re-entrant `threading.RLock()`, guaranteeing synthetic and physical input streams never interleave destructively.
+
+
