@@ -160,3 +160,25 @@ class CalendarSource:
 ```
 
 
+## 8. Offline Resilience & Graceful Calendar Cache Fallback
+Workstations frequently switch between Wi-Fi networks, enter sleep mode, or operate in airplane mode. MXB ensures zero-exception operation during network outages.
+
+### Two-Tier Cache Fallback Architecture
+- **In-Memory Cache**: Active 15-minute memory cache avoiding redundant HTTP requests.
+- **Durable Disk Cache**: Encrypted snapshot (`calendar_cache.ics`) stored in user AppData.
+
+```python
+def _fetch_calendar(self) -> str:
+    try:
+        resp = requests.get(self.feed_url, timeout=4.0)
+        resp.raise_for_status()
+        self._disk_cache.write_text(resp.text, encoding="utf-8")
+        return resp.text
+    except requests.RequestException as exc:
+        if self._disk_cache.exists():
+            log.warning(f"Calendar: network offline ({exc}); falling back to disk cache.")
+            return self._disk_cache.read_text(encoding="utf-8")
+        raise
+```
+
+
