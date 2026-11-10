@@ -262,3 +262,14 @@ To eliminate LLM hallucination of non-existent actions, MXB dynamically generate
 ```
 
 
+## 13. TaskScope Goal-Grounding & Lateral Action Confinement
+A major vulnerability in autonomous desktop agents is Indirect Prompt Injection—untrusted web text or emails instructing the agent to run dangerous secondary commands (e.g., launching PowerShell).
+
+### Semantic Goal Alignment Check
+Before executing any multi-step plan, MXB evaluates the semantic relevance of each step against the user's root goal:
+
+$$\text{Relevance}(\text{step}_i, \text{goal}) = \frac{\mathbf{e}(\text{step}_i) \cdot \mathbf{e}(\text{goal})}{\|\mathbf{e}(\text{step}_i)\|_2 \|\mathbf{e}(\text{goal})\|_2} \ge \tau_{\text{align}}$$
+
+If a step proposes high-risk lateral actions (such as `win+r`, shell execution, or registry modification) when the goal was informational, execution is immediately halted with an emergency security alert.
+
+
