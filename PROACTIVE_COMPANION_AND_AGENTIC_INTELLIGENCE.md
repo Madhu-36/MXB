@@ -204,3 +204,13 @@ def clean_subject(raw_header: str) -> str:
 ```
 
 
+## 10. Hardware Battery Sensing & Power State Management
+To ensure laptop companions do not cause battery anxiety or drain hardware during mobile sessions, MXB monitors OS power state APIs via `psutil.sensors_battery()`.
+
+### Low-Power Threshold Rules
+- **Plugged AC Power**: Standard VAD sensitivity, full 4.7 GB local reasoning models permitted.
+- **Battery > 20%**: Normal companion mode; proactive briefing active.
+- **Battery <= 20% & Not Charging**: Proactive audible speech disabled; speech model quantization lowered; visual HUD alerts only.
+- **Critical Battery <= 8%**: Audio pipeline enters low-power sleep; emergency save notification issued.
+
+
