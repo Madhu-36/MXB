@@ -25,3 +25,28 @@ MXB V4.4 marks the transition of MXB from a purely reactive desktop automation t
 - **Fail-Safe Offline Autonomy**: If network connectivity drops, MXB gracefully degrades to cached schedules and local models.
 
 
+## 2. Smart Turn Semantic End-of-Turn Engine
+Traditional voice assistants rely solely on acoustic silence timeouts (typically 700ms–1500ms) to detect when a user has finished speaking. This introduces unnatural pauses or prematurely cuts off users when thinking mid-sentence.
+
+### Semantic State Machine
+MXB V4.4 integrates a dual-mode turn detector:
+1. **Acoustic Silence Thresholding**: High-sensitivity energy detection via Silero VAD.
+2. **Semantic Turn Classifier**: A lightweight local ONNX transformer model that evaluates grammatical completeness:
+
+$$\mathcal{P}(\text{turn\_complete} \mid \mathbf{x}_{1:T}) = \sigma(\mathbf{W} \cdot \text{Transformer}(\mathbf{x}_{1:T}) + b)$$
+
+```python
+class TurnDetector:
+    def evaluate_turn(self, audio_frames: np.ndarray) -> TurnVerdict:
+        features = turn_features(audio_frames)
+        prob = self._session.run(None, {"input": features})[0][0]
+        if prob > 0.85:
+            return TurnVerdict.COMPLETE
+        elif prob < 0.35:
+            return TurnVerdict.HOLD
+        return TurnVerdict.UNCERTAIN
+```
+
+This eliminates dead air while allowing users to pause naturally during complex dictation.
+
+
