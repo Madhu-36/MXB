@@ -182,3 +182,25 @@ def _fetch_calendar(self) -> str:
 ```
 
 
+## 9. Secure IMAP Mailbox Polling & Header Extraction
+MXB provides hands-free email updates by monitoring IMAP servers (TLS port 993) with zero message body retention for user privacy.
+
+### Privacy-Preserving Header Extraction
+MXB inspects only standard message headers (`FROM`, `SUBJECT`, `DATE`, `FLAGS`), resolving RFC 2047 MIME encoded words into clean UTF-8 text:
+
+```python
+import email
+from email.header import decode_header
+
+def clean_subject(raw_header: str) -> str:
+    decoded_fragments = decode_header(raw_header)
+    parts = []
+    for bytes_or_str, encoding in decoded_fragments:
+        if isinstance(bytes_or_str, bytes):
+            parts.append(bytes_or_str.decode(encoding or "utf-8", errors="replace"))
+        else:
+            parts.append(str(bytes_or_str))
+    return "".join(parts)
+```
+
+
