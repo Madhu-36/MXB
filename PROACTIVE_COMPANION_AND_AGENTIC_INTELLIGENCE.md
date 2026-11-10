@@ -329,3 +329,13 @@ $$x_{\text{clamped}} = \max(X_{\min}, \min(X_{\max}, x)), \quad y_{\text{clamped
 Windows UIAutomation tree traversal is computationally expensive. MXB caches element bounding rectangles for 750ms, automatically invalidating the cache upon any mouse click or keyboard action.
 
 
+## 18. Model Context Protocol (MCP) Bridge & Dynamic Tool Catalog
+MXB implements Anthropic's Model Context Protocol (MCP) over standard JSON-RPC 2.0 (stdio and Streamable HTTP), enabling plug-and-play integration with 80+ tools.
+
+### Dynamic Schema Ingestion
+At cold start, MXB queries configured MCP servers via `tools/list`:
+1. Tool JSON schemas are converted to MXB `ActionSpec` records.
+2. Docstrings and summaries are indexed in the semantic vector catalog.
+3. Execution routes through `mcp.call_tool(name, arguments)`, returning structured results directly into the agent reasoning trace.
+
+
