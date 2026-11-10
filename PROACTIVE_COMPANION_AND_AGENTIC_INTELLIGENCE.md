@@ -71,3 +71,19 @@ def turn_features(audio: np.ndarray, sample_rate: int = 16000) -> np.ndarray:
 ```
 
 
+## 4. Multi-Speaker Voice ID & Speaker Verification
+To prevent accidental activation by background voices or television audio, MXB V4.4 implements biometric speaker verification.
+
+### Speaker Embedding Generation
+Using a compact ResNet-34 speaker recognition backbone (Sherpa-ONNX), MXB maps user utterances into a 512-dimensional unit hypersphere:
+
+$$\mathbf{e} = \frac{f_{\theta}(\mathbf{a})}{\|f_{\theta}(\mathbf{a})\|_2}, \quad \|\mathbf{e}\|_2 = 1.0$$
+
+### Cosine Verification Scoring
+During active turns, the incoming utterance embedding $\mathbf{e}_{\text{test}}$ is scored against the enrolled owner profile $\mathbf{e}_{\text{owner}}$:
+
+$$\text{Score}(\mathbf{e}_{\text{test}}, \mathbf{e}_{\text{owner}}) = \mathbf{e}_{\text{test}} \cdot \mathbf{e}_{\text{owner}} = \sum_{i=1}^{512} e_{\text{test}, i} \, e_{\text{owner}, i}$$
+
+If $\text{Score} < \tau$ (default threshold: $0.62$), the command is silently discarded or greeted with a security prompt.
+
+
