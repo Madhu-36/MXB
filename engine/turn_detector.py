@@ -44,9 +44,17 @@ def _extractor():
 def turn_features(audio: np.ndarray) -> np.ndarray:
     """(1, 80, 800) log-mel features of the last 8 s, exactly as Smart Turn was trained on."""
     n = SECONDS * RATE
-    x = np.asarray(audio, dtype=np.float32)
-    x = x[-n:] if len(x) > n else np.pad(x, (n - len(x), 0))      # the speech sits at the end
-    x = (x - x.mean()) / np.sqrt(x.var() + 1e-7)
+    x = np.asarray(audio, dtype=np.float32).reshape(-1)
+    if len(x) == 0:
+        x = np.zeros(n, dtype=np.float32)
+    elif len(x) > n:
+        x = x[-n:]
+    else:
+        x = np.pad(x, (n - len(x), 0))      # the speech sits at the end
+    np.nan_to_num(x, copy=False, posinf=1.0, neginf=-1.0)
+    var = float(x.var())
+    mean = float(x.mean())
+    x = (x - mean) / np.sqrt(var + 1e-7)
     return _extractor()(x, padding=0)[np.newaxis].astype(np.float32)
 
 
@@ -56,19 +64,27 @@ class SpeculativeTurn:
 
     def __init__(self):
         self._decided = threading.Event()
+        self._lock = threading.Lock()
         self.keep = False
 
     def confirm(self):
-        self.keep = True
-        self._decided.set()
+        with self._lock:
+            if not self._decided.is_set():
+                self.keep = True
+                self._decided.set()
 
     def cancel(self):
-        self.keep = False
-        self._decided.set()
+        with self._lock:
+            if not self._decided.is_set():
+                self.keep = False
+                self._decided.set()
 
     def wait(self, timeout: float = 5.0) -> bool:
         """True once confirmed; False if cancelled or undecided after timeout (never act on a guess)."""
-        return self._decided.wait(timeout) and self.keep
+        if not self._decided.wait(timeout):
+            return False
+        with self._lock:
+            return self.keep
 
 
 class TurnDetector:
@@ -87,27 +103,30 @@ class TurnDetector:
     def load(self) -> bool:
         if not self.enabled:
             return False
-        if self._session is not None:
-            return True
-        try:
-            import onnxruntime as ort
-            from utils.fetch_models import MODELS, fetch
-            folder = fetch("turn", progress=lambda m: log.info(f"TurnDetector: {m}"))
-            opts = ort.SessionOptions()
-            opts.inter_op_num_threads = 1
-            opts.intra_op_num_threads = 1
-            self._session = ort.InferenceSession(str(folder / MODELS["turn"]["files"][0]), sess_options=opts,
-                                                 providers=["CPUExecutionProvider"])
-            self.ready = True
-            log.info("TurnDetector: Smart Turn v3.2 loaded; turns end on meaning, not only on silence.")
-            return True
-        except Exception as e:
-            log.warning(f"TurnDetector: unavailable ({e}); ending turns on silence alone.")
-            self._session, self.ready = None, False
-            return False
+        with self._lock:
+            if self._session is not None:
+                return True
+            try:
+                import onnxruntime as ort
+                from utils.fetch_models import MODELS, fetch
+                folder = fetch("turn", progress=lambda m: log.info(f"TurnDetector: {m}"))
+                opts = ort.SessionOptions()
+                opts.inter_op_num_threads = 1
+                opts.intra_op_num_threads = 1
+                self._session = ort.InferenceSession(str(folder / MODELS["turn"]["files"][0]), sess_options=opts,
+                                                     providers=["CPUExecutionProvider"])
+                self.ready = True
+                log.info("TurnDetector: Smart Turn v3.2 loaded; turns end on meaning, not only on silence.")
+                return True
+            except Exception as e:
+                log.warning(f"TurnDetector: unavailable ({e}); ending turns on silence alone.")
+                self._session, self.ready = None, False
+                return False
 
     def complete_probability(self, audio: np.ndarray) -> float:
         with self._lock:
+            if self._session is None:
+                raise RuntimeError("TurnDetector model is not loaded")
             out = self._session.run(None, {"input_features": turn_features(audio)})
         return float(np.asarray(out[0]).reshape(-1)[0])
 

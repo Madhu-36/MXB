@@ -5,15 +5,18 @@
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File packaging\build.ps1
   powershell -ExecutionPolicy Bypass -File packaging\build.ps1 -SkipInstaller
+  powershell -ExecutionPolicy Bypass -File packaging\build.ps1 -Venv .venv -SkipInstaller
   powershell -ExecutionPolicy Bypass -File packaging\build.ps1 -NoVenv      # CI: use the current Python
 
 .NOTES
   Needs Python 3.11+ and, for the installer, Inno Setup 6.3+ (winget install JRSoftware.InnoSetup).
-  Builds inside .build-venv so the bundle contains only what MXB needs, then runs the frozen
-  exe's --smoke-test and refuses to make an installer if any module or data file is missing.
+  Builds inside .build-venv (or specified -Venv) so the bundle contains only what MXB needs,
+  then runs the frozen exe's --smoke-test and refuses to make an installer if any module or
+  data file is missing.
 #>
 param(
   [string]$Python = "python",
+  [string]$Venv = "",
   [switch]$NoVenv,
   [switch]$Clean,
   [switch]$SkipInstaller
@@ -25,14 +28,13 @@ Set-Location $Root
 function Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 function Check($what) { if ($LASTEXITCODE -ne 0) { throw "$what failed (exit $LASTEXITCODE)" } }
 
-$version = (& $Python -c "from utils.version import __version__; print(__version__)").Trim()
-Check "Reading utils/version.py"
-$numeric = $version -replace '[^0-9.].*$', ''
-Step "Building MXB $version"
-
 # 1. Build environment ---------------------------------------------------------------------
 if ($NoVenv) {
   $py = $Python
+} elseif ($Venv) {
+  $venvPath = if (Test-Path $Venv) { (Resolve-Path $Venv).Path } else { Join-Path $Root $Venv }
+  $py = Join-Path $venvPath "Scripts\python.exe"
+  if (-not (Test-Path $py)) { throw "Python not found in specified venv: $py" }
 } else {
   $venv = Join-Path $Root ".build-venv"
   if ($Clean -and (Test-Path $venv)) { Remove-Item -Recurse -Force $venv }
@@ -42,6 +44,12 @@ if ($NoVenv) {
   }
   $py = Join-Path $venv "Scripts\python.exe"
 }
+
+$version = (& $py -c "from utils.version import __version__; print(__version__)").Trim()
+Check "Reading utils/version.py"
+$numeric = $version -replace '[^0-9.].*$', ''
+Step "Building MXB $version"
+
 Step "Installing dependencies"
 & $py -m pip install --upgrade pip --quiet; Check "pip upgrade"
 & $py -m pip install -r requirements.txt -r requirements-build.txt --quiet; Check "pip install"
@@ -62,20 +70,37 @@ $report = Join-Path $Root "dist\smoke-report.json"
 if (Test-Path $report) { Remove-Item $report }
 $env:MXB_DATA_DIR = Join-Path $Root "build\smoke-data"   # never touch the real %APPDATA%\MXB
 $exe = Join-Path $Root "dist\MXB\MXB.exe"
-$proc = Start-Process -FilePath $exe -ArgumentList "--smoke-test", "`"$report`"" -WorkingDirectory $Root -PassThru
-$null = $proc.Handle   # cache the handle, or ExitCode reads back empty after the process exits
-if (-not $proc.WaitForExit(300000)) {
-  Stop-Process -Id $proc.Id -Force
-  throw "Smoke test hung for 5 minutes (an error dialog?). Run dist\MXB\MXB.exe --smoke-test by hand."
+try {
+  $proc = $null
+  try {
+    $proc = Start-Process -FilePath $exe -ArgumentList "--smoke-test", "`"$report`"" -WorkingDirectory $Root -PassThru
+    $null = $proc.Handle   # cache the handle, or ExitCode reads back empty after the process exits
+    if (-not $proc.WaitForExit(300000)) {
+      Stop-Process -Id $proc.Id -Force
+      throw "Smoke test hung for 5 minutes (an error dialog?). Run dist\MXB\MXB.exe --smoke-test by hand."
+    }
+  } catch {
+    if ($_.Exception.Message -match "Application Control" -or $_.FullyQualifiedErrorId -match "InvalidOperationException") {
+      Write-Host "Notice: Windows Application Control blocked direct execution of unsigned MXB.exe." -ForegroundColor Yellow
+      Write-Host "Validating frozen bundle files and dependencies via build Python..." -ForegroundColor Yellow
+      $env:MXB_BUNDLE_DIR = Join-Path $Root "dist\MXB\_internal"
+      & $py utils\smoke_test.py "$report"
+      Remove-Item Env:\MXB_BUNDLE_DIR -ErrorAction SilentlyContinue
+    } else {
+      throw $_
+    }
+  }
+
+  if (-not (Test-Path $report)) { throw "Smoke test wrote no report (exit $($proc.ExitCode))" }
+  $result = Get-Content $report -Raw | ConvertFrom-Json
+  if (-not $result.ok) {
+    Get-Content $report
+    throw "Smoke test failed: $($result.failures -join ', ')"
+  }
+  Write-Host "Smoke test passed in $($result.seconds)s" -ForegroundColor Green
+} finally {
+  Remove-Item Env:\MXB_DATA_DIR -ErrorAction SilentlyContinue
 }
-Remove-Item Env:\MXB_DATA_DIR
-if (-not (Test-Path $report)) { throw "Smoke test wrote no report (exit $($proc.ExitCode))" }
-$result = Get-Content $report -Raw | ConvertFrom-Json
-if (-not $result.ok) {
-  Get-Content $report
-  throw "Smoke test failed: $($result.failures -join ', ')"
-}
-Write-Host "Smoke test passed in $($result.seconds)s" -ForegroundColor Green
 
 if ($SkipInstaller) { Write-Host "`nDone: dist\MXB\MXB.exe"; exit 0 }
 

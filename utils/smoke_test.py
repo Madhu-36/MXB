@@ -15,17 +15,36 @@ import sys
 import time
 from pathlib import Path
 
+# Ensure project root is in sys.path even when smoke_test.py is run directly
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 OWN_MODULES = [
-    "engine.command_bus", "engine.executor", "engine.router", "engine.planner", "engine.agent_loop",
-    "engine.audio", "engine.tts", "engine.streaming", "engine.barge_in", "engine.wake_engine",
-    "engine.ui_automation", "engine.hardware", "engine.screen", "engine.file_ops", "engine.undo",
-    "engine.knowledge", "engine.semantic_memory", "engine.embeddings", "engine.scheduler",
-    "engine.routines", "engine.skills", "engine.remote_server",
-    "safety.policy", "safety.permissions", "safety.injection", "safety.audit", "safety.hotkeys",
-    "ui.chat", "ui.hud", "ui.tray", "ui.settings", "ui.setup_wizard", "ui.marks_overlay",
-    "utils.updater", "utils.autostart", "utils.paths", "utils.version", "utils.single_instance",
-    "engine.web", "engine.mcp_client", "engine.grounding", "engine.indic",
-    "engine.scam_shield", "engine.meetings", "engine.accessibility", "engine.focus_coach",
+    # engine
+    "engine.accessibility", "engine.actions_catalog", "engine.agent_loop", "engine.audio",
+    "engine.barge_in", "engine.color_picker", "engine.command_bus", "engine.embeddings",
+    "engine.executor", "engine.file_ops", "engine.focus_coach", "engine.grounding",
+    "engine.hardware", "engine.indic", "engine.keyboard_ext", "engine.knowledge",
+    "engine.kws_engine", "engine.listening", "engine.llm_client", "engine.mcp_client",
+    "engine.meetings", "engine.memory", "engine.mouse", "engine.persona",
+    "engine.planner", "engine.proactive", "engine.remote_server", "engine.router",
+    "engine.routines", "engine.scam_shield", "engine.scheduler", "engine.screen",
+    "engine.semantic_memory", "engine.skills", "engine.streaming", "engine.tts",
+    "engine.turn_detector", "engine.ui_automation", "engine.undo", "engine.voice_id",
+    "engine.wake_engine", "engine.wake_word", "engine.web", "engine.window_manager",
+    # safety
+    "safety.audit", "safety.hotkeys", "safety.injection", "safety.permissions", "safety.policy",
+    # ui
+    "ui.chat", "ui.hud", "ui.marks_overlay", "ui.settings", "ui.setup_wizard", "ui.tray",
+    # utils
+    "utils.app_launcher", "utils.audio_benchmark", "utils.audio_feedback", "utils.autostart",
+    "utils.clipboard_monitor", "utils.config_schema", "utils.credentials", "utils.diagnostics",
+    "utils.environment", "utils.fetch_models", "utils.llm_builder", "utils.logger",
+    "utils.math_evaluator", "utils.mic_setup", "utils.model_setup", "utils.notifications",
+    "utils.paths", "utils.power_manager", "utils.process_manager", "utils.single_instance",
+    "utils.smoke_test", "utils.timer_manager", "utils.updater", "utils.vault",
+    "utils.version", "utils.weather", "utils.web_search", "utils.windows_check",
 ]
 
 THIRD_PARTY = [
@@ -33,6 +52,7 @@ THIRD_PARTY = [
     "faster_whisper", "ctranslate2", "onnxruntime", "sounddevice", "edge_tts", "miniaudio", "qrcode",
     "pypdf", "docx", "send2trash", "PIL.Image", "pynput.keyboard", "pynput.mouse", "keyboard",
     "playwright.sync_api", "mcp", "mcp.client.stdio", "mcp.client.streamable_http", "zxingcpp",
+    "sherpa_onnx", "icalendar", "recurring_ical_events", "win11toast", "duckduckgo_search",
 ]
 
 WINDOWS_ONLY = [
@@ -45,6 +65,8 @@ WINDOWS_ONLY = [
 # Gracefully fall back if blocked by App Control policy or absent
 OPTIONAL_MODULES = {
     "miniaudio",
+    "sherpa_onnx",
+    "openwakeword",
 }
 
 
@@ -73,6 +95,8 @@ def check_files(base: Path | None = None) -> dict[str, str]:
         "config.json": "ok" if (base / "config.json").is_file() else "FAIL: missing",
         "plugins": "ok" if any((base / "plugins").glob("*.py")) else "FAIL: no plugins",
     }
+    if not ((base / "mxb.ico").is_file() or (base / "packaging" / "mxb.ico").is_file()):
+        out["icon"] = "FAIL: missing mxb.ico"
     try:
         json.loads((base / "config.json").read_text(encoding="utf-8"))
     except Exception as e:
@@ -124,3 +148,7 @@ def run_from_argv(argv: list[str]) -> int:
     """main.py hook: `MXB.exe --smoke-test [report.json]`."""
     args = argv[argv.index("--smoke-test") + 1:]
     return run(args[0] if args else None)
+
+
+if __name__ == "__main__":
+    sys.exit(run(sys.argv[1] if len(sys.argv) > 1 else None))

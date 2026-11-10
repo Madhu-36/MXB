@@ -1,12 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
+r"""
 PyInstaller spec for MXB: one folder, windowed (no console).
 
-    powershell -ExecutionPolicy Bypass -File packaging\\build.ps1      (recommended: venv + exe + installer)
-    python -m PyInstaller packaging\\mxb.spec --noconfirm --clean       (exe folder only)
+    powershell -ExecutionPolicy Bypass -File packaging\build.ps1      (recommended: venv + exe + installer)
+    python -m PyInstaller packaging\mxb.spec --noconfirm --clean       (exe folder only)
 
-Output: dist\\MXB\\MXB.exe with everything else in dist\\MXB\\_internal\\ (sys._MEIPASS).
-User data never goes in here; it lives in %APPDATA%\\MXB (see utils/paths.py).
+Output: dist\MXB\MXB.exe with everything else in dist\MXB\_internal\ (sys._MEIPASS).
+User data never goes in here; it lives in %APPDATA%\MXB (see utils/paths.py).
 """
 import sys
 from pathlib import Path
@@ -36,10 +36,21 @@ def local_modules(package: str) -> list[str]:
     return names
 
 
+# Ensure mxb.ico exists even if PyInstaller is run directly without build.ps1
+icon = ROOT / "packaging" / "mxb.ico"
+if not icon.exists():
+    try:
+        from packaging.make_icon import main as make_icon
+        make_icon(str(icon))
+    except Exception:
+        pass
+
 datas = [
     (str(ROOT / "config.json"), "."),          # default config, copied to %APPDATA%\MXB on first run
-    (str(ROOT / "plugins" / "*.py"), "plugins"),
 ]
+datas += [(str(p), "plugins") for p in sorted((ROOT / "plugins").glob("*.py"))]
+if icon.exists():
+    datas += [(str(icon), "packaging"), (str(icon), ".")]
 if (ROOT / "llm" / "Modelfile").exists():
     datas.append((str(ROOT / "llm" / "Modelfile"), "llm"))
 datas += optional(collect_data_files, "faster_whisper")   # Silero VAD .onnx assets
@@ -55,8 +66,9 @@ binaries += optional(collect_dynamic_libs, "sherpa_onnx")  # v4.4 voice ID + key
 hiddenimports = []
 for pkg in ("engine", "safety", "utils", "ui"):
     hiddenimports += local_modules(pkg)
-for pkg in ("winrt", "pycaw", "pywinauto", "screen_brightness_control", "edge_tts", "mcp", "playwright"):
+for pkg in ("winrt", "pycaw", "pywinauto", "screen_brightness_control", "edge_tts", "playwright"):
     hiddenimports += optional(collect_submodules, pkg)
+hiddenimports += optional(collect_submodules, "mcp", filter=lambda name: "cli" not in name)
 hiddenimports += [
     # imported dynamically by name, so static analysis can't see them
     "pyttsx3.drivers", "pyttsx3.drivers.sapi5",
@@ -64,7 +76,7 @@ hiddenimports += [
     "win32com.client", "pythoncom", "pywintypes",
     "comtypes.client", "comtypes.stream",
     "send2trash", "miniaudio", "qrcode.image.pil", "pypdf", "docx",
-    "sounddevice", "onnxruntime",
+    "sounddevice", "onnxruntime", "win11toast", "duckduckgo_search",
     "zxingcpp", "pyaudiowpatch",   # v4.3: QR decoding, meeting loopback audio (imported lazily)
     "sherpa_onnx", "icalendar", "recurring_ical_events",   # v4.4: voice ID, wake word, calendar
 ]
@@ -77,8 +89,6 @@ excludes = [
     "PySide6.QtMultimedia", "PySide6.QtCharts", "PySide6.QtDataVisualization", "PySide6.QtPdf",
     "PySide6.QtDesigner", "PySide6.QtSql", "PySide6.QtTest", "PySide6.QtBluetooth",
 ]
-
-icon = ROOT / "packaging" / "mxb.ico"
 
 a = Analysis(
     [str(ROOT / "main.py")],

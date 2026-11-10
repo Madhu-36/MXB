@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import requests
+
 import tests._stubs  # noqa: F401
 from engine import proactive
 from engine.proactive import (CalendarSource, MailSource, ProactiveEngine, _local, build_sources, imap_host_for,
@@ -106,6 +108,23 @@ class TestCalendar(unittest.TestCase):
         clock.now = 1000.0
         cal.events(day, day + timedelta(days=1))
         self.assertEqual(get.call_count, 2)
+
+    def test_network_fallback_to_cached_calendar(self):
+        resp = MagicMock(content=ICS.encode())
+        get = MagicMock(return_value=resp)
+        clock = FakeClock(0.0)
+        cal = CalendarSource("https://calendar.example/secret.ics", http_get=get, cache_seconds=900, clock=clock)
+        day = datetime(2026, 11, 9)
+        # First call caches the calendar
+        evs1 = cal.events(day, day + timedelta(days=1))
+        self.assertGreater(len(evs1), 0)
+
+        # Network disconnects/times out after cache expiry
+        clock.now = 2000.0
+        get.side_effect = requests.exceptions.ConnectionError("Network is unreachable")
+        # Should fall back to cached copy without raising
+        evs2 = cal.events(day, day + timedelta(days=1))
+        self.assertEqual(len(evs1), len(evs2))
 
 
 class FakeIMAP:
@@ -322,6 +341,33 @@ class TestProactiveEngine(unittest.TestCase):
         self.engine.mail = mail
         self.assertEqual(self.engine.email_summary(), "2 unread emails. Latest: Ravi: Placement drive.")
         self.assertIn("isn't connected", ProactiveEngine({}).agenda())
+
+    def test_resilience_to_probe_exceptions(self):
+        def bad_battery():
+            raise RuntimeError("psutil battery sensor failed")
+
+        def bad_busy():
+            raise RuntimeError("busy check failed")
+
+        def bad_idle():
+            raise RuntimeError("idle hook failed")
+
+        self.engine.battery = bad_battery
+        self.engine.busy = bad_busy
+        self.engine.idle_seconds = bad_idle
+        # tick should catch probe exceptions gracefully without raising
+        said = self.engine.tick()
+        self.assertIsInstance(said, list)
+
+    def test_alerted_memory_pruning(self):
+        old_time = (TODAY - timedelta(days=10)).isoformat()
+        # Seed alerted with 60 old entries
+        for i in range(60):
+            self.engine._alerted.add((f"Meeting {i}", old_time))
+        self.assertGreater(len(self.engine._alerted), 50)
+        # Next tick should prune old entries
+        self.engine.tick()
+        self.assertLess(len(self.engine._alerted), 50)
 
 
 class TestWiring(unittest.TestCase):

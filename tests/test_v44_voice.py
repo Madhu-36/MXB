@@ -109,6 +109,66 @@ class TestVoiceID(unittest.TestCase):
         self.assertTrue(vid.check(voice(2), "anything")[0])
         self.assertFalse(VoiceID({"voice_id": {"enabled": False}}, extractor=FakeExtractor(), store=self.store).ready())
 
+    def test_corrupted_profiles_and_file_locking(self):
+        # 1. Zero bytes
+        self.store.write_bytes(b"")
+        vid = VoiceID({}, extractor=FakeExtractor(), store=self.store)
+        self.assertFalse(vid.ready())
+        self.assertIsNone(vid.owner)
+
+        # 2. Random bytes
+        self.store.write_bytes(b"invalid npz archive contents")
+        vid = VoiceID({}, extractor=FakeExtractor(), store=self.store)
+        self.assertFalse(vid.ready())
+
+        # 3. Valid npz but missing owner key
+        np.savez(self.store, wrong_key=np.array([1, 2, 3]))
+        vid = VoiceID({}, extractor=FakeExtractor(), store=self.store)
+        self.assertFalse(vid.ready())
+
+        # 4. Owner array containing NaNs
+        np.savez(self.store, owner=np.array([np.nan] * 8, dtype=np.float32))
+        vid = VoiceID({}, extractor=FakeExtractor(), store=self.store)
+        self.assertFalse(vid.ready())
+
+        # 5. Owner array all zeros (norm < 1e-4)
+        np.savez(self.store, owner=np.zeros(8, dtype=np.float32))
+        vid = VoiceID({}, extractor=FakeExtractor(), store=self.store)
+        self.assertFalse(vid.ready())
+
+        # 6. Windows file lock test: ensure file handle is closed so replacing/saving succeeds
+        np.savez(self.store, owner=np.ones(8, dtype=np.float32), enrolled_at=np.array("2026-11-10"))
+        vid = VoiceID({}, extractor=FakeExtractor(), store=self.store)
+        self.assertTrue(vid.ready())
+        # Overwrite file while vid is loaded — on Windows this would fail if file wasn't closed
+        vid._save()
+        self.assertTrue(self.store.exists())
+
+    def test_thread_safety_concurrent_access(self):
+        vid = self.enrolled()
+        import threading
+        errors = []
+
+        def worker():
+            for _ in range(50):
+                try:
+                    vid.check(voice(1), "open notepad")
+                    vid.status()
+                    vid.ready()
+                except Exception as e:
+                    errors.append(e)
+
+        threads = [threading.Thread(target=worker) for _ in range(4)]
+        for t in threads:
+            t.start()
+        # Concurrently toggle and forget/enroll
+        for _ in range(10):
+            vid.set_enabled(False)
+            vid.set_enabled(True)
+        for t in threads:
+            t.join()
+        self.assertEqual(errors, [])
+
 
 class TestKeywordSpotting(unittest.TestCase):
     def test_default_phrases_need_no_sentencepiece(self):

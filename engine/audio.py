@@ -574,6 +574,20 @@ class VoicePipeline(QThread):
                 log.info(f"Microphone Streaming Active [{stream_rate}Hz, Ch {stream_channels}]. Continuous Parallel VAD Active.")
 
                 while self.is_running:
+                    if not self.is_listening:
+                        if is_speaking:
+                            is_speaking = False
+                            if speculative is not None:
+                                speculative.cancel()
+                                speculative = None
+                            buffer = []
+                            speech_frames_count = 0
+                            silence_frames = 0
+                            turn_verdict = None
+                            self.vad_status_changed.emit("Idle")
+                        time.sleep(0.01)
+                        continue
+
                     if not self.raw_audio_queue.empty():
                         raw_chunk = self.raw_audio_queue.get()
 
@@ -713,6 +727,10 @@ class VoicePipeline(QThread):
             error_msg = f"Audio stream error: {e}"
             log.error(error_msg)
             self.vad_status_changed.emit(error_msg)
+        finally:
+            if speculative is not None:
+                speculative.cancel()
+                speculative = None
 
     def _dispatch_utterance(self, buffer, started_during_tts: bool, agc_target: float, max_gain: float,
                             speculative=None) -> bool:

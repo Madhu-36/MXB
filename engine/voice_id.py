@@ -50,10 +50,11 @@ class SherpaExtractor:
     def __call__(self, audio: np.ndarray) -> np.ndarray:
         with self._lock:
             stream = self._ext.create_stream()
-            stream.accept_waveform(16000, np.asarray(audio, dtype=np.float32))
+            stream.accept_waveform(16000, np.asarray(audio, dtype=np.float32).reshape(-1))
             stream.input_finished()
             emb = np.asarray(self._ext.compute(stream), dtype=np.float32)
-        return emb / (np.linalg.norm(emb) or 1.0)
+        norm = float(np.linalg.norm(emb))
+        return emb / (norm if norm > 1e-6 else 1.0)
 
 
 class VoiceID:
@@ -65,6 +66,7 @@ class VoiceID:
         self.threshold = float(cfg.get("threshold", 0.38))
         self.floor = float(cfg.get("short_floor", 0.2))
         self.short_s = float(cfg.get("short_seconds", 1.0))
+        self._lock = threading.RLock()
         self._extractor = extractor
         self._store = store
         self.speak = speak or (lambda text: None)
@@ -84,53 +86,83 @@ class VoiceID:
         return self._store
 
     def _load(self):
-        try:
-            if self.store.exists():
-                data = np.load(self.store)
-                self.owner = data["owner"].astype(np.float32)
-                self.enrolled_at = str(data["enrolled_at"]) if "enrolled_at" in data else ""
-        except Exception as e:
-            log.warning(f"VoiceID: couldn't read the voiceprint ({e}); voice ID is off until you enrol again.")
-            self.owner = None
+        with self._lock:
+            try:
+                if self.store.exists():
+                    with np.load(self.store) as data:
+                        owner = data["owner"].astype(np.float32)
+                        if (isinstance(owner, np.ndarray) and owner.ndim == 1 and len(owner) > 0
+                                and not np.isnan(owner).any() and not np.isinf(owner).any()
+                                and float(np.linalg.norm(owner)) >= 1e-4):
+                            self.owner = owner
+                            self.enrolled_at = str(data["enrolled_at"]) if "enrolled_at" in data else ""
+                        else:
+                            raise ValueError("corrupted owner embedding in voiceprint")
+            except Exception as e:
+                log.warning(f"VoiceID: couldn't read the voiceprint ({e}); voice ID is off until you enrol again.")
+                self.owner = None
 
     def _save(self):
-        self.store.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.store.with_name(self.store.stem + ".tmp.npz")
-        np.savez(tmp, owner=self.owner, enrolled_at=np.array(self.enrolled_at))
-        tmp.replace(self.store)
+        with self._lock:
+            if self.owner is None:
+                return
+            self.store.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.store.with_name(f"{self.store.stem}.tmp.{threading.get_ident()}.npz")
+            try:
+                np.savez(tmp, owner=self.owner, enrolled_at=np.array(self.enrolled_at))
+                tmp.replace(self.store)
+            finally:
+                if tmp.exists():
+                    try:
+                        tmp.unlink(missing_ok=True)
+                    except Exception:
+                        pass
 
     # ------------------------------------------------------------------ model
     def extractor(self):
-        if self._extractor is None:
-            from utils.fetch_models import fetch, model_path, MODELS
-            fetch("voice_id", progress=lambda m: log.info(f"VoiceID: {m}"))
-            self._extractor = SherpaExtractor(model_path("voice_id") / MODELS["voice_id"]["files"][0])
-        return self._extractor
+        with self._lock:
+            if self._extractor is None:
+                from utils.fetch_models import fetch, model_path, MODELS
+                fetch("voice_id", progress=lambda m: log.info(f"VoiceID: {m}"))
+                self._extractor = SherpaExtractor(model_path("voice_id") / MODELS["voice_id"]["files"][0])
+            return self._extractor
 
     def ready(self) -> bool:
-        return self.enabled and self.owner is not None
+        with self._lock:
+            return self.enabled and self.owner is not None
 
     def score(self, audio: np.ndarray) -> float:
+        with self._lock:
+            owner = self.owner
+        if owner is None:
+            return 0.0
         emb = self.extractor()(audio)
-        return float(np.dot(emb, self.owner))
+        return float(np.dot(emb, owner))
 
     # ------------------------------------------------------------------ the gate
     def check(self, audio: np.ndarray, text: str) -> tuple[bool, str]:
         """(allowed, why). Only consulted once someone has enrolled."""
-        if not self.ready():
-            return True, "voice ID off"
+        with self._lock:
+            if not self.ready():
+                return True, "voice ID off"
+            owner = self.owner
+            threshold = self.threshold
+            floor = self.floor
+            short_s = self.short_s
         if is_stop_phrase(text):
             return True, "stop words are allowed from anyone"
         seconds = len(audio) / 16000
         try:
-            s = self.score(audio)
+            emb = self.extractor()(audio)
+            s = float(np.dot(emb, owner)) if owner is not None else 0.0
         except Exception as e:
             log.warning(f"VoiceID: couldn't check this voice ({e}); letting it through.")
             return True, "check failed"
-        self.last_score = s
-        if s >= self.threshold:
+        with self._lock:
+            self.last_score = s
+        if s >= threshold:
             return True, f"your voice ({s:.2f})"
-        if seconds < self.short_s and s >= self.floor:
+        if seconds < short_s and s >= floor:
             return True, f"too short to judge ({s:.2f}, {seconds:.1f} s)"
         return False, f"not your voice ({s:.2f})"
 
@@ -140,55 +172,62 @@ class VoiceID:
             self.extractor()                     # downloads the model now, not halfway through
         except Exception as e:
             return f"I can't learn voices on this PC yet: {e}. Install sherpa-onnx (pip install sherpa-onnx)."
-        self._samples = []
-        self.enrolling = samples
+        with self._lock:
+            self._samples = []
+            self.enrolling = samples
         return (f"Okay. Say {samples} sentences, any you like, each about three seconds long, with a short pause "
                 "between them. For example: what's the weather today.")
 
     def add_sample(self, audio: np.ndarray) -> str | None:
         """Feeds one enrolment utterance; returns a message to speak, or None to stay quiet."""
-        if not self.enrolling:
-            return None
-        if len(audio) < 16000 * 1.2:
-            return "That was a bit short. Say a full sentence."
-        self._samples.append(self.extractor()(audio))
-        self.enrolling -= 1
-        if self.enrolling:
-            return None if self.enrolling > 1 else "One more."
-        embs = np.stack(self._samples)
-        centroid = embs.mean(axis=0)
-        centroid /= np.linalg.norm(centroid) or 1.0
-        pairs = embs @ embs.T
-        agreement = float(pairs[~np.eye(len(embs), dtype=bool)].min())   # the least alike pair of samples
-        if agreement < 0.45:
-            self._samples, self.enrolling = [], 0
-            return ("Those didn't sound like the same voice, maybe someone else spoke or it was noisy. "
-                    "Say 'learn my voice' to try again.")
-        self.owner = centroid.astype(np.float32)
-        self.enrolled_at = time.strftime("%Y-%m-%d %H:%M")
-        self._save()
-        self._samples = []
-        return "Got it. From now on I'll only take commands from your voice. Anyone can still say stop."
+        with self._lock:
+            if not self.enrolling:
+                return None
+            if len(audio) < 16000 * 1.2:
+                return "That was a bit short. Say a full sentence."
+            emb = self.extractor()(audio)
+            self._samples.append(emb)
+            self.enrolling -= 1
+            if self.enrolling:
+                return None if self.enrolling > 1 else "One more."
+            embs = np.stack(self._samples)
+            centroid = embs.mean(axis=0)
+            centroid /= np.linalg.norm(centroid) or 1.0
+            pairs = embs @ embs.T
+            agreement = float(pairs[~np.eye(len(embs), dtype=bool)].min())   # the least alike pair of samples
+            if agreement < 0.45:
+                self._samples, self.enrolling = [], 0
+                return ("Those didn't sound like the same voice, maybe someone else spoke or it was noisy. "
+                        "Say 'learn my voice' to try again.")
+            self.owner = centroid.astype(np.float32)
+            self.enrolled_at = time.strftime("%Y-%m-%d %H:%M")
+            self._save()
+            self._samples = []
+            return "Got it. From now on I'll only take commands from your voice. Anyone can still say stop."
 
     def forget(self) -> str:
-        self.owner, self.enrolled_at, self.enrolling = None, "", 0
-        try:
-            self.store.unlink(missing_ok=True)
-        except Exception:
-            pass
-        return "I've forgotten your voice. I'll take commands from anyone again."
+        with self._lock:
+            self.owner, self.enrolled_at, self.enrolling = None, "", 0
+            self._samples = []
+            try:
+                self.store.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return "I've forgotten your voice. I'll take commands from anyone again."
 
     def set_enabled(self, on: bool) -> str:
-        self.enabled = on
-        if on and self.owner is None:
-            return "Voice ID is on, but I don't know your voice yet. Say 'learn my voice'."
-        return "Voice ID is on: I only take commands from you." if on else "Voice ID is off: I take commands from anyone."
+        with self._lock:
+            self.enabled = on
+            if on and self.owner is None:
+                return "Voice ID is on, but I don't know your voice yet. Say 'learn my voice'."
+            return "Voice ID is on: I only take commands from you." if on else "Voice ID is off: I take commands from anyone."
 
     def status(self) -> str:
-        if self.enrolling:
-            return f"I'm learning your voice: {self.enrolling} more sentence(s)."
-        if self.owner is None:
-            return "Voice ID isn't set up. Say 'learn my voice' and I'll only take commands from you."
-        state = "on" if self.enabled else "off"
-        last = f" Last voice I heard scored {self.last_score:.2f}." if self.last_score is not None else ""
-        return f"Voice ID is {state}; your voice was saved on {self.enrolled_at}.{last}"
+        with self._lock:
+            if self.enrolling:
+                return f"I'm learning your voice: {self.enrolling} more sentence(s)."
+            if self.owner is None:
+                return "Voice ID isn't set up. Say 'learn my voice' and I'll only take commands from you."
+            state = "on" if self.enabled else "off"
+            last = f" Last voice I heard scored {self.last_score:.2f}." if self.last_score is not None else ""
+            return f"Voice ID is {state}; your voice was saved on {self.enrolled_at}.{last}"

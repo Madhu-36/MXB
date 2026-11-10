@@ -90,9 +90,15 @@ class CalendarSource:
             return self._cache[1]
         if self.where.lower().startswith(("http://", "https://", "webcal://")):
             url = "https://" + self.where.split("://", 1)[1] if self.where.lower().startswith("webcal://") else self.where
-            resp = self.http_get(url, timeout=15)
-            resp.raise_for_status()
-            data = resp.content
+            try:
+                resp = self.http_get(url, timeout=15)
+                resp.raise_for_status()
+                data = resp.content
+            except Exception as e:
+                if self._cache:
+                    log.warning(f"CalendarSource: network fetch failed ({e}); falling back to cached calendar.")
+                    return self._cache[1]
+                raise
         else:
             data = Path(self.where).expanduser().read_bytes()
         self._cache = (now, data)
@@ -101,15 +107,31 @@ class CalendarSource:
     def events(self, start: datetime, end: datetime) -> list[Event]:
         import icalendar
         import recurring_ical_events
-        cal = icalendar.Calendar.from_ical(self._ics())
+        data = self._ics()
+        if not data:
+            return []
+        try:
+            cal = icalendar.Calendar.from_ical(data)
+        except Exception as e:
+            log.warning(f"CalendarSource: failed to parse calendar ({e})")
+            return []
         out = []
-        for comp in recurring_ical_events.of(cal).between(start, end):
-            if str(comp.get("STATUS", "")).upper() == "CANCELLED":
+        try:
+            comps = recurring_ical_events.of(cal).between(start, end)
+        except Exception as e:
+            log.warning(f"CalendarSource: failed to expand recurring events ({e})")
+            return []
+        for comp in comps:
+            try:
+                if str(comp.get("STATUS", "")).upper() == "CANCELLED":
+                    continue
+                begin, all_day = _local(comp.decoded("DTSTART"))
+                finish = _local(comp.decoded("DTEND"))[0] if comp.get("DTEND") else begin + timedelta(hours=1)
+                out.append(Event(str(comp.get("SUMMARY", "Untitled")).strip(), begin, finish,
+                                 str(comp.get("LOCATION", "") or "").strip(), all_day))
+            except Exception as e:
+                log.warning(f"CalendarSource: skipping corrupted event ({e})")
                 continue
-            begin, all_day = _local(comp.decoded("DTSTART"))
-            finish = _local(comp.decoded("DTEND"))[0] if comp.get("DTEND") else begin + timedelta(hours=1)
-            out.append(Event(str(comp.get("SUMMARY", "Untitled")).strip(), begin, finish,
-                             str(comp.get("LOCATION", "") or "").strip(), all_day))
         return sorted(out, key=lambda e: (not e.all_day, e.start))
 
 
@@ -130,20 +152,26 @@ class MailSource:
 
     def unread(self, limit: int = 3) -> tuple[int, list[tuple[str, str]]]:
         """(number of unread messages, [(sender, subject), ...] newest first). Read-only."""
+        pw = self.password_getter() if callable(self.password_getter) else self.password_getter
+        if not pw or not self.host:
+            return 0, []
         conn = self.imap_factory(self.host, self.port)
         try:
-            conn.login(self.user, self.password_getter())
+            conn.login(self.user, pw)
             conn.select(self.folder, readonly=True)
             status, data = conn.search(None, "UNSEEN")
             ids = data[0].split() if status == "OK" and data and data[0] else []
             latest = []
             for msg_id in reversed(ids[-limit:]):
-                status, parts = conn.fetch(msg_id, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)])")
-                if status != "OK" or not parts or not isinstance(parts[0], tuple):
+                try:
+                    status, parts = conn.fetch(msg_id, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)])")
+                    if status != "OK" or not parts or not isinstance(parts[0], tuple):
+                        continue
+                    msg = email.message_from_bytes(parts[0][1])
+                    name, address = email.utils.parseaddr(_decode(msg.get("From", "")))
+                    latest.append((name or address, _decode(msg.get("Subject", "(no subject)"))))
+                except Exception:
                     continue
-                msg = email.message_from_bytes(parts[0][1])
-                name, address = email.utils.parseaddr(_decode(msg.get("From", "")))
-                latest.append((name or address, _decode(msg.get("Subject", "(no subject)"))))
             return len(ids), latest
         finally:
             try:
@@ -210,6 +238,18 @@ class ProactiveEngine:
         now = self.clock()
         said = []
         quiet = self.quiet(now)
+
+        # Prune old alerted meeting keys to prevent unbounded memory growth over prolonged sessions
+        if len(self._alerted) > 50:
+            cutoff = (now - timedelta(days=2)).isoformat()
+            self._alerted = {k for k in self._alerted if isinstance(k, tuple) and len(k) == 2 and k[1] >= cutoff}
+
+        try:
+            is_busy = bool(self.busy())
+        except Exception as e:
+            log.warning(f"Proactive: busy check failed: {e}")
+            is_busy = False
+
         if "meetings" not in self.muted and self.calendar:
             try:
                 for ev in self._today(now):
@@ -220,13 +260,17 @@ class ProactiveEngine:
                         text = f"{ev.title} starts in {max(1, round(minutes))} minutes" + \
                                (f", {ev.location}." if ev.location else ".")
                         said.append(("meetings", text))
-                        self.announce(text, speak=not quiet and not self.busy())
+                        self.announce(text, speak=not quiet and not is_busy)
             except Exception as e:
                 log.warning(f"Proactive: calendar check failed: {e}")
-        if quiet or self.busy():
+        if quiet or is_busy:
             return said
         if "battery" not in self.muted and self.battery:
-            reading = self.battery()
+            try:
+                reading = self.battery()
+            except Exception as e:
+                log.warning(f"Proactive: battery check failed: {e}")
+                reading = None
             if reading:
                 percent, plugged = reading
                 if percent <= self.battery_percent and not plugged and not self._battery_warned:
@@ -237,8 +281,13 @@ class ProactiveEngine:
                 elif plugged or percent > self.battery_percent + 10:
                     self._battery_warned = False
         # Unasked, only with something to tell: no daily "your calendar isn't connected" nag.
+        try:
+            idle_s = float(self.idle_seconds())
+        except Exception:
+            idle_s = 0.0
+
         if "briefing" not in self.muted and (self.calendar or self.mail) and self._last_briefing != now.date() and \
-                (now.hour, now.minute) >= self.briefing_at and self.idle_seconds() < 300:
+                (now.hour, now.minute) >= self.briefing_at and idle_s < 300:
             self._last_briefing = now.date()
             text = self.briefing(now, asked=False)
             said.append(("briefing", text))

@@ -4,7 +4,8 @@ Where MXB keeps its code and its data.
 - Source checkout (python main.py): everything stays next to the code, exactly as before.
 - Installed / frozen build (MXB.exe): user data lives in %APPDATA%\\MXB so updates and
   uninstalls never touch it, and the program folder can stay read-only.
-- MXB_DATA_DIR=<folder> overrides both (portable installs, tests).
+- MXB_DATA_DIR=<folder> overrides data location (portable installs, tests).
+- MXB_BUNDLE_DIR=<folder> overrides shipped bundle location (tests).
 
 bundle_dir() is where read-only shipped files live (default config, plugins, Modelfile).
 """
@@ -23,6 +24,9 @@ def is_frozen() -> bool:
 
 def bundle_dir() -> Path:
     """Read-only files shipped with MXB (PyInstaller unpacks them into sys._MEIPASS)."""
+    override = os.environ.get("MXB_BUNDLE_DIR")
+    if override:
+        return Path(override)
     if is_frozen():
         return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
     return APP_DIR

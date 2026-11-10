@@ -34,6 +34,23 @@ class TestFeatures(unittest.TestCase):
         long = rng.normal(0, 0.05, 16000 * 12).astype(np.float32)
         np.testing.assert_allclose(turn_features(long), turn_features(long[-16000 * 8:]), atol=1e-5)
 
+    def test_robustness_to_edge_cases(self):
+        # Empty audio
+        empty_feats = turn_features(np.array([], dtype=np.float32))
+        self.assertEqual(empty_feats.shape, (1, 80, 800))
+        self.assertFalse(np.isnan(empty_feats).any())
+
+        # 2D audio (e.g. multi-channel or column vector)
+        col_feats = turn_features(np.zeros((16000, 1), dtype=np.float32))
+        self.assertEqual(col_feats.shape, (1, 80, 800))
+        self.assertFalse(np.isnan(col_feats).any())
+
+        # Audio with NaN / Inf
+        dirty = np.array([np.nan, np.inf, -np.inf, 0.5] * 4000, dtype=np.float32)
+        dirty_feats = turn_features(dirty)
+        self.assertEqual(dirty_feats.shape, (1, 80, 800))
+        self.assertFalse(np.isnan(dirty_feats).any())
+
     @unittest.skipUnless(importlib.util.find_spec("transformers"), "reference extractor needs transformers")
     def test_matches_the_reference_extractor(self):
         from transformers import WhisperFeatureExtractor
@@ -100,9 +117,17 @@ class TestTurnDetector(unittest.TestCase):
         keep = SpeculativeTurn()
         threading.Timer(0.05, keep.confirm).start()
         self.assertTrue(keep.wait(timeout=2))
+        # Idempotence: cannot cancel once confirmed
+        keep.cancel()
+        self.assertTrue(keep.wait(timeout=0.01))
+
         drop = SpeculativeTurn()
         drop.cancel()
         self.assertFalse(drop.wait(timeout=2))
+        # Idempotence: cannot confirm once cancelled
+        drop.confirm()
+        self.assertFalse(drop.wait(timeout=0.01))
+
         self.assertFalse(SpeculativeTurn().wait(timeout=0.01))      # undecided: never act on a guess
 
     def test_pipeline_wiring(self):
