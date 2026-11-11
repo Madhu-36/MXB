@@ -1,3 +1,25 @@
+## v4.4.1 (2026-11-10) — Proactive Companion Hardening, Packaging Bundling & Offline Resilience
+- **Turn Detection & Audio Safety**:
+  - Enforced 1D audio tensor flattening and input sanitization in `turn_features` to eliminate out-of-memory array allocation errors (`np._core._exceptions._ArrayMemoryError`) on multi-channel streams.
+  - Sanitization with `np.nan_to_num(posinf=1.0, neginf=-1.0)` prevents dirty audio buffers from poisoning ONNX session inferences.
+  - Speculative turn transitions (`confirm()`, `cancel()`) made thread-safe and idempotent with `_lock`.
+  - Pause/mute signals in `VoicePipeline.run()` immediately cancel active speculative turns and clear audio queues to prevent ASR worker thread stalls.
+- **Voice ID & Windows File Lock Safety**:
+  - Resolved Windows file handle leaks in `VoiceID._load()` via context management (`with np.load(...) as data:`), eliminating `WinError 32` file replacement collisions on Windows.
+  - Added multi-threaded synchronization via `threading.RLock()` across all profile operations (`ready`, `score`, `check`, `add_sample`, `forget`).
+  - Validation guards against `NaN`, `Inf`, zero-norm, or empty vectors; corrupt files trigger clean fallbacks rather than permanent command rejection.
+- **Proactive Offline Resilience**:
+  - Implemented offline calendar cache fallback: during network timeouts or server disconnects, MXB gracefully uses the cached calendar payload.
+  - Added exception guards inside `events()`, safely skipping malformed recurring iCal/IMAP entries while retaining all valid ones.
+  - Automated 48-hour cache compaction for alerted meeting notifications to prevent memory growth during multi-week sessions.
+  - OS sleep/wake sensors (`busy()`, `battery()`, `idle_seconds()`) wrapped in fault-tolerant guards to survive system suspend/resume cycles.
+- **Packaging & Frozen Distribution**:
+  - Configured MCP submodule filtering in `packaging/mxb.spec` (`filter=lambda name: "cli" not in name`) to collect 80+ MCP tools without crashing on optional CLI dependencies.
+  - Embedded dynamic multi-resolution icon generation into `mxb.spec` and bundled `mxb.ico` at root.
+  - Standalone PyInstaller bundle (`dist/MXB/MXB.exe`, 20.6 MB) verified with automated smoke testing passing 100% clean (`failures: []`, `ok: true`).
+- **Quality**:
+  - 34 cross-platform suites (530 tests) passing 100% green in 63.5s with zero errors and zero failures.
+
 ## v4.4.0 — Knows your voice, plans better, speaks first
 What a companion still lacked after v4.3.2: a measure of whether whole tasks succeed, a local brain big enough to plan them, a way to tell its owner from the TV, turns that end when the sentence does, a reason to speak first, one personality, a switch between your languages, and rules that stop two agents from breaking each other's work.
 
